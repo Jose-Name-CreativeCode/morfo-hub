@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub | Dashboard</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Morfo Hub</div>
+
+        <nav class="sidebar-nav">
+          <ul>
+            <li><a href="dashboard.html" class="active">Dashboard</a></li>
+            <li><a href="clients.html">Clientes</a></li>
+            <li><a href="income.html">Ingresos</a></li>
+            <li><a href="expenses.html">Gastos</a></li>
+            <li><a href="quotes.html">Cotizaciones</a></li>
+            <li><a href="reports.html">Reportes</a></li>
+            <li><a href="settings.html">Configuración</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <div class="header-title">Dashboard</div>
+          <div class="header-user">Marco / Administrador</div>
+        </header>
+
+        <main class="page-content">
+          <h1 class="section-title">Resumen general</h1>
+          <p class="section-subtitle">
+            Visualiza el estado actual de ingresos, gastos, clientes y
+            pendientes.
+          </p>
+
+          <section class="cards-grid">
+            <article class="card income">
+              <div class="card-label">Ingresos del mes</div>
+              <div class="card-value">$0.00</div>
+            </article>
+
+            <article class="card expense">
+              <div class="card-label">Gastos del mes</div>
+              <div class="card-value">$0.00</div>
+            </article>
+
+            <article class="card">
+              <div class="card-label">Utilidad estimada</div>
+              <div class="card-value">$0.00</div>
+            </article>
+
+            <article class="card">
+              <div class="card-label">Clientes activos</div>
+              <div class="card-value">0</div>
+            </article>
+
+            <article class="card pending">
+              <div class="card-label">Pendiente por cobrar</div>
+              <div class="card-value">$0.00</div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
