@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub | Cotizaciones</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Morfo Hub</div>
+
+        <nav class="sidebar-nav">
+          <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="clients.html">Clientes</a></li>
+            <li><a href="income.html">Ingresos</a></li>
+            <li><a href="expenses.html">Gastos</a></li>
+            <li><a href="quotes.html" class="active">Cotizaciones</a></li>
+            <li><a href="reports.html">Reportes</a></li>
+            <li><a href="settings.html">Configuración</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <div class="header-title">Cotizaciones</div>
+          <div class="header-user">Marco / Administrador</div>
+        </header>
+
+        <main class="page-content">
+          <h1 class="section-title">Gestión de cotizaciones</h1>
+          <p class="section-subtitle">
+            Crea propuestas personalizadas para redes sociales, páginas web,
+            mantenimiento, hosting y servicios adicionales.
+          </p>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Nueva cotización
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="quote-client">Cliente</label>
+                <select id="quote-client">
+                  <option value="">Selecciona un cliente</option>
+                  <option value="insectalia">Insectalia</option>
+                  <option value="demo">Cliente Demo</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="quote-date">Fecha</label>
+                <input type="date" id="quote-date" />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-title">Nombre de la cotización</label>
+                <input
+                  type="text"
+                  id="quote-title"
+                  placeholder="Ej. Plan mensual + pauta Meta"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-service-type">Tipo de servicio</label>
+                <select id="quote-service-type">
+                  <option value="">Selecciona una opción</option>
+                  <option value="social-media">Redes sociales</option>
+                  <option value="ads">Publicidad digital</option>
+                  <option value="website">Página web</option>
+                  <option value="maintenance">Mantenimiento web</option>
+                  <option value="hosting-domain">Hosting / Dominio</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="quote-description">Descripción general</label>
+                <textarea
+                  id="quote-description"
+                  rows="4"
+                  placeholder="Describe el alcance general de la propuesta..."
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="quote-includes">Incluye</label>
+                <textarea
+                  id="quote-includes"
+                  rows="6"
+                  placeholder="Ej. Planeación estratégica mensual, diseño de contenido, community management, hosting anual, mantenimiento, etc."
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="quote-subtotal">Subtotal</label>
+                <input
+                  type="number"
+                  id="quote-subtotal"
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-invoice">¿Requiere factura?</label>
+                <select id="quote-invoice">
+                  <option value="">Selecciona una opción</option>
+                  <option value="yes">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="quote-iva">IVA (16%)</label>
+                <input
+                  type="number"
+                  id="quote-iva"
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-total">Total</label>
+                <input
+                  type="number"
+                  id="quote-total"
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-notes">Condiciones / observaciones</label>
+                <textarea id="quote-notes" rows="14">
+Nota:
+La inversión en pauta publicitaria se destina directamente a la plataforma Meta
+(Facebook e Instagram). Este monto no forma parte del servicio de gestión.
+
+Siguiente paso:
+Una vez aprobada la propuesta, se inicia la configuración de campañas y lanzamiento
+de anuncios en un plazo aproximado de 3 a 5 días hábiles.
+
+Información adicional:
+Se requiere un anticipo del 50% para comenzar con el proyecto, y el saldo restante se
+finiquitará contra la entrega total.
+
+En caso de que se necesiten correcciones, se agendarán las juntas necesarias con el
+cliente para asegurar que se logre el resultado final deseado.
+
+Los trabajos adicionales fuera del alcance de esta cotización se negociarán por
+separado.
+
+Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
+
+¡Muchas gracias!
+“Morfo Studio”</textarea
+                >
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar cotización
+              </button>
+            </form>
+          </section>
+
+          <section class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Cotización</th>
+                  <th>Tipo</th>
+                  <th>Subtotal</th>
+                  <th>Total</th>
+                  <th>Factura</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2026-03-24</td>
+                  <td>Insectalia</td>
+                  <td>Plan mensual + pauta Meta</td>
+                  <td>Redes sociales</td>
+                  <td>$8,000.00</td>
+                  <td>$9,280.00</td>
+                  <td>Sí</td>
+                </tr>
+                <tr>
+                  <td>2026-03-22</td>
+                  <td>Cliente Demo</td>
+                  <td>Desarrollo de página web</td>
+                  <td>Página web</td>
+                  <td>$12,000.00</td>
+                  <td>$12,000.00</td>
+                  <td>No</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
