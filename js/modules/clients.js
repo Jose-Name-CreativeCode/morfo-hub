@@ -1,8 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   const clientForm = document.querySelector("form");
   const clientTableBody = document.querySelector(".table tbody");
+  const submitButton = clientForm.querySelector(".btn-primary");
 
   const STORAGE_KEY = "morfo_clients";
+  let editingClientId = null;
 
   function getClients() {
     const clients = localStorage.getItem(STORAGE_KEY);
@@ -13,6 +15,12 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
   }
 
+  function resetForm() {
+    clientForm.reset();
+    editingClientId = null;
+    submitButton.textContent = "Guardar cliente";
+  }
+
   function renderClients() {
     const clients = getClients();
     clientTableBody.innerHTML = "";
@@ -20,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (clients.length === 0) {
       clientTableBody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center;">No hay clientes registrados.</td>
+          <td colspan="8" style="text-align: center;">No hay clientes registrados.</td>
         </tr>
       `;
       return;
@@ -36,14 +44,75 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${client.phone}</td>
         <td>${client.status}</td>
         <td>${client.invoiceRequired}</td>
+        <td>
+          <button type="button" class="edit-btn" data-id="${client.id}">Editar</button>
+        </td>
+        <td>
+          <button type="button" class="delete-btn" data-id="${client.id}">Eliminar</button>
+        </td>
       `;
 
       clientTableBody.appendChild(row);
     });
+
+    addTableEvents();
   }
 
-  function resetForm() {
-    clientForm.reset();
+  function fillForm(client) {
+    document.getElementById("client-name").value = client.name;
+    document.getElementById("client-contact").value = client.contact;
+    document.getElementById("client-email").value = client.email;
+    document.getElementById("client-phone").value = client.phone;
+    document.getElementById("client-status").value = client.status;
+    document.getElementById("client-invoice").value =
+      client.invoiceRequired === "Sí" ? "yes" : "no";
+    document.getElementById("client-notes").value = client.notes || "";
+
+    editingClientId = client.id;
+    submitButton.textContent = "Actualizar cliente";
+  }
+
+  function handleEdit(clientId) {
+    const clients = getClients();
+    const clientToEdit = clients.find((client) => client.id === clientId);
+
+    if (!clientToEdit) return;
+
+    fillForm(clientToEdit);
+  }
+
+  function handleDelete(clientId) {
+    const confirmed = confirm("¿Seguro que quieres eliminar este cliente?");
+    if (!confirmed) return;
+
+    let clients = getClients();
+    clients = clients.filter((client) => client.id !== clientId);
+    saveClients(clients);
+
+    if (editingClientId === clientId) {
+      resetForm();
+    }
+
+    renderClients();
+  }
+
+  function addTableEvents() {
+    const editButtons = document.querySelectorAll(".edit-btn");
+    const deleteButtons = document.querySelectorAll(".delete-btn");
+
+    editButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const clientId = Number(button.dataset.id);
+        handleEdit(clientId);
+      });
+    });
+
+    deleteButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const clientId = Number(button.dataset.id);
+        handleDelete(clientId);
+      });
+    });
   }
 
   clientForm.addEventListener("submit", (event) => {
@@ -62,20 +131,40 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const newClient = {
-      id: Date.now(),
-      name,
-      contact,
-      email,
-      phone,
-      status,
-      invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
-      notes,
-    };
-
     const clients = getClients();
-    clients.push(newClient);
-    saveClients(clients);
+
+    if (editingClientId) {
+      const updatedClients = clients.map((client) =>
+        client.id === editingClientId
+          ? {
+              ...client,
+              name,
+              contact,
+              email,
+              phone,
+              status,
+              invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
+              notes,
+            }
+          : client,
+      );
+
+      saveClients(updatedClients);
+    } else {
+      const newClient = {
+        id: Date.now(),
+        name,
+        contact,
+        email,
+        phone,
+        status,
+        invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
+        notes,
+      };
+
+      clients.push(newClient);
+      saveClients(clients);
+    }
 
     renderClients();
     resetForm();
