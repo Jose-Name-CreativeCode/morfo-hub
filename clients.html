@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub | Clientes</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Morfo Hub</div>
+
+        <nav class="sidebar-nav">
+          <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="clients.html" class="active">Clientes</a></li>
+            <li><a href="income.html">Ingresos</a></li>
+            <li><a href="expenses.html">Gastos</a></li>
+            <li><a href="quotes.html">Cotizaciones</a></li>
+            <li><a href="reports.html">Reportes</a></li>
+            <li><a href="settings.html">Configuración</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <div class="header-title">Clientes</div>
+          <div class="header-user">Marco / Administrador</div>
+        </header>
+
+        <main class="page-content">
+          <h1 class="section-title">Gestión de clientes</h1>
+          <p class="section-subtitle">
+            Administra los clientes de Morfo, su información general y su
+            estatus.
+          </p>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Nuevo cliente
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="client-name">Nombre del cliente</label>
+                <input
+                  type="text"
+                  id="client-name"
+                  placeholder="Ej. Insectalia"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="client-contact">Nombre del contacto</label>
+                <input
+                  type="text"
+                  id="client-contact"
+                  placeholder="Ej. Juan Pérez"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="client-email">Correo electrónico</label>
+                <input
+                  type="email"
+                  id="client-email"
+                  placeholder="cliente@ejemplo.com"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="client-phone">Teléfono</label>
+                <input
+                  type="text"
+                  id="client-phone"
+                  placeholder="222 000 0000"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="client-status">Estatus</label>
+                <select id="client-status">
+                  <option value="">Selecciona una opción</option>
+                  <option value="active">Activo</option>
+                  <option value="inactive">Inactivo</option>
+                  <option value="prospect">Prospecto</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="client-invoice">¿Requiere factura?</label>
+                <select id="client-invoice">
+                  <option value="">Selecciona una opción</option>
+                  <option value="yes">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="client-notes">Observaciones</label>
+                <textarea
+                  id="client-notes"
+                  rows="4"
+                  placeholder="Notas adicionales del cliente..."
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn-primary">Guardar cliente</button>
+            </form>
+          </section>
+
+          <section class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Contacto</th>
+                  <th>Correo</th>
+                  <th>Teléfono</th>
+                  <th>Estatus</th>
+                  <th>Factura</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Insectalia</td>
+                  <td>Juan Pérez</td>
+                  <td>juan@insectalia.com</td>
+                  <td>222 000 0000</td>
+                  <td>Activo</td>
+                  <td>Sí</td>
+                </tr>
+                <tr>
+                  <td>Cliente Demo</td>
+                  <td>María López</td>
+                  <td>maria@demo.com</td>
+                  <td>222 111 1111</td>
+                  <td>Prospecto</td>
+                  <td>No</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

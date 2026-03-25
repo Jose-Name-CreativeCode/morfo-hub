@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub | Ingresos</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Morfo Hub</div>
+
+        <nav class="sidebar-nav">
+          <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="clients.html">Clientes</a></li>
+            <li><a href="income.html" class="active">Ingresos</a></li>
+            <li><a href="expenses.html">Gastos</a></li>
+            <li><a href="quotes.html">Cotizaciones</a></li>
+            <li><a href="reports.html">Reportes</a></li>
+            <li><a href="settings.html">Configuración</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <div class="header-title">Ingresos</div>
+          <div class="header-user">Marco / Administrador</div>
+        </header>
+
+        <main class="page-content">
+          <h1 class="section-title">Registro de ingresos</h1>
+          <p class="section-subtitle">
+            Administra los ingresos recibidos, pagos parciales y estatus de
+            cobro por cliente.
+          </p>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Nuevo ingreso
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="income-client">Cliente</label>
+                <select id="income-client">
+                  <option value="">Selecciona un cliente</option>
+                  <option value="insectalia">Insectalia</option>
+                  <option value="demo">Cliente Demo</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="income-date">Fecha</label>
+                <input type="date" id="income-date" />
+              </div>
+
+              <div class="form-group">
+                <label for="income-concept">Concepto</label>
+                <input
+                  type="text"
+                  id="income-concept"
+                  placeholder="Ej. Plan mensual de redes sociales"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="income-amount">Monto total</label>
+                <input
+                  type="number"
+                  id="income-amount"
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="income-payment-status">Estatus de pago</label>
+                <select id="income-payment-status">
+                  <option value="">Selecciona una opción</option>
+                  <option value="pending">Pendiente</option>
+                  <option value="partial">Pago parcial</option>
+                  <option value="paid">Pagado</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="income-paid-amount">Monto pagado</label>
+                <input
+                  type="number"
+                  id="income-paid-amount"
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="income-payment-method">Método de pago</label>
+                <select id="income-payment-method">
+                  <option value="">Selecciona una opción</option>
+                  <option value="transfer">Transferencia</option>
+                  <option value="cash">Efectivo</option>
+                  <option value="card">Tarjeta</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="income-invoice">¿Requiere factura?</label>
+                <select id="income-invoice">
+                  <option value="">Selecciona una opción</option>
+                  <option value="yes">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="income-notes">Observaciones</label>
+                <textarea
+                  id="income-notes"
+                  rows="4"
+                  placeholder="Notas del ingreso o condiciones del pago..."
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn-primary">Guardar ingreso</button>
+            </form>
+          </section>
+
+          <section class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Fecha</th>
+                  <th>Concepto</th>
+                  <th>Monto total</th>
+                  <th>Pagado</th>
+                  <th>Estatus</th>
+                  <th>Factura</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Insectalia</td>
+                  <td>2026-03-24</td>
+                  <td>Plan mensual redes sociales</td>
+                  <td>$8,000.00</td>
+                  <td>$4,000.00</td>
+                  <td>Pago parcial</td>
+                  <td>Sí</td>
+                </tr>
+                <tr>
+                  <td>Cliente Demo</td>
+                  <td>2026-03-22</td>
+                  <td>Diseño de landing page</td>
+                  <td>$5,500.00</td>
+                  <td>$5,500.00</td>
+                  <td>Pagado</td>
+                  <td>No</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
