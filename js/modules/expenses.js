@@ -1,8 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   const expenseForm = document.querySelector("form");
   const expenseTableBody = document.querySelector(".table tbody");
+  const submitButton = expenseForm.querySelector(".btn-primary");
 
   const STORAGE_KEY = "morfo_expenses";
+  let editingExpenseId = null;
 
   function getExpenses() {
     const expenses = localStorage.getItem(STORAGE_KEY);
@@ -20,6 +22,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function resetForm() {
+    expenseForm.reset();
+    editingExpenseId = null;
+    submitButton.textContent = "Guardar gasto";
+  }
+
   function renderExpenses() {
     const expenses = getExpenses();
     expenseTableBody.innerHTML = "";
@@ -27,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (expenses.length === 0) {
       expenseTableBody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center;">No hay gastos registrados.</td>
+          <td colspan="8" style="text-align: center;">No hay gastos registrados.</td>
         </tr>
       `;
       return;
@@ -43,14 +51,76 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${formatCurrency(expense.amount)}</td>
         <td>${expense.paymentMethod}</td>
         <td>${expense.invoice}</td>
+        <td>
+          <button type="button" class="edit-btn" data-id="${expense.id}">Editar</button>
+        </td>
+        <td>
+          <button type="button" class="delete-btn" data-id="${expense.id}">Eliminar</button>
+        </td>
       `;
 
       expenseTableBody.appendChild(row);
     });
+
+    addTableEvents();
   }
 
-  function resetForm() {
-    expenseForm.reset();
+  function fillForm(expense) {
+    document.getElementById("expense-date").value = expense.date;
+    document.getElementById("expense-concept").value = expense.concept;
+    document.getElementById("expense-category").value = expense.category;
+    document.getElementById("expense-amount").value = expense.amount;
+    document.getElementById("expense-payment-method").value =
+      expense.paymentMethod;
+    document.getElementById("expense-invoice").value =
+      expense.invoice === "Sí" ? "yes" : "no";
+    document.getElementById("expense-notes").value = expense.notes || "";
+
+    editingExpenseId = expense.id;
+    submitButton.textContent = "Actualizar gasto";
+  }
+
+  function handleEdit(expenseId) {
+    const expenses = getExpenses();
+    const expenseToEdit = expenses.find((expense) => expense.id === expenseId);
+
+    if (!expenseToEdit) return;
+
+    fillForm(expenseToEdit);
+  }
+
+  function handleDelete(expenseId) {
+    const confirmed = confirm("¿Seguro que quieres eliminar este gasto?");
+    if (!confirmed) return;
+
+    let expenses = getExpenses();
+    expenses = expenses.filter((expense) => expense.id !== expenseId);
+    saveExpenses(expenses);
+
+    if (editingExpenseId === expenseId) {
+      resetForm();
+    }
+
+    renderExpenses();
+  }
+
+  function addTableEvents() {
+    const editButtons = document.querySelectorAll(".edit-btn");
+    const deleteButtons = document.querySelectorAll(".delete-btn");
+
+    editButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const expenseId = Number(button.dataset.id);
+        handleEdit(expenseId);
+      });
+    });
+
+    deleteButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const expenseId = Number(button.dataset.id);
+        handleDelete(expenseId);
+      });
+    });
   }
 
   expenseForm.addEventListener("submit", (event) => {
@@ -78,20 +148,40 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const newExpense = {
-      id: Date.now(),
-      date,
-      concept,
-      category,
-      amount: Number(amount),
-      paymentMethod,
-      invoice: invoice === "yes" ? "Sí" : "No",
-      notes,
-    };
-
     const expenses = getExpenses();
-    expenses.push(newExpense);
-    saveExpenses(expenses);
+
+    if (editingExpenseId) {
+      const updatedExpenses = expenses.map((expense) =>
+        expense.id === editingExpenseId
+          ? {
+              ...expense,
+              date,
+              concept,
+              category,
+              amount: Number(amount),
+              paymentMethod,
+              invoice: invoice === "yes" ? "Sí" : "No",
+              notes,
+            }
+          : expense,
+      );
+
+      saveExpenses(updatedExpenses);
+    } else {
+      const newExpense = {
+        id: Date.now(),
+        date,
+        concept,
+        category,
+        amount: Number(amount),
+        paymentMethod,
+        invoice: invoice === "yes" ? "Sí" : "No",
+        notes,
+      };
+
+      expenses.push(newExpense);
+      saveExpenses(expenses);
+    }
 
     renderExpenses();
     resetForm();
