@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub | Configuración</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Morfo Hub</div>
+
+        <nav class="sidebar-nav">
+          <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="clients.html">Clientes</a></li>
+            <li><a href="income.html">Ingresos</a></li>
+            <li><a href="expenses.html">Gastos</a></li>
+            <li><a href="quotes.html">Cotizaciones</a></li>
+            <li><a href="reports.html">Reportes</a></li>
+            <li><a href="settings.html" class="active">Configuración</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <div class="header-title">Configuración</div>
+          <div class="header-user">Marco / Administrador</div>
+        </header>
+
+        <main class="page-content">
+          <h1 class="section-title">Configuración general</h1>
+          <p class="section-subtitle">
+            Administra la información base de Morfo Studio, datos de contacto y
+            textos por defecto para cotizaciones.
+          </p>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Datos de la agencia
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="agency-name">Nombre de la agencia</label>
+                <input type="text" id="agency-name" value="Morfo Studio" />
+              </div>
+
+              <div class="form-group">
+                <label for="agency-email">Correo electrónico</label>
+                <input
+                  type="email"
+                  id="agency-email"
+                  placeholder="contacto@morfostudio.com"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="agency-phone">Teléfono</label>
+                <input
+                  type="text"
+                  id="agency-phone"
+                  placeholder="222 000 0000"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="agency-address">Dirección</label>
+                <input
+                  type="text"
+                  id="agency-address"
+                  placeholder="Puebla, México"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="agency-website">Sitio web</label>
+                <input
+                  type="text"
+                  id="agency-website"
+                  placeholder="www.morfostudio.com"
+                />
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar datos de la agencia
+              </button>
+            </form>
+          </section>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Condiciones comerciales por defecto
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="default-terms"
+                  >Texto por defecto para cotizaciones</label
+                >
+                <textarea id="default-terms" rows="16">
+Nota:
+La inversión en pauta publicitaria se destina directamente a la plataforma Meta
+(Facebook e Instagram). Este monto no forma parte del servicio de gestión.
+
+Siguiente paso:
+Una vez aprobada la propuesta, se inicia la configuración de campañas y lanzamiento
+de anuncios en un plazo aproximado de 3 a 5 días hábiles.
+
+Información adicional:
+Se requiere un anticipo del 50% para comenzar con el proyecto, y el saldo restante se
+finiquitará contra la entrega total.
+
+En caso de que se necesiten correcciones, se agendarán las juntas necesarias con el
+cliente para asegurar que se logre el resultado final deseado.
+
+Los trabajos adicionales fuera del alcance de esta cotización se negociarán por
+separado.
+
+Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
+
+¡Muchas gracias!
+“Morfo Studio”</textarea
+                >
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar condiciones
+              </button>
+            </form>
+          </section>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Ajustes de factura
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="invoice-tax">IVA por defecto (%)</label>
+                <input type="number" id="invoice-tax" value="16" step="0.01" />
+              </div>
+
+              <div class="form-group">
+                <label for="invoice-note">Nota fiscal por defecto</label>
+                <textarea id="invoice-note" rows="4">
+Si se requiere factura, se añadirá un 16% adicional a los montos indicados.</textarea
+                >
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar ajustes fiscales
+              </button>
+            </form>
+          </section>
+
+          <section class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Configuración</th>
+                  <th>Valor actual</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Nombre de la agencia</td>
+                  <td>Morfo Studio</td>
+                </tr>
+                <tr>
+                  <td>IVA por defecto</td>
+                  <td>16%</td>
+                </tr>
+                <tr>
+                  <td>Anticipo sugerido</td>
+                  <td>50%</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
