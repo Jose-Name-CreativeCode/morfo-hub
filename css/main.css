@@ -270,17 +270,18 @@ img {
   line-height: 1.5;
 }
 
-/* TABLE / FUTURE MODULES */
+/* TABLE / MODULES */
 .table-wrapper {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: var(--shadow);
 }
 
 .table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
 }
 
@@ -289,16 +290,230 @@ img {
   padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  vertical-align: middle;
 }
 
 .table th {
   background: var(--panel-2);
   color: var(--text);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .table td {
   color: var(--muted);
+}
+
+.table button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.table button:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.table button:active {
+  transform: translateY(0);
+}
+
+.edit-btn {
+  background: var(--primary);
+}
+
+.delete-btn {
+  background: var(--danger);
+}
+
+.pdf-btn {
+  background: var(--secondary);
+}
+
+.manage-btn {
+  background: #64748b;
+}
+
+.status-btn {
+  background: #64748b;
+}
+
+.payment-btn {
+  background: #8b5cf6;
+}
+
+.status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  line-height: 1;
+  color: #111827;
+}
+
+.status.borrador {
+  background: #ffe082;
+}
+
+.status.enviada {
+  background: #81d4fa;
+}
+
+.status.aprobada {
+  background: #a5d6a7;
+}
+
+.status.rechazada {
+  background: #ef9a9a;
+}
+
+.status.payment.no-pagada {
+  background: #f5c6cb;
+  color: #111827;
+}
+
+.status.payment.anticipo-pagado {
+  background: #ffe082;
+  color: #111827;
+}
+
+.status.payment.pagada-total {
+  background: #a5d6a7;
+  color: #111827;
+}
+
+/* MANAGE MODAL */
+.manage-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s ease;
+  z-index: 999;
+}
+
+.manage-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.manage-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(560px, calc(100% - 32px));
+  transform: translate(-50%, -50%) scale(0.96);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s ease;
+  z-index: 1000;
+}
+
+.manage-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.manage-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.manage-modal-header h3 {
+  font-size: 1.2rem;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.manage-modal-header p {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.manage-close-btn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.manage-close-btn:hover {
+  opacity: 0.9;
+}
+
+.manage-section {
+  margin-bottom: 18px;
+}
+
+.manage-section h4 {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.manage-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manage-actions-grid .manage-action {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.manage-actions-grid .manage-action:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.manage-actions-grid .edit-btn {
+  background: var(--primary);
+}
+
+.manage-actions-grid .delete-btn {
+  background: var(--danger);
+}
+
+.manage-actions-grid .status-btn {
+  background: #64748b;
+}
+
+.manage-actions-grid .payment-btn {
+  background: #8b5cf6;
 }
 
 /* RESPONSIVE */
@@ -324,6 +539,12 @@ img {
   }
 }
 
+@media (max-width: 700px) {
+  .manage-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 600px) {
   .header {
     padding: 0 16px;
@@ -340,20 +561,8 @@ img {
   .login-card {
     padding: 24px;
   }
-}
-.table button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  color: #ffffff;
-  cursor: pointer;
-  font-weight: 600;
-}
 
-.edit-btn {
-  background: var(--primary);
-}
-
-.delete-btn {
-  background: var(--danger);
+  .table {
+    min-width: 700px;
+  }
 }

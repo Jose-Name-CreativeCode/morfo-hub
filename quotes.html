@@ -50,8 +50,6 @@
                 <label for="quote-client">Cliente</label>
                 <select id="quote-client">
                   <option value="">Selecciona un cliente</option>
-                  <option value="Insectalia">Insectalia</option>
-                  <option value="Cliente Demo">Cliente Demo</option>
                 </select>
               </div>
 
@@ -173,44 +171,180 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
             </form>
           </section>
 
-          <section class="table-wrapper">
+          <section class="table-wrapper" style="margin-bottom: 24px">
             <table class="table">
               <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Cliente</th>
-                  <th>Cotización</th>
-                  <th>Tipo</th>
-                  <th>Subtotal</th>
+                  <th>Título</th>
+                  <th>Servicio</th>
                   <th>Total</th>
-                  <th>Factura</th>
+                  <th>Estado</th>
+                  <th>Pago</th>
+                  <th>PDF</th>
+                  <th>Gestionar</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td>2026-03-24</td>
-                  <td>Insectalia</td>
-                  <td>Plan mensual + pauta Meta</td>
-                  <td>Redes sociales</td>
-                  <td>$8,000.00</td>
-                  <td>$9,280.00</td>
-                  <td>Sí</td>
-                </tr>
-                <tr>
-                  <td>2026-03-22</td>
-                  <td>Cliente Demo</td>
-                  <td>Desarrollo de página web</td>
-                  <td>Página web</td>
-                  <td>$12,000.00</td>
-                  <td>$12,000.00</td>
-                  <td>No</td>
-                </tr>
-              </tbody>
+              <tbody></tbody>
             </table>
           </section>
+
+          <div id="manage-overlay" class="manage-overlay"></div>
+
+          <div id="manage-quote-modal" class="manage-modal">
+            <div class="manage-modal-header">
+              <div>
+                <h3 id="manage-quote-title">Gestionar cotización</h3>
+                <p id="manage-quote-meta"></p>
+              </div>
+              <button type="button" id="manage-close" class="manage-close-btn">
+                ×
+              </button>
+            </div>
+
+            <div class="manage-section">
+              <h4>Acciones generales</h4>
+              <div class="manage-actions-grid">
+                <button
+                  type="button"
+                  class="manage-action edit-btn"
+                  data-action="edit"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  class="manage-action delete-btn"
+                  data-action="delete"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+
+            <div class="manage-section">
+              <h4>Estado de cotización</h4>
+              <div class="manage-actions-grid">
+                <button
+                  type="button"
+                  class="manage-action status-btn"
+                  data-action="status"
+                  data-value="enviada"
+                >
+                  Enviar
+                </button>
+                <button
+                  type="button"
+                  class="manage-action status-btn"
+                  data-action="status"
+                  data-value="aprobada"
+                >
+                  Aprobar
+                </button>
+                <button
+                  type="button"
+                  class="manage-action status-btn"
+                  data-action="status"
+                  data-value="rechazada"
+                >
+                  Rechazar
+                </button>
+              </div>
+            </div>
+
+            <div class="manage-section">
+              <h4>Registrar pago</h4>
+              <div class="manage-actions-grid">
+                <button
+                  type="button"
+                  class="manage-action payment-btn"
+                  data-action="open-payment"
+                  data-value="anticipo"
+                >
+                  Registrar anticipo
+                </button>
+                <button
+                  type="button"
+                  class="manage-action payment-btn"
+                  data-action="open-payment"
+                  data-value="total"
+                >
+                  Registrar pago total
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="payment-overlay" class="manage-overlay"></div>
+
+          <div id="payment-modal" class="manage-modal">
+            <div class="manage-modal-header">
+              <div>
+                <h3 id="payment-modal-title">Registrar pago</h3>
+                <p id="payment-modal-meta"></p>
+              </div>
+              <button type="button" id="payment-close" class="manage-close-btn">
+                ×
+              </button>
+            </div>
+
+            <form id="payment-form">
+              <div class="form-group">
+                <label for="payment-type">Tipo de pago</label>
+                <input type="text" id="payment-type" readonly />
+              </div>
+
+              <div class="form-group">
+                <label for="payment-date">Fecha de pago</label>
+                <input type="date" id="payment-date" />
+              </div>
+
+              <div class="form-group">
+                <label for="payment-amount">Monto pagado</label>
+                <input
+                  type="number"
+                  id="payment-amount"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="payment-method">Método de pago</label>
+                <select id="payment-method">
+                  <option value="">Selecciona una opción</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="payment-due-date"
+                  >Fecha pactada del pago restante</label
+                >
+                <input type="date" id="payment-due-date" />
+              </div>
+
+              <div class="form-group">
+                <label for="payment-notes">Observaciones</label>
+                <textarea
+                  id="payment-notes"
+                  rows="5"
+                  placeholder="Ej. Anticipo recibido. Falta el 50% restante..."
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn-primary">Guardar pago</button>
+            </form>
+          </div>
         </main>
       </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="js/modules/quotes.js"></script>
   </body>
 </html>

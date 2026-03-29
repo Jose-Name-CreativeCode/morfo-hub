@@ -121,6 +121,70 @@
             </form>
           </section>
 
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Filtros
+            </h2>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 16px;
+                align-items: end;
+              "
+            >
+              <div class="form-group" style="margin-bottom: 0">
+                <label for="filter-expense-year">Año</label>
+                <select id="filter-expense-year">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0">
+                <label for="filter-expense-month">Mes</label>
+                <select id="filter-expense-month">
+                  <option value="">Todos</option>
+                  <option value="01">Enero</option>
+                  <option value="02">Febrero</option>
+                  <option value="03">Marzo</option>
+                  <option value="04">Abril</option>
+                  <option value="05">Mayo</option>
+                  <option value="06">Junio</option>
+                  <option value="07">Julio</option>
+                  <option value="08">Agosto</option>
+                  <option value="09">Septiembre</option>
+                  <option value="10">Octubre</option>
+                  <option value="11">Noviembre</option>
+                  <option value="12">Diciembre</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0">
+                <button
+                  type="button"
+                  class="btn-primary"
+                  id="clear-expense-filters"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0">
+                <button
+                  type="button"
+                  class="btn-primary"
+                  id="export-expense-excel"
+                >
+                  Descargar Excel
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section class="table-wrapper">
             <table class="table">
               <thead>
@@ -141,6 +205,9 @@
         </main>
       </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
     <script src="js/modules/expenses.js"></script>
   </body>
 </html>
