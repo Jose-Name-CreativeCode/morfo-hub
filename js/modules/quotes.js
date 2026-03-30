@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const STORAGE_KEY = "morfo_quotes";
   const CLIENTS_KEY = "morfo_clients";
   const INCOME_KEY = "morfo_income";
+  const SETTINGS_KEY = "morfo_settings";
   const IVA_RATE = 0.16;
 
   let editingQuoteId = null;
@@ -51,6 +52,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function saveIncomes(incomes) {
     localStorage.setItem(INCOME_KEY, JSON.stringify(incomes));
+  }
+
+  function getSettings() {
+    const settings = localStorage.getItem(SETTINGS_KEY);
+    return settings ? JSON.parse(settings) : {};
+  }
+
+  function getSettingsAgencyName() {
+    const settings = getSettings();
+    return settings.agency?.name || "";
+  }
+
+  function getSettingsAgencyEmail() {
+    const settings = getSettings();
+    return settings.agency?.email || "";
+  }
+
+  function getSettingsAgencyPhone() {
+    const settings = getSettings();
+    return settings.agency?.phone || "";
+  }
+
+  function getSettingsAgencyWebsite() {
+    const settings = getSettings();
+    return settings.agency?.website || "";
+  }
+
+  function getSettingsAgencyAddress() {
+    const settings = getSettings();
+    return settings.agency?.address || "";
+  }
+
+  function getDefaultTerms() {
+    const settings = getSettings();
+    return settings.terms || "";
+  }
+
+  function getDefaultInvoiceTax() {
+    const settings = getSettings();
+    return Number(settings.invoice?.tax || IVA_RATE * 100);
+  }
+
+  function getDefaultInvoiceNote() {
+    const settings = getSettings();
+    return settings.invoice?.note || "";
+  }
+
+  function applyDefaultTermsToQuoteForm(force = false) {
+    const notesField = document.getElementById("quote-notes");
+    if (!notesField) return;
+
+    const defaultTerms = getDefaultTerms();
+
+    if (force || !notesField.value.trim()) {
+      notesField.value = defaultTerms;
+    }
   }
 
   function formatCurrency(amount) {
@@ -168,8 +225,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const subtotal = Number(subtotalInput.value) || 0;
     const requiresInvoice = invoiceSelect.value === "yes";
+    const taxRate = getDefaultInvoiceTax() / 100;
 
-    const iva = requiresInvoice ? subtotal * IVA_RATE : 0;
+    const iva = requiresInvoice ? subtotal * taxRate : 0;
     const total = subtotal + iva;
 
     ivaInput.value = iva.toFixed(2);
@@ -182,6 +240,8 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Guardar cotización";
     document.getElementById("quote-iva").value = "";
     document.getElementById("quote-total").value = "";
+
+    applyDefaultTermsToQuoteForm(true);
   }
 
   function resetPaymentForm() {
@@ -601,7 +661,8 @@ document.addEventListener("DOMContentLoaded", () => {
       quote.invoiceRequired === "Sí" ? "yes" : "no";
     document.getElementById("quote-iva").value = quote.iva;
     document.getElementById("quote-total").value = quote.total;
-    document.getElementById("quote-notes").value = quote.notes || "";
+    document.getElementById("quote-notes").value =
+      quote.notes || getDefaultTerms();
 
     editingQuoteId = quote.id;
     submitButton.textContent = "Actualizar cotización";
@@ -1083,6 +1144,19 @@ document.addEventListener("DOMContentLoaded", () => {
       format: "letter",
     });
 
+    const agencyName = getSettingsAgencyName();
+    const agencyEmail = getSettingsAgencyEmail();
+    const agencyPhone = getSettingsAgencyPhone();
+    const agencyWebsite = getSettingsAgencyWebsite();
+    const agencyAddress = getSettingsAgencyAddress();
+    const defaultTerms = getDefaultTerms();
+    const defaultInvoiceNote = getDefaultInvoiceNote();
+
+    const dynamicNotes = [quote.notes || "", defaultInvoiceNote || ""]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .join("\n\n");
+
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const marginX = 50;
@@ -1308,6 +1382,26 @@ document.addEventListener("DOMContentLoaded", () => {
       doc.text("COTIZACIÓN", pageWidth - 112, 47, { align: "center" });
 
       y = 130;
+
+      doc.setTextColor(...colors.dark);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(agencyName, marginX, 112);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const contactParts = [
+        agencyEmail,
+        agencyPhone,
+        agencyWebsite,
+        agencyAddress,
+      ].filter(Boolean);
+
+      if (contactParts.length > 0) {
+        doc.setTextColor(...colors.muted);
+        doc.text(contactParts.join("  |  "), marginX, 128);
+      }
     }
 
     await drawHeader();
@@ -1329,13 +1423,13 @@ document.addEventListener("DOMContentLoaded", () => {
     drawTotalsBox();
 
     drawSectionTitle("Condiciones y observaciones");
-    drawParagraph(quote.notes || "-", 10.5, colors.text, 10);
+    drawParagraph(dynamicNotes || defaultTerms || "-", 10.5, colors.text, 10);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(...colors.muted);
     doc.text(
-      "Gracias por considerar a Morfo Studio para este proyecto.",
+      `Gracias por considerar a ${agencyName} para este proyecto.`,
       marginX,
       pageHeight - 30,
     );
@@ -1410,7 +1504,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const invoiceValue = document.getElementById("quote-invoice").value;
     const iva = Number(document.getElementById("quote-iva").value) || 0;
     const total = Number(document.getElementById("quote-total").value) || 0;
-    const notes = document.getElementById("quote-notes").value.trim();
+    const rawNotes = document.getElementById("quote-notes").value.trim();
+    const notes = rawNotes || getDefaultTerms();
 
     if (
       !client ||
@@ -1493,4 +1588,19 @@ document.addEventListener("DOMContentLoaded", () => {
   bindManageActions();
   loadClientOptions();
   renderQuotes();
+  resetForm();
+
+  window.addEventListener("focus", () => {
+    if (!editingQuoteId) {
+      applyDefaultTermsToQuoteForm(true);
+      calculateTotals();
+    }
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === SETTINGS_KEY && !editingQuoteId) {
+      applyDefaultTermsToQuoteForm(true);
+      calculateTotals();
+    }
+  });
 });
