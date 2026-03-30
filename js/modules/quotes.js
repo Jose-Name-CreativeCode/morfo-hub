@@ -212,7 +212,158 @@ document.addEventListener("DOMContentLoaded", () => {
     return "no-pagada";
   }
 
+  function normalizeIncomePaymentStatus(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  function inferQuotePaymentStatusFromIncome(quote, income) {
+    const quoteTotal = Number(quote.total || 0);
+
+    if (!income) {
+      return {
+        paymentStatus: "no pagada",
+        totalPaid: 0,
+        remainingAmount: quoteTotal,
+        linkedIncomeId: "",
+        paymentMethod: "",
+      };
+    }
+
+    const incomeStatus = normalizeIncomePaymentStatus(income.paymentStatus);
+    const incomePaidAmount = Number(income.paidAmount || 0);
+    const incomeRemainingRaw =
+      income.remainingAmount !== undefined && income.remainingAmount !== null
+        ? Number(income.remainingAmount || 0)
+        : Math.max(quoteTotal - incomePaidAmount, 0);
+    const incomeRemainingAmount = Math.max(incomeRemainingRaw, 0);
+
+    if (
+      incomeStatus === "pendiente" ||
+      incomeStatus === "no pagada" ||
+      incomeStatus === "no_pagada"
+    ) {
+      return {
+        paymentStatus: "no pagada",
+        totalPaid: 0,
+        remainingAmount: quoteTotal,
+        linkedIncomeId: income.publicId || "",
+        paymentMethod: income.paymentMethod || "",
+      };
+    }
+
+    if (
+      incomeStatus === "parcial" ||
+      incomeStatus === "anticipo pagado" ||
+      incomeStatus === "anticipo_pagado"
+    ) {
+      const paidAmount =
+        incomePaidAmount > 0
+          ? incomePaidAmount
+          : Math.max(quoteTotal - incomeRemainingAmount, 0);
+
+      return {
+        paymentStatus: "anticipo pagado",
+        totalPaid: paidAmount,
+        remainingAmount: Math.max(quoteTotal - paidAmount, 0),
+        linkedIncomeId: income.publicId || "",
+        paymentMethod: income.paymentMethod || "",
+      };
+    }
+
+    if (incomeStatus === "pagado" || incomeStatus === "pagada total") {
+      return {
+        paymentStatus: "pagada total",
+        totalPaid: quoteTotal,
+        remainingAmount: 0,
+        linkedIncomeId: income.publicId || "",
+        paymentMethod: income.paymentMethod || "",
+      };
+    }
+
+    if (incomeRemainingAmount === 0 && incomePaidAmount > 0) {
+      return {
+        paymentStatus: "pagada total",
+        totalPaid: quoteTotal,
+        remainingAmount: 0,
+        linkedIncomeId: income.publicId || "",
+        paymentMethod: income.paymentMethod || "",
+      };
+    }
+
+    if (incomePaidAmount > 0 && incomeRemainingAmount > 0) {
+      return {
+        paymentStatus: "anticipo pagado",
+        totalPaid: incomePaidAmount,
+        remainingAmount: incomeRemainingAmount,
+        linkedIncomeId: income.publicId || "",
+        paymentMethod: income.paymentMethod || "",
+      };
+    }
+
+    return {
+      paymentStatus: "no pagada",
+      totalPaid: 0,
+      remainingAmount: quoteTotal,
+      linkedIncomeId: income.publicId || "",
+      paymentMethod: income.paymentMethod || "",
+    };
+  }
+
+  function syncQuotesWithIncomes() {
+    const quotes = getQuotes();
+    const incomes = getIncomes();
+
+    let changed = false;
+
+    const updatedQuotes = quotes.map((quote) => {
+      const income = incomes.find((item) => item.quoteId === quote.id);
+      const nextPaymentState = inferQuotePaymentStatusFromIncome(quote, income);
+
+      const quotePaymentStatus = String(quote.paymentStatus || "").trim();
+      const quoteTotalPaid = Number(quote.totalPaid || 0);
+      const quoteRemainingAmount =
+        quote.remainingAmount !== undefined && quote.remainingAmount !== null
+          ? Number(quote.remainingAmount || 0)
+          : Number(quote.total || 0);
+      const quoteLinkedIncomeId = String(quote.linkedIncomeId || "");
+      const quotePaymentMethod = String(quote.paymentMethod || "");
+
+      const mustUpdate =
+        quotePaymentStatus !== nextPaymentState.paymentStatus ||
+        quoteTotalPaid !== nextPaymentState.totalPaid ||
+        quoteRemainingAmount !== nextPaymentState.remainingAmount ||
+        quoteLinkedIncomeId !== nextPaymentState.linkedIncomeId ||
+        quotePaymentMethod !== nextPaymentState.paymentMethod;
+
+      if (!mustUpdate) {
+        return quote;
+      }
+
+      changed = true;
+
+      return {
+        ...quote,
+        paymentStatus: nextPaymentState.paymentStatus,
+        totalPaid: nextPaymentState.totalPaid,
+        remainingAmount: nextPaymentState.remainingAmount,
+        linkedIncomeId: nextPaymentState.linkedIncomeId,
+        paymentMethod: nextPaymentState.paymentMethod,
+      };
+    });
+
+    if (changed) {
+      saveQuotes(updatedQuotes);
+    }
+
+    return updatedQuotes;
+  }
+
   function getQuoteById(id) {
+    syncQuotesWithIncomes();
     return getQuotes().find((q) => q.id === id);
   }
 
@@ -253,7 +404,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const alreadyPaid = Number(income?.paidAmount || 0);
     const remaining = Math.max(total - alreadyPaid, 0);
 
-    // SOLO bloquear si está pagada Y sí existe ingreso
     if (quote.paymentStatus === "pagada total" && income) {
       alert(
         `La cotización ${quote.publicId} ya fue liquidada por completo. No se puede registrar otro pago.`,
@@ -262,7 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (type === "anticipo") {
-      if (income) {
+      if (income && Number(income.paidAmount || 0) > 0) {
         alert(
           `La cotización ${quote.publicId} ya tiene un ingreso relacionado (${income.publicId}). No se puede registrar otro anticipo.`,
         );
@@ -370,6 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterSelect = document.getElementById("filter-client");
     if (!filterSelect) return;
 
+    syncQuotesWithIncomes();
     const quotes = getQuotes();
     const uniqueClients = [
       ...new Set(quotes.map((q) => q.client).filter(Boolean)),
@@ -389,9 +540,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderQuotes() {
     ensureQuoteTableHeader();
-    loadFilterOptions();
+
+    syncQuotesWithIncomes();
 
     let quotes = getQuotes();
+    loadFilterOptions();
 
     if (selectedClientFilter) {
       quotes = quotes.filter((quote) => quote.client === selectedClientFilter);
@@ -562,7 +715,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const existingIncome = incomes.find((income) => income.quoteId === quoteId);
 
     if (paymentType === "anticipo") {
-      if (existingIncome) {
+      if (existingIncome && Number(existingIncome.paidAmount || 0) > 0) {
         alert(
           `La cotización ${quote.publicId} ya tiene un ingreso relacionado (${existingIncome.publicId}). No se puede registrar otro anticipo.`,
         );
@@ -744,7 +897,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
       }
 
-      // Si NO existe ingreso, crearlo aunque la cotización ya tenga estado pagada total
       const nextIncomeId = buildSequentialId("ING", incomes, "publicId");
       const mergedNotes = buildPaymentNote({
         paymentDate,
@@ -1005,11 +1157,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function drawInfoCard() {
-      ensureSpace(120);
+      ensureSpace(100);
 
       doc.setFillColor(...colors.lightBg);
       doc.setDrawColor(...colors.border);
-      doc.roundedRect(marginX, y, contentWidth, 105, 10, 10, "FD");
+      doc.roundedRect(marginX, y, contentWidth, 82, 10, 10, "FD");
 
       doc.setTextColor(...colors.dark);
       doc.setFont("helvetica", "bold");
@@ -1021,18 +1173,8 @@ document.addEventListener("DOMContentLoaded", () => {
       doc.setFontSize(11);
       doc.setTextColor(...colors.text);
       doc.text(`Fecha: ${quote.date}`, marginX + 16, y + 66);
-      doc.text(
-        `Estado de cotización: ${quote.status || "borrador"}`,
-        marginX + 16,
-        y + 86,
-      );
-      doc.text(
-        `Estado de pago: ${quote.paymentStatus || "no pagada"}`,
-        marginX + 16,
-        y + 104,
-      );
 
-      y += 128;
+      y += 106;
     }
 
     function drawParagraph(text, size = 11, color = colors.text, extra = 10) {
@@ -1146,26 +1288,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const logoData = await loadImageAsDataURL(
           "assets/logos/logo-morfo.png",
         );
-        doc.addImage(logoData, "PNG", marginX, 20, 60, 60);
+        doc.addImage(logoData, "PNG", marginX, 10, 150, 90);
       } catch (error) {
         console.error("No se pudo cargar el logo:", error);
       }
 
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(24);
-      doc.text("Morfo Marketing Creative Studio", marginX + 75, 42);
+      doc.setFontSize(22);
 
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.text("Cotización comercial", marginX + 75, 64);
+      doc.setFontSize(12);
 
       doc.setFillColor(...colors.accent);
-      doc.roundedRect(pageWidth - 170, 30, 120, 28, 8, 8, "F");
+      doc.roundedRect(pageWidth - 175, 28, 125, 30, 8, 8, "F");
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(255, 255, 255);
-      doc.text("PROPUESTA", pageWidth - 110, 49, { align: "center" });
+      doc.text("COTIZACIÓN", pageWidth - 112, 47, { align: "center" });
 
       y = 130;
     }
@@ -1338,6 +1478,7 @@ document.addEventListener("DOMContentLoaded", () => {
       saveQuotes(existingQuotes);
     }
 
+    syncQuotesWithIncomes();
     renderQuotes();
     resetForm();
     loadClientOptions();
@@ -1347,6 +1488,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ensureQuoteIds();
   ensureIncomeIds();
   repairMissingIncomes();
+  syncQuotesWithIncomes();
   ensureFilterUI();
   bindManageActions();
   loadClientOptions();

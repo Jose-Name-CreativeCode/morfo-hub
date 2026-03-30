@@ -37,8 +37,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function normalizeText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
   function normalizePaymentStatus(status) {
-    if (status === "Parcial") return "Pago parcial";
+    const normalized = normalizeText(status);
+
+    if (normalized === "parcial" || normalized === "pago parcial") {
+      return "Pago parcial";
+    }
+
+    if (normalized === "pagado" || normalized === "pagada total") {
+      return "Pagado";
+    }
+
+    if (
+      normalized === "pendiente" ||
+      normalized === "no pagada" ||
+      normalized === "no_pagada"
+    ) {
+      return "Pendiente";
+    }
+
     return status || "";
   }
 
@@ -46,6 +71,44 @@ document.addEventListener("DOMContentLoaded", () => {
     const total = Number(income.totalAmount || 0);
     const paid = Number(income.paidAmount || 0);
     return Math.max(total - paid, 0);
+  }
+
+  function getPaymentStatusBadge(status) {
+    const label = normalizePaymentStatus(status);
+    const normalized = normalizeText(label);
+
+    let background = "#fee2e2";
+    let textColor = "#991b1b";
+
+    if (normalized === "pagado") {
+      background = "#dcfce7";
+      textColor = "#166534";
+    } else if (normalized === "pago parcial" || normalized === "parcial") {
+      background = "#fef3c7";
+      textColor = "#92400e";
+    } else if (normalized === "pendiente") {
+      background = "#fee2e2";
+      textColor = "#991b1b";
+    }
+
+    return `
+      <span
+        style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 6px 12px;
+          border-radius: 999px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          background: ${background};
+          color: ${textColor};
+          min-width: 110px;
+        "
+      >
+        ${label || "-"}
+      </span>
+    `;
   }
 
   function loadClientOptions() {
@@ -143,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${income.concept || "-"}</td>
         <td>${formatCurrency(income.totalAmount)}</td>
         <td>${formatCurrency(income.paidAmount)}</td>
-        <td>${normalizePaymentStatus(income.paymentStatus) || "-"}</td>
+        <td>${getPaymentStatusBadge(income.paymentStatus)}</td>
         <td>${income.invoiceRequired || "-"}</td>
         <td>
           <button type="button" class="edit-btn" data-id="${income.id}">Editar</button>
@@ -368,7 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
       row.getCell(6).numFmt = "$#,##0.00";
 
       const statusCell = row.getCell(7);
-      const statusText = String(statusCell.value || "").toLowerCase();
+      const statusText = normalizeText(statusCell.value);
 
       if (statusText.includes("pagado")) {
         statusCell.fill = {
@@ -457,6 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fileName,
     );
   }
+
   incomeForm.addEventListener("submit", (event) => {
     event.preventDefault();
 

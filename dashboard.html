@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Morfo Hub | Dashboard</title>
     <link rel="stylesheet" href="css/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div class="app-layout">
@@ -27,17 +28,42 @@
       <div class="main-content">
         <header class="header">
           <div class="header-title">Dashboard</div>
-          <div class="header-user">Marco / Administrador</div>
+          <div class="header-user">Jose / Administrador</div>
         </header>
 
         <main class="page-content">
-          <h1 class="section-title">Resumen general</h1>
-          <p class="section-subtitle">
-            Visualiza el estado actual de ingresos, gastos, clientes y
-            pendientes.
-          </p>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 16px;
+              flex-wrap: wrap;
+              margin-bottom: 20px;
+            "
+          >
+            <div>
+              <h1 class="section-title">Resumen general</h1>
+              <p class="section-subtitle">
+                Visualiza el estado actual de ingresos, gastos, clientes y
+                pendientes.
+              </p>
+            </div>
 
-          <section class="cards-grid">
+            <a
+              href="reports.html"
+              class="btn-primary"
+              style="
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+              "
+            >
+              Ir a reportes
+            </a>
+          </div>
+
+          <section class="cards-grid" style="margin-bottom: 24px">
             <article class="card income">
               <div class="card-label">Ingresos del mes</div>
               <div class="card-value">$0.00</div>
@@ -63,9 +89,149 @@
               <div class="card-value">$0.00</div>
             </article>
           </section>
+
+          <section class="card" style="margin-bottom: 24px">
+            <h2
+              class="section-title"
+              style="font-size: 1.1rem; margin-bottom: 16px"
+            >
+              Accesos rápidos
+            </h2>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 12px;
+              "
+            >
+              <a
+                href="clients.html"
+                class="btn-primary"
+                style="text-align: center; text-decoration: none"
+              >
+                Clientes
+              </a>
+
+              <a
+                href="income.html"
+                class="btn-primary"
+                style="text-align: center; text-decoration: none"
+              >
+                Ingresos
+              </a>
+
+              <a
+                href="expenses.html"
+                class="btn-primary"
+                style="text-align: center; text-decoration: none"
+              >
+                Gastos
+              </a>
+
+              <a
+                href="quotes.html"
+                class="btn-primary"
+                style="text-align: center; text-decoration: none"
+              >
+                Cotización
+              </a>
+            </div>
+          </section>
+
+          <section
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 24px;
+              margin-bottom: 24px;
+            "
+          >
+            <article class="card">
+              <h2
+                class="section-title"
+                style="font-size: 1.1rem; margin-bottom: 16px"
+              >
+                Distribución financiera
+              </h2>
+
+              <div style="max-width: 340px; margin: 0 auto; padding: 10px 0">
+                <canvas id="financePieChart"></canvas>
+              </div>
+            </article>
+
+            <article class="card">
+              <h2
+                class="section-title"
+                style="font-size: 1.1rem; margin-bottom: 16px"
+              >
+                Resumen de cotizaciones
+              </h2>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(2, minmax(120px, 1fr));
+                  gap: 12px;
+                "
+              >
+                <div class="card" style="padding: 16px">
+                  <div class="card-label">Borrador</div>
+                  <div class="card-value" id="quoteDraftCount">0</div>
+                </div>
+
+                <div class="card" style="padding: 16px">
+                  <div class="card-label">Enviadas</div>
+                  <div class="card-value" id="quoteSentCount">0</div>
+                </div>
+
+                <div class="card" style="padding: 16px">
+                  <div class="card-label">Aprobadas</div>
+                  <div class="card-value" id="quoteApprovedCount">0</div>
+                </div>
+
+                <div class="card" style="padding: 16px">
+                  <div class="card-label">Rechazadas</div>
+                  <div class="card-value" id="quoteRejectedCount">0</div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section style="margin-bottom: 24px">
+            <article class="card">
+              <h2
+                class="section-title"
+                style="font-size: 1.1rem; margin-bottom: 16px"
+              >
+                Actividad reciente
+              </h2>
+
+              <div class="table-wrapper">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Concepto</th>
+                      <th>Fecha</th>
+                      <th>Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentActivityBody">
+                    <tr>
+                      <td colspan="4" style="text-align: center">
+                        No hay actividad reciente.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
         </main>
       </div>
     </div>
+
     <script src="js/modules/dashboard.js"></script>
   </body>
 </html>
