@@ -4,8 +4,10 @@ import {
   getClientsCollection,
   saveClientRecord,
 } from "../services/clients-service.js";
+import { askConfirm, setPageLoading, showToast } from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
 
   const clientForm = document.querySelector("form");
@@ -26,16 +28,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     return cell;
   }
 
+  function createEmptyStateRow(message, columns) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columns;
+    cell.style.textAlign = "center";
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
+
   async function renderClients() {
     currentClients = await getClientsCollection();
-    clientTableBody.innerHTML = "";
+    clientTableBody.replaceChildren();
 
     if (currentClients.length === 0) {
-      clientTableBody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align: center;">No hay clientes registrados.</td>
-        </tr>
-      `;
+      clientTableBody.appendChild(
+        createEmptyStateRow("No hay clientes registrados.", 8),
+      );
       return;
     }
 
@@ -98,7 +108,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function handleDelete(clientId) {
-    const confirmed = confirm("¿Seguro que quieres eliminar este cliente?");
+    const confirmed = await askConfirm({
+      title: "Eliminar cliente",
+      message: "¿Seguro que quieres eliminar este cliente?",
+      confirmText: "Eliminar",
+    });
     if (!confirmed) return;
 
     await deleteClientRecord(clientId);
@@ -108,6 +122,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await renderClients();
+    showToast("Cliente eliminado correctamente.", { type: "success" });
   }
 
   function addTableEvents() {
@@ -141,7 +156,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const notes = document.getElementById("client-notes").value.trim();
 
     if (!name || !contact || !email || !phone || !status || !invoiceRequired) {
-      alert("Por favor, completa todos los campos obligatorios.");
+      showToast("Por favor, completa todos los campos obligatorios.", {
+        type: "error",
+      });
       return;
     }
 
@@ -158,7 +175,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await renderClients();
     resetForm();
+    showToast("Cliente guardado correctamente.", { type: "success" });
   });
 
-  await renderClients();
+  try {
+    await renderClients();
+  } finally {
+    setPageLoading(false);
+  }
 });

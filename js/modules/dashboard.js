@@ -1,14 +1,18 @@
 import { protectPage } from "../services/auth.js";
-import { STORAGE_KEYS, getData } from "../services/storage.js";
-import { formatCurrency, formatDate, normalizeText } from "../utils.js";
+import { getClientsCollection } from "../services/clients-service.js";
+import { getExpensesCollection } from "../services/expenses-service.js";
+import { getIncomeCollection } from "../services/income-service.js";
+import { getQuotesCollection } from "../services/quotes-service.js";
+import {
+  formatCurrency,
+  formatDate,
+  normalizeText,
+  setPageLoading,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
-
-  const incomeKey = STORAGE_KEYS.INCOME;
-  const expensesKey = STORAGE_KEYS.EXPENSES;
-  const clientsKey = STORAGE_KEYS.CLIENTS;
-  const quotesKey = STORAGE_KEYS.QUOTES;
 
   const cards = document.querySelectorAll(".cards-grid .card-value");
 
@@ -184,12 +188,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  function getDashboardData() {
-    const incomes = getData(incomeKey);
-    const expenses = getData(expensesKey);
-    const clients = getData(clientsKey);
-    const quotes = getData(quotesKey);
-
+  function getDashboardData({ incomes, expenses, clients, quotes }) {
     const monthlyIncomes = incomes.filter((item) =>
       isCurrentMonth(item.date || item.createdAt),
     );
@@ -292,31 +291,40 @@ document.addEventListener("DOMContentLoaded", async () => {
       .slice(0, 6);
   }
 
+  function createCell(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
+
+  function createEmptyStateRow(message, columns) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columns;
+    cell.style.textAlign = "center";
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
+
   function renderRecentActivity(rows) {
     if (!recentActivityBody) return;
 
-    recentActivityBody.innerHTML = "";
+    recentActivityBody.replaceChildren();
 
     if (!rows.length) {
-      recentActivityBody.innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align: center;">
-            No hay actividad reciente.
-          </td>
-        </tr>
-      `;
+      recentActivityBody.appendChild(
+        createEmptyStateRow("No hay actividad reciente.", 4),
+      );
       return;
     }
 
     rows.forEach((row) => {
       const tr = document.createElement("tr");
-
-      tr.innerHTML = `
-        <td>${row.type}</td>
-        <td>${row.concept}</td>
-        <td>${formatDate(row.date)}</td>
-        <td>${formatCurrency(row.amount)}</td>
-      `;
+      tr.appendChild(createCell(row.type));
+      tr.appendChild(createCell(row.concept));
+      tr.appendChild(createCell(formatDate(row.date)));
+      tr.appendChild(createCell(formatCurrency(row.amount)));
 
       recentActivityBody.appendChild(tr);
     });
@@ -369,8 +377,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function loadDashboardData() {
-    const data = getDashboardData();
+  async function refreshDashboardData() {
+    const [incomes, expenses, clients, quotes] = await Promise.all([
+      getIncomeCollection(),
+      getExpensesCollection(),
+      getClientsCollection(),
+      getQuotesCollection(),
+    ]);
+
+    const data = getDashboardData({
+      incomes,
+      expenses,
+      clients,
+      quotes,
+    });
 
     incomeCard.textContent = formatCurrency(data.totalIncome);
     expenseCard.textContent = formatCurrency(data.totalExpenses);
@@ -383,5 +403,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderFinancePieChart(data);
   }
 
-  loadDashboardData();
+  try {
+    await refreshDashboardData();
+  } finally {
+    setPageLoading(false);
+  }
+
+  window.addEventListener("focus", async () => {
+    await refreshDashboardData();
+  });
 });

@@ -97,12 +97,37 @@ export function setHeaderUser(user) {
   const headerUser = document.querySelector(".header-user");
   if (!headerUser) return;
 
+  let actions = document.querySelector(".header-actions");
+
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.className = "header-actions";
+
+    const parent = headerUser.parentElement;
+    if (parent) {
+      parent.appendChild(actions);
+    }
+  }
+
+  actions.replaceChildren();
+
   if (!user?.email) {
     headerUser.textContent = "Modo local";
     return;
   }
 
   headerUser.textContent = `${user.email} / Administrador`;
+
+  const logoutButton = document.createElement("button");
+  logoutButton.type = "button";
+  logoutButton.className = "header-logout-btn";
+  logoutButton.textContent = "Cerrar sesión";
+  logoutButton.addEventListener("click", async () => {
+    await logoutCurrentUser();
+    window.location.href = getLoginUrl();
+  });
+
+  actions.appendChild(logoutButton);
 }
 
 export async function protectPage({

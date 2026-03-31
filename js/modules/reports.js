@@ -1,17 +1,22 @@
 import { protectPage } from "../services/auth.js";
-import { STORAGE_KEYS, getData } from "../services/storage.js";
-import { formatCurrency, formatDate, normalizeText } from "../utils.js";
+import { getClientsCollection } from "../services/clients-service.js";
+import { getExpensesCollection } from "../services/expenses-service.js";
+import { getIncomeCollection } from "../services/income-service.js";
+import { getQuotesCollection } from "../services/quotes-service.js";
+import {
+  formatCurrency,
+  formatDate,
+  normalizeText,
+  setPageLoading,
+  showToast,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
 
   const reportForm = document.querySelector("form");
   const exportPdfBtn = document.getElementById("exportReportPdfBtn");
-
-  const incomeKey = STORAGE_KEYS.INCOME;
-  const expensesKey = STORAGE_KEYS.EXPENSES;
-  const clientsKey = STORAGE_KEYS.CLIENTS;
-  const quotesKey = STORAGE_KEYS.QUOTES;
 
   const cards = document.querySelectorAll(".card-value");
   const incomeCard = cards[0];
@@ -220,27 +225,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "Pendiente";
   }
 
+  function createCell(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
+
+  function createEmptyStateRow(message, columns) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columns;
+    cell.style.textAlign = "center";
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
+
   function renderTableRows(data) {
-    tableBody.innerHTML = "";
+    tableBody.replaceChildren();
 
     if (!data || data.length === 0) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center;">No hay datos para este filtro.</td>
-        </tr>
-      `;
+      tableBody.appendChild(
+        createEmptyStateRow("No hay datos para este filtro.", 5),
+      );
       return;
     }
 
     data.forEach((item) => {
       const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${item.concept || "-"}</td>
-        <td>${item.category || "-"}</td>
-        <td>${item.date || "-"}</td>
-        <td>${item.amount || "-"}</td>
-        <td>${item.type || "-"}</td>
-      `;
+      row.appendChild(createCell(item.concept || "-"));
+      row.appendChild(createCell(item.category || "-"));
+      row.appendChild(createCell(item.date || "-"));
+      row.appendChild(createCell(item.amount || "-"));
+      row.appendChild(createCell(item.type || "-"));
       tableBody.appendChild(row);
     });
   }
@@ -360,28 +377,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     ]);
   }
 
-  function generateReport(month, year, reportTypeRaw) {
+  async function generateReport(month, year, reportTypeRaw) {
     const reportType = normalizeReportType(reportTypeRaw);
 
+    const [allIncomes, allExpenses, allQuotes, clients] = await Promise.all([
+      getIncomeCollection(),
+      getExpensesCollection(),
+      getQuotesCollection(),
+      getClientsCollection(),
+    ]);
+
     const incomes = getFilteredMonthYear(
-      getData(incomeKey),
+      allIncomes,
       "date",
       month,
       year,
     );
     const expenses = getFilteredMonthYear(
-      getData(expensesKey),
+      allExpenses,
       "date",
       month,
       year,
     );
     const quotes = getFilteredMonthYear(
-      getData(quotesKey),
+      allQuotes,
       "date",
       month,
       year,
     );
-    const clients = getData(clientsKey);
 
     const totalIncome = incomes.reduce(
       (sum, item) => sum + getIncomeAmount(item),
@@ -466,7 +489,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function exportCurrentReportToPDF() {
     if (!window.jspdf || !window.jspdf.jsPDF) {
-      alert("No se cargó jsPDF. Revisa reports.html.");
+      showToast("No se cargó jsPDF. Revisa reports.html.", { type: "error" });
       return;
     }
 
@@ -628,14 +651,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   if (reportForm) {
-    reportForm.addEventListener("submit", (event) => {
+    reportForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const month = document.getElementById("report-month").value;
       const year = document.getElementById("report-year").value.trim();
       const reportTypeRaw = document.getElementById("report-type").value;
 
-      generateReport(month, year, reportTypeRaw);
+      await generateReport(month, year, reportTypeRaw);
     });
   }
 
@@ -643,5 +666,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     exportPdfBtn.addEventListener("click", exportCurrentReportToPDF);
   }
 
-  generateReport("", "", "general");
+  try {
+    await generateReport("", "", "general");
+  } finally {
+    setPageLoading(false);
+  }
+
+  window.addEventListener("focus", async () => {
+    await generateReport(
+      currentReportState.month,
+      currentReportState.year,
+      currentReportState.reportType,
+    );
+  });
 });

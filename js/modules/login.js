@@ -3,6 +3,7 @@ import {
   loginWithEmail,
   redirectAuthenticatedUser,
 } from "../services/auth.js";
+import { setButtonLoading } from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const loginForm = document.querySelector("form");
@@ -40,8 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    submitButton.disabled = true;
-    submitButton.textContent = "Entrando...";
+    setButtonLoading(submitButton, true, "Entrando...");
     message.textContent = "Validando acceso...";
     message.style.color = "#475569";
 
@@ -53,8 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         error?.message || "No fue posible iniciar sesion. Revisa tus credenciales.";
       message.style.color = "#b91c1c";
     } finally {
-      submitButton.disabled = false;
-      submitButton.textContent = "Iniciar sesión";
+      setButtonLoading(submitButton, false);
     }
   });
 });

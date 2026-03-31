@@ -13,6 +13,9 @@ export default [
       sourceType: "module",
       globals: {
         ...globals.browser,
+        Chart: "readonly",
+        ExcelJS: "readonly",
+        saveAs: "readonly",
       },
     },
     rules: {

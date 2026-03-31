@@ -6,29 +6,12 @@
     <title>Morfo Hub | Cotizaciones</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
-  <body>
+  <body data-page-title="Cotizaciones" data-nav-key="quotes">
     <div class="app-layout">
-      <aside class="sidebar">
-        <div class="sidebar-brand">Morfo Hub</div>
-
-        <nav class="sidebar-nav">
-          <ul>
-            <li><a href="dashboard.html">Dashboard</a></li>
-            <li><a href="clients.html">Clientes</a></li>
-            <li><a href="income.html">Ingresos</a></li>
-            <li><a href="expenses.html">Gastos</a></li>
-            <li><a href="quotes.html" class="active">Cotizaciones</a></li>
-            <li><a href="reports.html">Reportes</a></li>
-            <li><a href="settings.html">Configuración</a></li>
-          </ul>
-        </nav>
-      </aside>
+      <aside class="sidebar" data-app-sidebar></aside>
 
       <div class="main-content">
-        <header class="header">
-          <div class="header-title">Cotizaciones</div>
-          <div class="header-user">Jose / Administrador</div>
-        </header>
+        <header class="header" data-app-header></header>
 
         <main class="page-content">
           <h1 class="section-title">Gestión de cotizaciones</h1>
@@ -345,6 +328,7 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script type="module" src="js/app.js"></script>
     <script type="module" src="js/modules/quotes.js"></script>
   </body>
 </html>

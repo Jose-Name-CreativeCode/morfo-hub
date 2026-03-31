@@ -1,8 +1,21 @@
 import { protectPage } from "../services/auth.js";
-import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
-import { formatCurrency, normalizeText } from "../utils.js";
+import { getClientsCollection } from "../services/clients-service.js";
+import {
+  deleteIncomeRecord,
+  getIncomeCollection,
+  saveIncomeRecord,
+} from "../services/income-service.js";
+import {
+  askConfirm,
+  formatCurrency,
+  normalizeText,
+  setButtonLoading,
+  setPageLoading,
+  showToast,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
 
   console.log("income.js cargado correctamente");
@@ -17,22 +30,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const clearFiltersBtn = document.getElementById("clear-income-filters");
   const exportExcelBtn = document.getElementById("export-income-excel");
 
-  const STORAGE_KEY = STORAGE_KEYS.INCOME;
-  const CLIENTS_KEY = STORAGE_KEYS.CLIENTS;
-
   let editingIncomeId = null;
-
-  function getIncomes() {
-    return getData(STORAGE_KEY, []);
-  }
-
-  function saveIncomes(incomes) {
-    saveData(STORAGE_KEY, incomes);
-  }
-
-  function getClients() {
-    return getData(CLIENTS_KEY, []);
-  }
+  let currentIncomes = [];
+  let currentClients = [];
 
   function normalizePaymentStatus(status) {
     const normalized = normalizeText(status);
@@ -80,37 +80,57 @@ document.addEventListener("DOMContentLoaded", async () => {
       textColor = "#991b1b";
     }
 
-    return `
-      <span
-        style="
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 6px 12px;
-          border-radius: 999px;
-          font-size: 0.85rem;
-          font-weight: 700;
-          background: ${background};
-          color: ${textColor};
-          min-width: 110px;
-        "
-      >
-        ${label || "-"}
-      </span>
-    `;
+    const badge = document.createElement("span");
+    badge.style.display = "inline-flex";
+    badge.style.alignItems = "center";
+    badge.style.justifyContent = "center";
+    badge.style.padding = "6px 12px";
+    badge.style.borderRadius = "999px";
+    badge.style.fontSize = "0.85rem";
+    badge.style.fontWeight = "700";
+    badge.style.background = background;
+    badge.style.color = textColor;
+    badge.style.minWidth = "110px";
+    badge.textContent = label || "-";
+    return badge;
   }
 
-  function loadClientOptions() {
-    const clients = getClients();
+  function createCell(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
 
-    clientSelect.innerHTML = `<option value="">Selecciona un cliente</option>`;
+  function createEmptyStateRow(message, columns) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columns;
+    cell.style.textAlign = "center";
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
 
-    if (clients.length === 0) {
-      clientSelect.innerHTML += `<option value="" disabled>No hay clientes registrados</option>`;
+  async function loadClientOptions() {
+    currentClients = await getClientsCollection();
+
+    clientSelect.replaceChildren();
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Selecciona un cliente";
+    clientSelect.appendChild(placeholderOption);
+
+    if (currentClients.length === 0) {
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.disabled = true;
+      emptyOption.textContent = "No hay clientes registrados";
+      clientSelect.appendChild(emptyOption);
       return;
     }
 
-    clients.forEach((client) => {
+    currentClients.forEach((client) => {
       const option = document.createElement("option");
       option.value = client.name;
       option.textContent = client.name;
@@ -121,10 +141,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   function loadYearOptions() {
     if (!filterYearSelect) return;
 
-    const incomes = getIncomes();
     const years = [
       ...new Set(
-        incomes
+        currentIncomes
           .map((income) => (income.date ? income.date.split("-")[0] : ""))
           .filter(Boolean),
       ),
@@ -132,7 +151,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const currentValue = filterYearSelect.value;
 
-    filterYearSelect.innerHTML = `<option value="">Todos</option>`;
+    filterYearSelect.replaceChildren();
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "Todos";
+    filterYearSelect.appendChild(allOption);
 
     years.forEach((year) => {
       const option = document.createElement("option");
@@ -151,7 +175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getFilteredIncomes() {
-    let incomes = getIncomes();
+    let incomes = [...currentIncomes];
 
     const selectedYear = filterYearSelect ? filterYearSelect.value : "";
     const selectedMonth = filterMonthSelect ? filterMonthSelect.value : "";
@@ -175,35 +199,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderIncomes() {
     const incomes = getFilteredIncomes();
-    incomeTableBody.innerHTML = "";
+    incomeTableBody.replaceChildren();
 
     if (incomes.length === 0) {
-      incomeTableBody.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align: center;">No hay ingresos registrados.</td>
-        </tr>
-      `;
+      incomeTableBody.appendChild(
+        createEmptyStateRow("No hay ingresos registrados.", 9),
+      );
       return;
     }
 
     incomes.forEach((income) => {
       const row = document.createElement("tr");
+      row.appendChild(createCell(income.client || "-"));
+      row.appendChild(createCell(income.date || "-"));
+      row.appendChild(createCell(income.concept || "-"));
+      row.appendChild(createCell(formatCurrency(income.totalAmount)));
+      row.appendChild(createCell(formatCurrency(income.paidAmount)));
 
-      row.innerHTML = `
-        <td>${income.client || "-"}</td>
-        <td>${income.date || "-"}</td>
-        <td>${income.concept || "-"}</td>
-        <td>${formatCurrency(income.totalAmount)}</td>
-        <td>${formatCurrency(income.paidAmount)}</td>
-        <td>${getPaymentStatusBadge(income.paymentStatus)}</td>
-        <td>${income.invoiceRequired || "-"}</td>
-        <td>
-          <button type="button" class="edit-btn" data-id="${income.id}">Editar</button>
-        </td>
-        <td>
-          <button type="button" class="delete-btn" data-id="${income.id}">Eliminar</button>
-        </td>
-      `;
+      const statusCell = document.createElement("td");
+      statusCell.appendChild(getPaymentStatusBadge(income.paymentStatus));
+      row.appendChild(statusCell);
+
+      row.appendChild(createCell(income.invoiceRequired || "-"));
+
+      const editCell = document.createElement("td");
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "edit-btn";
+      editButton.dataset.id = String(income.id);
+      editButton.textContent = "Editar";
+      editCell.appendChild(editButton);
+      row.appendChild(editCell);
+
+      const deleteCell = document.createElement("td");
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "delete-btn";
+      deleteButton.dataset.id = String(income.id);
+      deleteButton.textContent = "Eliminar";
+      deleteCell.appendChild(deleteButton);
+      row.appendChild(deleteCell);
 
       incomeTableBody.appendChild(row);
     });
@@ -232,27 +267,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function handleEdit(incomeId) {
-    const incomes = getIncomes();
-    const incomeToEdit = incomes.find((income) => income.id === incomeId);
+    const incomeToEdit = currentIncomes.find(
+      (income) => String(income.id) === String(incomeId),
+    );
 
     if (!incomeToEdit) return;
     fillForm(incomeToEdit);
   }
 
-  function handleDelete(incomeId) {
-    const confirmed = confirm("¿Seguro que quieres eliminar este ingreso?");
+  async function handleDelete(incomeId) {
+    const confirmed = await askConfirm({
+      title: "Eliminar ingreso",
+      message: "¿Seguro que quieres eliminar este ingreso?",
+      confirmText: "Eliminar",
+    });
     if (!confirmed) return;
 
-    let incomes = getIncomes();
-    incomes = incomes.filter((income) => income.id !== incomeId);
-    saveIncomes(incomes);
+    await deleteIncomeRecord(incomeId);
 
     if (editingIncomeId === incomeId) {
       resetForm();
     }
 
+    currentIncomes = await getIncomeCollection();
     loadYearOptions();
     renderIncomes();
+    showToast("Ingreso eliminado correctamente.", { type: "success" });
   }
 
   function addTableEvents() {
@@ -261,15 +301,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     editButtons.forEach((button) => {
       button.addEventListener("click", () => {
-        const incomeId = Number(button.dataset.id);
+        const incomeId = button.dataset.id;
         handleEdit(incomeId);
       });
     });
 
     deleteButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const incomeId = Number(button.dataset.id);
-        handleDelete(incomeId);
+      button.addEventListener("click", async () => {
+        const incomeId = button.dataset.id;
+        await handleDelete(incomeId);
       });
     });
   }
@@ -278,12 +318,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const incomes = getFilteredIncomes();
 
     if (incomes.length === 0) {
-      alert("No hay ingresos en el filtro seleccionado para exportar.");
+      showToast("No hay ingresos en el filtro seleccionado para exportar.", {
+        type: "info",
+      });
       return;
     }
 
     if (typeof ExcelJS === "undefined" || typeof saveAs === "undefined") {
-      alert("No se cargaron las librerías para exportar el Excel.");
+      showToast("No se cargaron las librerías para exportar el Excel.", {
+        type: "error",
+      });
       return;
     }
 
@@ -510,7 +554,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  incomeForm.addEventListener("submit", (event) => {
+  incomeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const client = document.getElementById("income-client").value;
@@ -536,34 +580,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       !paymentMethod ||
       !invoiceRequired
     ) {
-      alert("Por favor, completa todos los campos obligatorios.");
+      showToast("Por favor, completa todos los campos obligatorios.", {
+        type: "error",
+      });
       return;
     }
 
-    const incomes = getIncomes();
+    const existingIncome =
+      currentIncomes.find(
+        (income) => String(income.id) === String(editingIncomeId),
+      ) || {};
 
-    if (editingIncomeId) {
-      const updatedIncomes = incomes.map((income) =>
-        income.id === editingIncomeId
-          ? {
-              ...income,
-              client,
-              date,
-              concept,
-              totalAmount: Number(totalAmount),
-              paymentStatus,
-              paidAmount: Number(paidAmount),
-              paymentMethod,
-              invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
-              notes,
-            }
-          : income,
-      );
+    setButtonLoading(
+      submitButton,
+      true,
+      editingIncomeId ? "Actualizando..." : "Guardando...",
+    );
 
-      saveIncomes(updatedIncomes);
-    } else {
-      const newIncome = {
-        id: Date.now(),
+    try {
+      await saveIncomeRecord({
+        ...existingIncome,
+        id: editingIncomeId,
         client,
         date,
         concept,
@@ -573,16 +610,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         paymentMethod,
         invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
         notes,
-      };
+      });
 
-      incomes.push(newIncome);
-      saveIncomes(incomes);
+      resetForm();
+      currentIncomes = await getIncomeCollection();
+      await loadClientOptions();
+      loadYearOptions();
+      renderIncomes();
+      showToast("Ingreso guardado correctamente.", { type: "success" });
+    } finally {
+      setButtonLoading(submitButton, false);
     }
-
-    resetForm();
-    loadClientOptions();
-    loadYearOptions();
-    renderIncomes();
   });
 
   if (filterYearSelect) {
@@ -605,24 +643,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     exportExcelBtn.addEventListener("click", exportFilteredIncomesToExcel);
   }
 
-  window.addEventListener("storage", (event) => {
-    if (event.key === STORAGE_KEY) {
-      loadYearOptions();
-      renderIncomes();
-    }
-
-    if (event.key === CLIENTS_KEY) {
-      loadClientOptions();
-    }
-  });
-
-  window.addEventListener("focus", () => {
-    loadClientOptions();
+  window.addEventListener("focus", async () => {
+    currentClients = await getClientsCollection();
+    currentIncomes = await getIncomeCollection();
+    await loadClientOptions();
     loadYearOptions();
     renderIncomes();
   });
 
-  loadClientOptions();
-  loadYearOptions();
-  renderIncomes();
+  try {
+    currentIncomes = await getIncomeCollection();
+    await loadClientOptions();
+    loadYearOptions();
+    renderIncomes();
+  } finally {
+    setPageLoading(false);
+  }
 });

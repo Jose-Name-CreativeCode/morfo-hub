@@ -1,8 +1,19 @@
 import { protectPage } from "../services/auth.js";
-import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
-import { formatCurrency } from "../utils.js";
+import {
+  deleteExpenseRecord,
+  getExpensesCollection,
+  saveExpenseRecord,
+} from "../services/expenses-service.js";
+import {
+  askConfirm,
+  formatCurrency,
+  setButtonLoading,
+  setPageLoading,
+  showToast,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
 
   const expenseForm = document.querySelector("form");
@@ -14,16 +25,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const clearFiltersBtn = document.getElementById("clear-expense-filters");
   const exportExcelBtn = document.getElementById("export-expense-excel");
 
-  const STORAGE_KEY = STORAGE_KEYS.EXPENSES;
   let editingExpenseId = null;
-
-  function getExpenses() {
-    return getData(STORAGE_KEY, []);
-  }
-
-  function saveExpenses(expenses) {
-    saveData(STORAGE_KEY, expenses);
-  }
+  let currentExpenses = [];
 
   function resetForm() {
     expenseForm.reset();
@@ -31,13 +34,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitButton.textContent = "Guardar gasto";
   }
 
+  function createCell(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
+
+  function createEmptyStateRow(message, columns) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columns;
+    cell.style.textAlign = "center";
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
+
   function loadYearOptions() {
     if (!filterYearSelect) return;
 
-    const expenses = getExpenses();
     const years = [
       ...new Set(
-        expenses
+        currentExpenses
           .map((expense) => (expense.date ? expense.date.split("-")[0] : ""))
           .filter(Boolean),
       ),
@@ -45,7 +63,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const currentValue = filterYearSelect.value;
 
-    filterYearSelect.innerHTML = `<option value="">Todos</option>`;
+    filterYearSelect.replaceChildren();
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "Todos";
+    filterYearSelect.appendChild(allOption);
 
     years.forEach((year) => {
       const option = document.createElement("option");
@@ -58,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getFilteredExpenses() {
-    let expenses = getExpenses();
+    let expenses = [...currentExpenses];
 
     const selectedYear = filterYearSelect ? filterYearSelect.value : "";
     const selectedMonth = filterMonthSelect ? filterMonthSelect.value : "";
@@ -83,34 +106,41 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderExpenses() {
     const expenses = getFilteredExpenses();
-    expenseTableBody.innerHTML = "";
+    expenseTableBody.replaceChildren();
 
     if (expenses.length === 0) {
-      expenseTableBody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align: center;">No hay gastos registrados.</td>
-        </tr>
-      `;
+      expenseTableBody.appendChild(
+        createEmptyStateRow("No hay gastos registrados.", 8),
+      );
       return;
     }
 
     expenses.forEach((expense) => {
       const row = document.createElement("tr");
+      row.appendChild(createCell(expense.date || "-"));
+      row.appendChild(createCell(expense.concept || "-"));
+      row.appendChild(createCell(expense.category || "-"));
+      row.appendChild(createCell(formatCurrency(expense.amount)));
+      row.appendChild(createCell(expense.paymentMethod || "-"));
+      row.appendChild(createCell(expense.invoice || "-"));
 
-      row.innerHTML = `
-        <td>${expense.date || "-"}</td>
-        <td>${expense.concept || "-"}</td>
-        <td>${expense.category || "-"}</td>
-        <td>${formatCurrency(expense.amount)}</td>
-        <td>${expense.paymentMethod || "-"}</td>
-        <td>${expense.invoice || "-"}</td>
-        <td>
-          <button type="button" class="edit-btn" data-id="${expense.id}">Editar</button>
-        </td>
-        <td>
-          <button type="button" class="delete-btn" data-id="${expense.id}">Eliminar</button>
-        </td>
-      `;
+      const editCell = document.createElement("td");
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "edit-btn";
+      editButton.dataset.id = String(expense.id);
+      editButton.textContent = "Editar";
+      editCell.appendChild(editButton);
+      row.appendChild(editCell);
+
+      const deleteCell = document.createElement("td");
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "delete-btn";
+      deleteButton.dataset.id = String(expense.id);
+      deleteButton.textContent = "Eliminar";
+      deleteCell.appendChild(deleteButton);
+      row.appendChild(deleteCell);
 
       expenseTableBody.appendChild(row);
     });
@@ -135,27 +165,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function handleEdit(expenseId) {
-    const expenses = getExpenses();
-    const expenseToEdit = expenses.find((expense) => expense.id === expenseId);
+    const expenseToEdit = currentExpenses.find(
+      (expense) => String(expense.id) === String(expenseId),
+    );
 
     if (!expenseToEdit) return;
     fillForm(expenseToEdit);
   }
 
-  function handleDelete(expenseId) {
-    const confirmed = confirm("¿Seguro que quieres eliminar este gasto?");
+  async function handleDelete(expenseId) {
+    const confirmed = await askConfirm({
+      title: "Eliminar gasto",
+      message: "¿Seguro que quieres eliminar este gasto?",
+      confirmText: "Eliminar",
+    });
     if (!confirmed) return;
 
-    let expenses = getExpenses();
-    expenses = expenses.filter((expense) => expense.id !== expenseId);
-    saveExpenses(expenses);
+    await deleteExpenseRecord(expenseId);
 
     if (editingExpenseId === expenseId) {
       resetForm();
     }
 
+    currentExpenses = await getExpensesCollection();
     loadYearOptions();
     renderExpenses();
+    showToast("Gasto eliminado correctamente.", { type: "success" });
   }
 
   function addTableEvents() {
@@ -164,15 +199,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     editButtons.forEach((button) => {
       button.addEventListener("click", () => {
-        const expenseId = Number(button.dataset.id);
+        const expenseId = button.dataset.id;
         handleEdit(expenseId);
       });
     });
 
     deleteButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const expenseId = Number(button.dataset.id);
-        handleDelete(expenseId);
+      button.addEventListener("click", async () => {
+        const expenseId = button.dataset.id;
+        await handleDelete(expenseId);
       });
     });
   }
@@ -181,12 +216,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const expenses = getFilteredExpenses();
 
     if (expenses.length === 0) {
-      alert("No hay gastos en el filtro seleccionado para exportar.");
+      showToast("No hay gastos en el filtro seleccionado para exportar.", {
+        type: "info",
+      });
       return;
     }
 
     if (typeof ExcelJS === "undefined" || typeof saveAs === "undefined") {
-      alert("No se cargaron las librerías para exportar el Excel.");
+      showToast("No se cargaron las librerías para exportar el Excel.", {
+        type: "error",
+      });
       return;
     }
 
@@ -362,7 +401,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  expenseForm.addEventListener("submit", (event) => {
+  expenseForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const date = document.getElementById("expense-date").value;
@@ -383,32 +422,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       !paymentMethod ||
       !invoice
     ) {
-      alert("Por favor, completa todos los campos obligatorios.");
+      showToast("Por favor, completa todos los campos obligatorios.", {
+        type: "error",
+      });
       return;
     }
 
-    const expenses = getExpenses();
+    const existingExpense =
+      currentExpenses.find(
+        (expense) => String(expense.id) === String(editingExpenseId),
+      ) || {};
 
-    if (editingExpenseId) {
-      const updatedExpenses = expenses.map((expense) =>
-        expense.id === editingExpenseId
-          ? {
-              ...expense,
-              date,
-              concept,
-              category,
-              amount: Number(amount),
-              paymentMethod,
-              invoice: invoice === "yes" ? "Sí" : "No",
-              notes,
-            }
-          : expense,
-      );
+    setButtonLoading(
+      submitButton,
+      true,
+      editingExpenseId ? "Actualizando..." : "Guardando...",
+    );
 
-      saveExpenses(updatedExpenses);
-    } else {
-      const newExpense = {
-        id: Date.now(),
+    try {
+      await saveExpenseRecord({
+        ...existingExpense,
+        id: editingExpenseId,
         date,
         concept,
         category,
@@ -416,15 +450,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         paymentMethod,
         invoice: invoice === "yes" ? "Sí" : "No",
         notes,
-      };
+      });
 
-      expenses.push(newExpense);
-      saveExpenses(expenses);
+      currentExpenses = await getExpensesCollection();
+      renderExpenses();
+      resetForm();
+      loadYearOptions();
+      showToast("Gasto guardado correctamente.", { type: "success" });
+    } finally {
+      setButtonLoading(submitButton, false);
     }
-
-    renderExpenses();
-    resetForm();
-    loadYearOptions();
   });
 
   if (filterYearSelect) {
@@ -447,18 +482,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     exportExcelBtn.addEventListener("click", exportFilteredExpensesToExcel);
   }
 
-  window.addEventListener("storage", (event) => {
-    if (event.key === STORAGE_KEY) {
-      loadYearOptions();
-      renderExpenses();
-    }
-  });
-
-  window.addEventListener("focus", () => {
+  window.addEventListener("focus", async () => {
+    currentExpenses = await getExpensesCollection();
     loadYearOptions();
     renderExpenses();
   });
 
-  loadYearOptions();
-  renderExpenses();
+  try {
+    currentExpenses = await getExpensesCollection();
+    loadYearOptions();
+    renderExpenses();
+  } finally {
+    setPageLoading(false);
+  }
 });

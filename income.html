@@ -6,29 +6,12 @@
     <title>Morfo Hub | Ingresos</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
-  <body>
+  <body data-page-title="Ingresos" data-nav-key="income">
     <div class="app-layout">
-      <aside class="sidebar">
-        <div class="sidebar-brand">Morfo Hub</div>
-
-        <nav class="sidebar-nav">
-          <ul>
-            <li><a href="dashboard.html">Dashboard</a></li>
-            <li><a href="clients.html">Clientes</a></li>
-            <li><a href="income.html" class="active">Ingresos</a></li>
-            <li><a href="expenses.html">Gastos</a></li>
-            <li><a href="quotes.html">Cotizaciones</a></li>
-            <li><a href="reports.html">Reportes</a></li>
-            <li><a href="settings.html">Configuración</a></li>
-          </ul>
-        </nav>
-      </aside>
+      <aside class="sidebar" data-app-sidebar></aside>
 
       <div class="main-content">
-        <header class="header">
-          <div class="header-title">Ingresos</div>
-          <div class="header-user">Jose / Administrador</div>
-        </header>
+        <header class="header" data-app-header></header>
 
         <main class="page-content">
           <h1 class="section-title">Registro de ingresos</h1>
@@ -216,6 +199,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
+    <script type="module" src="js/app.js"></script>
     <script type="module" src="js/modules/income.js"></script>
   </body>
 </html>

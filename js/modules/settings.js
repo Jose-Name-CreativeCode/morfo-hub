@@ -3,8 +3,10 @@ import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
+import { setButtonLoading, setPageLoading, showToast } from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
 
   // ===== FORMS =====
@@ -23,6 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const invoiceTax = document.getElementById("invoice-tax");
   const invoiceNote = document.getElementById("invoice-note");
+  const summaryTableBody = document.querySelector(".table tbody");
   let currentSettings = null;
 
   // ===== LOAD SETTINGS =====
@@ -49,73 +52,118 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ===== UPDATE TABLE =====
   function updateSummaryTable(settings) {
-    const rows = document.querySelectorAll(".table tbody tr");
+    if (!summaryTableBody) return;
 
-    if (!rows.length) return;
+    summaryTableBody.replaceChildren();
 
-    rows[0].children[1].textContent = settings.agency?.name || "Morfo Studio";
+    const summaryRows = [
+      {
+        label: "Nombre de la agencia",
+        value: settings.agency?.name || "Morfo Studio",
+      },
+      {
+        label: "IVA por defecto",
+        value: `${settings.invoice?.tax || 16}%`,
+      },
+      {
+        label: "Anticipo sugerido",
+        value: "50%",
+      },
+    ];
 
-    rows[1].children[1].textContent = (settings.invoice?.tax || 16) + "%";
+    summaryRows.forEach((item) => {
+      const row = document.createElement("tr");
+      const labelCell = document.createElement("td");
+      const valueCell = document.createElement("td");
 
-    rows[2].children[1].textContent = settings.terms?.includes("50%")
-      ? "50%"
-      : "50%";
+      labelCell.textContent = item.label;
+      valueCell.textContent = item.value;
+
+      row.appendChild(labelCell);
+      row.appendChild(valueCell);
+      summaryTableBody.appendChild(row);
+    });
   }
 
   // ===== SAVE AGENCY =====
   agencyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const settings = await saveSettingsRecord({
-      ...currentSettings,
-      agency: {
-      name: agencyName.value,
-      email: agencyEmail.value,
-      phone: agencyPhone.value,
-      address: agencyAddress.value,
-      website: agencyWebsite.value,
-      },
-    });
+    const button = agencyForm.querySelector(".btn-primary");
+    setButtonLoading(button, true, "Guardando...");
 
-    currentSettings = settings;
-    updateSummaryTable(settings);
+    try {
+      const settings = await saveSettingsRecord({
+        ...currentSettings,
+        agency: {
+          name: agencyName.value,
+          email: agencyEmail.value,
+          phone: agencyPhone.value,
+          address: agencyAddress.value,
+          website: agencyWebsite.value,
+        },
+      });
 
-    alert("Datos de la agencia guardados");
+      currentSettings = settings;
+      updateSummaryTable(settings);
+
+      showToast("Datos de la agencia guardados.", { type: "success" });
+    } finally {
+      setButtonLoading(button, false);
+    }
   });
 
   // ===== SAVE TERMS =====
   termsForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const settings = await saveSettingsRecord({
-      ...currentSettings,
-      terms: defaultTerms.value,
-    });
+    const button = termsForm.querySelector(".btn-primary");
+    setButtonLoading(button, true, "Guardando...");
 
-    currentSettings = settings;
-    updateSummaryTable(settings);
+    try {
+      const settings = await saveSettingsRecord({
+        ...currentSettings,
+        terms: defaultTerms.value,
+      });
 
-    alert("Condiciones guardadas");
+      currentSettings = settings;
+      updateSummaryTable(settings);
+
+      showToast("Condiciones guardadas.", { type: "success" });
+    } finally {
+      setButtonLoading(button, false);
+    }
   });
 
   // ===== SAVE INVOICE =====
   invoiceForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const settings = await saveSettingsRecord({
-      ...currentSettings,
-      invoice: {
-        tax: Number(invoiceTax.value),
-        note: invoiceNote.value,
-      },
-    });
+    const button = invoiceForm.querySelector(".btn-primary");
+    setButtonLoading(button, true, "Guardando...");
 
-    currentSettings = settings;
-    updateSummaryTable(settings);
+    try {
+      const settings = await saveSettingsRecord({
+        ...currentSettings,
+        invoice: {
+          tax: Number(invoiceTax.value),
+          note: invoiceNote.value,
+        },
+      });
 
-    alert("Ajustes fiscales guardados");
+      currentSettings = settings;
+      updateSummaryTable(settings);
+
+      showToast("Ajustes fiscales guardados.", { type: "success" });
+    } finally {
+      setButtonLoading(button, false);
+    }
   });
 
   // ===== INIT =====
-  await loadSettings();
+  try {
+    await loadSettings();
+  } finally {
+    setPageLoading(false);
+  }
 });

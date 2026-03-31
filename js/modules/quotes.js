@@ -1,8 +1,27 @@
 import { protectPage } from "../services/auth.js";
+import { getClientsCollection } from "../services/clients-service.js";
+import {
+  getIncomeCollection,
+  replaceIncomeCollection,
+} from "../services/income-service.js";
+import {
+  deleteQuoteRecord,
+  getQuotesCollection,
+  replaceQuotesCollection,
+} from "../services/quotes-service.js";
 import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
-import { formatCurrency, getTodayISO, normalizeText } from "../utils.js";
+import {
+  askConfirm,
+  formatCurrency,
+  getTodayISO,
+  normalizeText,
+  setButtonLoading,
+  setPageLoading,
+  showToast,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  setPageLoading(true);
   await protectPage();
 
   const quoteForm = document.querySelector("form");
@@ -25,9 +44,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const paymentModalMeta = document.getElementById("payment-modal-meta");
   const paymentForm = document.getElementById("payment-form");
 
-  const STORAGE_KEY = STORAGE_KEYS.QUOTES;
-  const CLIENTS_KEY = STORAGE_KEYS.CLIENTS;
-  const INCOME_KEY = STORAGE_KEYS.INCOME;
   const SETTINGS_KEY = STORAGE_KEYS.SETTINGS;
   const IVA_RATE = 0.16;
 
@@ -36,25 +52,62 @@ document.addEventListener("DOMContentLoaded", async () => {
   let activePaymentQuoteId = null;
   let activePaymentType = null;
   let selectedClientFilter = "";
+  let currentQuotes = [];
+  let currentClients = [];
+  let currentIncomes = [];
 
   function getQuotes() {
-    return getData(STORAGE_KEY, []);
+    return currentQuotes;
   }
 
   function saveQuotes(quotes) {
-    saveData(STORAGE_KEY, quotes);
+    currentQuotes = [...quotes];
+    saveData(STORAGE_KEYS.QUOTES, currentQuotes);
   }
 
   function getClients() {
-    return getData(CLIENTS_KEY, []);
+    return currentClients;
   }
 
   function getIncomes() {
-    return getData(INCOME_KEY, []);
+    return currentIncomes;
   }
 
   function saveIncomes(incomes) {
-    saveData(INCOME_KEY, incomes);
+    currentIncomes = [...incomes];
+    saveData(STORAGE_KEYS.INCOME, currentIncomes);
+  }
+
+  function createCell(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
+
+  function createEmptyStateRow(message, columns) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columns;
+    cell.style.textAlign = "center";
+    cell.textContent = message;
+    row.appendChild(cell);
+    return row;
+  }
+
+  function createStatusBadge(text, className) {
+    const badge = document.createElement("span");
+    badge.className = className;
+    badge.textContent = text;
+    return badge;
+  }
+
+  function createActionButton({ className, text, dataId }) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.dataset.id = String(dataId);
+    button.textContent = text;
+    return button;
   }
 
   function getSettings() {
@@ -150,7 +203,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveQuotes(updated);
     }
 
-    return updated;
+    return changed;
   }
 
   function ensureIncomeIds() {
@@ -175,13 +228,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     if (changed) saveIncomes(updated);
-    return updated;
+    return changed;
   }
 
-  function loadClientOptions() {
+  async function persistQuotes() {
+    await replaceQuotesCollection(currentQuotes);
+  }
+
+  async function persistIncomes() {
+    await replaceIncomeCollection(currentIncomes);
+  }
+
+  async function loadClientOptions() {
+    currentClients = await getClientsCollection();
     const clients = getClients();
 
-    clientSelect.innerHTML = `<option value="">Selecciona un cliente</option>`;
+    clientSelect.replaceChildren();
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Selecciona un cliente";
+    clientSelect.appendChild(placeholderOption);
 
     if (clients.length === 0) {
       const option = document.createElement("option");
@@ -363,7 +430,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     let changed = false;
 
     const updatedQuotes = quotes.map((quote) => {
-      const income = incomes.find((item) => item.quoteId === quote.id);
+      const income = incomes.find(
+        (item) => String(item.quoteId) === String(quote.id),
+      );
       const nextPaymentState = inferQuotePaymentStatusFromIncome(quote, income);
 
       const quotePaymentStatus = String(quote.paymentStatus || "").trim();
@@ -407,11 +476,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getQuoteById(id) {
     syncQuotesWithIncomes();
-    return getQuotes().find((q) => q.id === id);
+    return getQuotes().find((q) => String(q.id) === String(id));
   }
 
   function getIncomeByQuoteId(quoteId) {
-    return getIncomes().find((income) => income.quoteId === quoteId);
+    return getIncomes().find(
+      (income) => String(income.quoteId) === String(quoteId),
+    );
   }
 
   function openManageModal(id) {
@@ -448,16 +519,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const remaining = Math.max(total - alreadyPaid, 0);
 
     if (quote.paymentStatus === "pagada total" && income) {
-      alert(
+      showToast(
         `La cotización ${quote.publicId} ya fue liquidada por completo. No se puede registrar otro pago.`,
+        { type: "error", duration: 4200 },
       );
       return;
     }
 
     if (type === "anticipo") {
       if (income && Number(income.paidAmount || 0) > 0) {
-        alert(
+        showToast(
           `La cotización ${quote.publicId} ya tiene un ingreso relacionado (${income.publicId}). No se puede registrar otro anticipo.`,
+          { type: "error", duration: 4200 },
         );
         return;
       }
@@ -501,20 +574,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function ensureQuoteTableHeader() {
-    quoteTableHead.innerHTML = `
-      <tr>
-        <th>ID</th>
-        <th>Fecha</th>
-        <th>Cliente</th>
-        <th>Título</th>
-        <th>Servicio</th>
-        <th>Total</th>
-        <th>Estado</th>
-        <th>Pago</th>
-        <th>PDF</th>
-        <th>Gestionar</th>
-      </tr>
-    `;
+    quoteTableHead.replaceChildren();
+
+    const row = document.createElement("tr");
+    [
+      "ID",
+      "Fecha",
+      "Cliente",
+      "Título",
+      "Servicio",
+      "Total",
+      "Estado",
+      "Pago",
+      "PDF",
+      "Gestionar",
+    ].forEach((label) => {
+      const th = document.createElement("th");
+      th.textContent = label;
+      row.appendChild(th);
+    });
+
+    quoteTableHead.appendChild(row);
   }
 
   function ensureFilterUI() {
@@ -528,17 +608,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterWrapper.style.gap = "14px";
     filterWrapper.style.marginBottom = "18px";
 
-    filterWrapper.innerHTML = `
-      <div class="form-group" style="margin-bottom:0;">
-        <label for="filter-client">Filtrar por cliente</label>
-        <select id="filter-client">
-          <option value="">Todos los clientes</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:0; display:flex; align-items:end;">
-        <button type="button" id="clear-quote-filters" class="btn-primary">Limpiar filtro</button>
-      </div>
-    `;
+    const selectGroup = document.createElement("div");
+    selectGroup.className = "form-group";
+    selectGroup.style.marginBottom = "0";
+
+    const label = document.createElement("label");
+    label.htmlFor = "filter-client";
+    label.textContent = "Filtrar por cliente";
+    selectGroup.appendChild(label);
+
+    const select = document.createElement("select");
+    select.id = "filter-client";
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "Todos los clientes";
+    select.appendChild(defaultOption);
+    selectGroup.appendChild(select);
+
+    const actionsGroup = document.createElement("div");
+    actionsGroup.className = "form-group";
+    actionsGroup.style.marginBottom = "0";
+    actionsGroup.style.display = "flex";
+    actionsGroup.style.alignItems = "end";
+
+    const clearButton = document.createElement("button");
+    clearButton.type = "button";
+    clearButton.id = "clear-quote-filters";
+    clearButton.className = "btn-primary";
+    clearButton.textContent = "Limpiar filtro";
+    actionsGroup.appendChild(clearButton);
+
+    filterWrapper.appendChild(selectGroup);
+    filterWrapper.appendChild(actionsGroup);
 
     const tableWrapper = quoteTable.closest(".table-wrapper");
     tableWrapper.parentNode.insertBefore(filterWrapper, tableWrapper);
@@ -569,7 +670,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       ...new Set(quotes.map((q) => q.client).filter(Boolean)),
     ];
 
-    filterSelect.innerHTML = `<option value="">Todos los clientes</option>`;
+    filterSelect.replaceChildren();
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "Todos los clientes";
+    filterSelect.appendChild(allOption);
 
     uniqueClients.forEach((client) => {
       const option = document.createElement("option");
@@ -593,14 +699,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       quotes = quotes.filter((quote) => quote.client === selectedClientFilter);
     }
 
-    quoteTableBody.innerHTML = "";
+    quoteTableBody.replaceChildren();
 
     if (quotes.length === 0) {
-      quoteTableBody.innerHTML = `
-        <tr>
-          <td colspan="10" style="text-align:center;">No hay cotizaciones registradas.</td>
-        </tr>
-      `;
+      quoteTableBody.appendChild(
+        createEmptyStateRow("No hay cotizaciones registradas.", 10),
+      );
       return;
     }
 
@@ -608,23 +712,50 @@ document.addEventListener("DOMContentLoaded", async () => {
       const row = document.createElement("tr");
       const statusClass = getStatusClass(quote.status);
       const paymentStatusClass = getPaymentStatusClass(quote.paymentStatus);
+      row.appendChild(createCell(quote.publicId || "-"));
+      row.appendChild(createCell(quote.date || "-"));
+      row.appendChild(createCell(quote.client || "-"));
+      row.appendChild(createCell(quote.title || "-"));
+      row.appendChild(createCell(quote.serviceType || "-"));
+      row.appendChild(createCell(formatCurrency(quote.total)));
 
-      row.innerHTML = `
-        <td>${quote.publicId || "-"}</td>
-        <td>${quote.date}</td>
-        <td>${quote.client}</td>
-        <td>${quote.title}</td>
-        <td>${quote.serviceType}</td>
-        <td>${formatCurrency(quote.total)}</td>
-        <td><span class="status ${statusClass}">${quote.status || "borrador"}</span></td>
-        <td><span class="status payment ${paymentStatusClass}">${quote.paymentStatus || "no pagada"}</span></td>
-        <td>
-          <button type="button" class="pdf-btn" data-id="${quote.id}">PDF</button>
-        </td>
-        <td>
-          <button type="button" class="manage-btn" data-id="${quote.id}">Gestionar</button>
-        </td>
-      `;
+      const statusCell = document.createElement("td");
+      statusCell.appendChild(
+        createStatusBadge(
+          quote.status || "borrador",
+          `status ${statusClass}`,
+        ),
+      );
+      row.appendChild(statusCell);
+
+      const paymentCell = document.createElement("td");
+      paymentCell.appendChild(
+        createStatusBadge(
+          quote.paymentStatus || "no pagada",
+          `status payment ${paymentStatusClass}`,
+        ),
+      );
+      row.appendChild(paymentCell);
+
+      const pdfCell = document.createElement("td");
+      pdfCell.appendChild(
+        createActionButton({
+          className: "pdf-btn",
+          text: "PDF",
+          dataId: quote.id,
+        }),
+      );
+      row.appendChild(pdfCell);
+
+      const manageCell = document.createElement("td");
+      manageCell.appendChild(
+        createActionButton({
+          className: "manage-btn",
+          text: "Gestionar",
+          dataId: quote.id,
+        }),
+      );
+      row.appendChild(manageCell);
 
       quoteTableBody.appendChild(row);
     });
@@ -659,28 +790,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeManageModal();
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     const quote = getQuoteById(id);
     if (!quote) return;
 
-    const confirmed = confirm(`¿Eliminar la cotización ${quote.publicId}?`);
+    const confirmed = await askConfirm({
+      title: "Eliminar cotización",
+      message: `¿Eliminar la cotización ${quote.publicId}?`,
+      confirmText: "Eliminar",
+    });
     if (!confirmed) return;
 
     let quotes = getQuotes();
-    quotes = quotes.filter((q) => q.id !== id);
+    quotes = quotes.filter((q) => String(q.id) !== String(id));
     saveQuotes(quotes);
+    await deleteQuoteRecord(id);
 
     if (editingQuoteId === id) resetForm();
     closeManageModal();
     renderQuotes();
+    showToast("Cotización eliminada correctamente.", { type: "success" });
   }
 
-  function updateStatus(id, newStatus) {
+  async function updateStatus(id, newStatus) {
     const quotes = getQuotes().map((quote) =>
-      quote.id === id ? { ...quote, status: newStatus } : quote,
+      String(quote.id) === String(id)
+        ? { ...quote, status: newStatus }
+        : quote,
     );
 
     saveQuotes(quotes);
+    await persistQuotes();
     renderQuotes();
     openManageModal(id);
   }
@@ -736,7 +876,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return lines.join("\n");
   }
 
-  function registerPayment({
+  async function registerPayment({
     quoteId,
     paymentType,
     paymentDate,
@@ -748,20 +888,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     const quotes = getQuotes();
     let incomes = ensureIncomeIds();
 
-    const quote = quotes.find((q) => q.id === quoteId);
+    const quote = quotes.find((q) => String(q.id) === String(quoteId));
     if (!quote) {
-      alert("No se encontró la cotización.");
+      showToast("No se encontró la cotización.", { type: "error" });
       return false;
     }
 
     const quoteTotal = Number(quote.total) || 0;
     const paidNow = Number(amountPaid) || 0;
-    const existingIncome = incomes.find((income) => income.quoteId === quoteId);
+    const existingIncome = incomes.find(
+      (income) => String(income.quoteId) === String(quoteId),
+    );
 
     if (paymentType === "anticipo") {
       if (existingIncome && Number(existingIncome.paidAmount || 0) > 0) {
-        alert(
+        showToast(
           `La cotización ${quote.publicId} ya tiene un ingreso relacionado (${existingIncome.publicId}). No se puede registrar otro anticipo.`,
+          { type: "error", duration: 4200 },
         );
         return false;
       }
@@ -812,7 +955,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveIncomes(incomes);
 
       const updatedQuotes = quotes.map((item) =>
-        item.id === quoteId
+        String(item.id) === String(quoteId)
           ? {
               ...item,
               paymentStatus: "anticipo pagado",
@@ -839,10 +982,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       saveQuotes(updatedQuotes);
+      await persistIncomes();
+      await persistQuotes();
       renderQuotes();
 
-      alert(
+      showToast(
         `Anticipo registrado correctamente.\nCotización: ${quote.publicId}\nIngreso generado: ${nextIncomeId}\nMonto: ${formatCurrency(amountToSave)}\nSaldo pendiente: ${formatCurrency(remainingAmount)}`,
+        { type: "success", duration: 4200 },
       );
 
       return true;
@@ -851,8 +997,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (paymentType === "total") {
       if (existingIncome) {
         if (normalizeText(existingIncome.paymentStatus) === "pagado") {
-          alert(
+          showToast(
             `La cotización ${quote.publicId} ya fue liquidada. No se puede registrar otro pago total.`,
+            { type: "error", duration: 4200 },
           );
           return false;
         }
@@ -861,7 +1008,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const remainingAmount = Number((quoteTotal - currentPaid).toFixed(2));
 
         if (remainingAmount <= 0) {
-          alert(`La cotización ${quote.publicId} ya no tiene saldo pendiente.`);
+          showToast(
+            `La cotización ${quote.publicId} ya no tiene saldo pendiente.`,
+            { type: "error", duration: 4200 },
+          );
           return false;
         }
 
@@ -878,7 +1028,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         incomes = incomes.map((income) =>
-          income.quoteId === quoteId
+          String(income.quoteId) === String(quoteId)
             ? {
                 ...income,
                 date: paymentDate,
@@ -906,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         saveIncomes(incomes);
 
         const updatedQuotes = quotes.map((item) =>
-          item.id === quoteId
+            String(item.id) === String(quoteId)
             ? {
                 ...item,
                 paymentStatus: "pagada total",
@@ -932,10 +1082,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
 
         saveQuotes(updatedQuotes);
+        await persistIncomes();
+        await persistQuotes();
         renderQuotes();
 
-        alert(
+        showToast(
           `Pago total aplicado correctamente.\nCotización: ${quote.publicId}\nReferencia: ${existingIncome.publicId}\nSolo se liquidó el saldo restante por ${formatCurrency(amountToApply)}.`,
+          { type: "success", duration: 4200 },
         );
 
         return true;
@@ -983,7 +1136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveIncomes(incomes);
 
       const updatedQuotes = quotes.map((item) =>
-        item.id === quoteId
+        String(item.id) === String(quoteId)
           ? {
               ...item,
               paymentStatus: "pagada total",
@@ -1008,10 +1161,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       saveQuotes(updatedQuotes);
+      await persistIncomes();
+      await persistQuotes();
       renderQuotes();
 
-      alert(
+      showToast(
         `Pago total registrado correctamente.\nCotización: ${quote.publicId}\nIngreso generado: ${nextIncomeId}`,
+        { type: "success", duration: 4200 },
       );
 
       return true;
@@ -1026,7 +1182,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     let repaired = false;
 
     quotes.forEach((quote) => {
-      const hasIncome = incomes.some((income) => income.quoteId === quote.id);
+      const hasIncome = incomes.some(
+        (income) => String(income.quoteId) === String(quote.id),
+      );
 
       if (
         !hasIncome &&
@@ -1069,12 +1227,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (repaired) {
       saveIncomes(incomes);
     }
+
+    return repaired;
   }
 
   function addTableEvents() {
     document.querySelectorAll(".pdf-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
+        const id = btn.dataset.id;
         const quote = getQuoteById(id);
         if (!quote) return;
         await generatePDF(quote);
@@ -1083,7 +1243,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.querySelectorAll(".manage-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        openManageModal(Number(btn.dataset.id));
+        openManageModal(btn.dataset.id);
       });
     });
   }
@@ -1102,12 +1262,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (action === "delete") {
-          handleDelete(activeManageQuoteId);
+          void handleDelete(activeManageQuoteId);
           return;
         }
 
         if (action === "status") {
-          updateStatus(activeManageQuoteId, value);
+          void updateStatus(activeManageQuoteId, value);
           return;
         }
 
@@ -1438,11 +1598,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     paymentOverlay.addEventListener("click", closePaymentModal);
   }
 
-  paymentForm.addEventListener("submit", (event) => {
+  paymentForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const paymentSubmitButton = paymentForm.querySelector(".btn-primary");
 
     if (!activePaymentQuoteId || !activePaymentType) {
-      alert("No hay una cotización seleccionada para registrar el pago.");
+      showToast("No hay una cotización seleccionada para registrar el pago.", {
+        type: "error",
+      });
       return;
     }
 
@@ -1453,26 +1616,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     const paymentNotes = document.getElementById("payment-notes").value.trim();
 
     if (!paymentDate || !amountPaid || !paymentMethod) {
-      alert("Completa los campos obligatorios del pago.");
+      showToast("Completa los campos obligatorios del pago.", {
+        type: "error",
+      });
       return;
     }
 
-    const saved = registerPayment({
-      quoteId: activePaymentQuoteId,
-      paymentType: activePaymentType,
-      paymentDate,
-      amountPaid,
-      paymentMethod,
-      dueDate,
-      paymentNotes,
-    });
+    setButtonLoading(paymentSubmitButton, true, "Registrando...");
 
-    if (saved) {
-      closePaymentModal();
+    try {
+      const saved = await registerPayment({
+        quoteId: activePaymentQuoteId,
+        paymentType: activePaymentType,
+        paymentDate,
+        amountPaid,
+        paymentMethod,
+        dueDate,
+        paymentNotes,
+      });
+
+      if (saved) {
+        closePaymentModal();
+      }
+    } finally {
+      setButtonLoading(paymentSubmitButton, false);
     }
   });
 
-  quoteForm.addEventListener("submit", (event) => {
+  quoteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const client = document.getElementById("quote-client").value;
@@ -1498,82 +1669,118 @@ document.addEventListener("DOMContentLoaded", async () => {
       !subtotal ||
       !invoiceValue
     ) {
-      alert("Completa los campos obligatorios.");
+      showToast("Completa los campos obligatorios.", { type: "error" });
       return;
     }
 
     let quotes = getQuotes();
+    setButtonLoading(
+      submitButton,
+      true,
+      editingQuoteId ? "Actualizando..." : "Guardando...",
+    );
 
-    if (editingQuoteId) {
-      const currentQuote = quotes.find((q) => q.id === editingQuoteId);
+    try {
+      if (editingQuoteId) {
+        const currentQuote = quotes.find(
+          (q) => String(q.id) === String(editingQuoteId),
+        );
 
-      quotes = quotes.map((quote) =>
-        quote.id === editingQuoteId
-          ? {
-              ...quote,
-              client,
-              date,
-              title,
-              serviceType,
-              description,
-              includes,
-              subtotal,
-              invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
-              iva,
-              total,
-              notes,
-              publicId: currentQuote?.publicId || quote.publicId,
-              paymentHistory: quote.paymentHistory || [],
-            }
-          : quote,
-      );
+        quotes = quotes.map((quote) =>
+          String(quote.id) === String(editingQuoteId)
+            ? {
+                ...quote,
+                client,
+                date,
+                title,
+                serviceType,
+                description,
+                includes,
+                subtotal,
+                invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
+                iva,
+                total,
+                notes,
+                publicId: currentQuote?.publicId || quote.publicId,
+                paymentHistory: quote.paymentHistory || [],
+              }
+            : quote,
+        );
 
-      saveQuotes(quotes);
-    } else {
-      const existingQuotes = getQuotes();
-      const newQuote = {
-        id: Date.now(),
-        publicId: buildSequentialId("COT", existingQuotes, "publicId"),
-        client,
-        date,
-        title,
-        serviceType,
-        description,
-        includes,
-        subtotal,
-        invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
-        iva,
-        total,
-        notes,
-        status: "borrador",
-        paymentStatus: "no pagada",
-        totalPaid: 0,
-        remainingAmount: total,
-        paymentHistory: [],
-      };
+        saveQuotes(quotes);
+        await persistQuotes();
+      } else {
+        const existingQuotes = getQuotes();
+        const newQuote = {
+          id: Date.now(),
+          publicId: buildSequentialId("COT", existingQuotes, "publicId"),
+          client,
+          date,
+          title,
+          serviceType,
+          description,
+          includes,
+          subtotal,
+          invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
+          iva,
+          total,
+          notes,
+          status: "borrador",
+          paymentStatus: "no pagada",
+          totalPaid: 0,
+          remainingAmount: total,
+          paymentHistory: [],
+        };
 
-      existingQuotes.push(newQuote);
-      saveQuotes(existingQuotes);
+        existingQuotes.push(newQuote);
+        saveQuotes(existingQuotes);
+        await persistQuotes();
+      }
+
+      syncQuotesWithIncomes();
+      renderQuotes();
+      resetForm();
+      await loadClientOptions();
+      loadFilterOptions();
+      showToast("Cotización guardada correctamente.", { type: "success" });
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  });
+
+  try {
+    currentQuotes = await getQuotesCollection();
+    currentIncomes = await getIncomeCollection();
+
+    const quoteIdsRepaired = ensureQuoteIds();
+    const incomeIdsRepaired = ensureIncomeIds();
+    const missingIncomesRepaired = repairMissingIncomes();
+
+    if (quoteIdsRepaired) {
+      await persistQuotes();
+    }
+
+    if (incomeIdsRepaired || missingIncomesRepaired) {
+      await persistIncomes();
     }
 
     syncQuotesWithIncomes();
+    ensureFilterUI();
+    bindManageActions();
+    await loadClientOptions();
     renderQuotes();
     resetForm();
-    loadClientOptions();
-    loadFilterOptions();
-  });
+  } finally {
+    setPageLoading(false);
+  }
 
-  ensureQuoteIds();
-  ensureIncomeIds();
-  repairMissingIncomes();
-  syncQuotesWithIncomes();
-  ensureFilterUI();
-  bindManageActions();
-  loadClientOptions();
-  renderQuotes();
-  resetForm();
+  window.addEventListener("focus", async () => {
+    currentQuotes = await getQuotesCollection();
+    currentIncomes = await getIncomeCollection();
+    await loadClientOptions();
+    syncQuotesWithIncomes();
+    renderQuotes();
 
-  window.addEventListener("focus", () => {
     if (!editingQuoteId) {
       applyDefaultTermsToQuoteForm(true);
       calculateTotals();

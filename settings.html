@@ -6,29 +6,12 @@
     <title>Morfo Hub | Configuración</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
-  <body>
+  <body data-page-title="Configuración" data-nav-key="settings">
     <div class="app-layout">
-      <aside class="sidebar">
-        <div class="sidebar-brand">Morfo Hub</div>
-
-        <nav class="sidebar-nav">
-          <ul>
-            <li><a href="dashboard.html">Dashboard</a></li>
-            <li><a href="clients.html">Clientes</a></li>
-            <li><a href="income.html">Ingresos</a></li>
-            <li><a href="expenses.html">Gastos</a></li>
-            <li><a href="quotes.html">Cotizaciones</a></li>
-            <li><a href="reports.html">Reportes</a></li>
-            <li><a href="settings.html" class="active">Configuración</a></li>
-          </ul>
-        </nav>
-      </aside>
+      <aside class="sidebar" data-app-sidebar></aside>
 
       <div class="main-content">
-        <header class="header">
-          <div class="header-title">Configuración</div>
-          <div class="header-user">Jose / Administrador</div>
-        </header>
+        <header class="header" data-app-header></header>
 
         <main class="page-content">
           <h1 class="section-title">Configuración general</h1>
@@ -173,25 +156,13 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.</t
                   <th>Valor actual</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td>Nombre de la agencia</td>
-                  <td>Morfo Studio</td>
-                </tr>
-                <tr>
-                  <td>IVA por defecto</td>
-                  <td>16%</td>
-                </tr>
-                <tr>
-                  <td>Anticipo sugerido</td>
-                  <td>50%</td>
-                </tr>
-              </tbody>
+              <tbody></tbody>
             </table>
           </section>
         </main>
       </div>
     </div>
+    <script type="module" src="js/app.js"></script>
     <script type="module" src="js/modules/settings.js"></script>
   </body>
 </html>

@@ -6,29 +6,12 @@
     <title>Morfo Hub | Clientes</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
-  <body>
+  <body data-page-title="Clientes" data-nav-key="clients">
     <div class="app-layout">
-      <aside class="sidebar">
-        <div class="sidebar-brand">Morfo Hub</div>
-
-        <nav class="sidebar-nav">
-          <ul>
-            <li><a href="dashboard.html">Dashboard</a></li>
-            <li><a href="clients.html" class="active">Clientes</a></li>
-            <li><a href="income.html">Ingresos</a></li>
-            <li><a href="expenses.html">Gastos</a></li>
-            <li><a href="quotes.html">Cotizaciones</a></li>
-            <li><a href="reports.html">Reportes</a></li>
-            <li><a href="settings.html">Configuración</a></li>
-          </ul>
-        </nav>
-      </aside>
+      <aside class="sidebar" data-app-sidebar></aside>
 
       <div class="main-content">
-        <header class="header">
-          <div class="header-title">Clientes</div>
-          <div class="header-user">Jose / Administrador</div>
-        </header>
+        <header class="header" data-app-header></header>
 
         <main class="page-content">
           <h1 class="section-title">Gestión de clientes</h1>
@@ -128,29 +111,13 @@
                   <th>Eliminar</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td>Insectalia</td>
-                  <td>Juan Pérez</td>
-                  <td>juan@insectalia.com</td>
-                  <td>222 000 0000</td>
-                  <td>Activo</td>
-                  <td>Sí</td>
-                </tr>
-                <tr>
-                  <td>Cliente Demo</td>
-                  <td>María López</td>
-                  <td>maria@demo.com</td>
-                  <td>222 111 1111</td>
-                  <td>Prospecto</td>
-                  <td>No</td>
-                </tr>
-              </tbody>
+              <tbody></tbody>
             </table>
           </section>
         </main>
       </div>
     </div>
+    <script type="module" src="js/app.js"></script>
     <script type="module" src="js/modules/clients.js"></script>
   </body>
 </html>
