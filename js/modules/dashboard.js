@@ -1,8 +1,14 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const incomeKey = "morfo_income";
-  const expensesKey = "morfo_expenses";
-  const clientsKey = "morfo_clients";
-  const quotesKey = "morfo_quotes";
+import { protectPage } from "../services/auth.js";
+import { STORAGE_KEYS, getData } from "../services/storage.js";
+import { formatCurrency, formatDate, normalizeText } from "../utils.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await protectPage();
+
+  const incomeKey = STORAGE_KEYS.INCOME;
+  const expensesKey = STORAGE_KEYS.EXPENSES;
+  const clientsKey = STORAGE_KEYS.CLIENTS;
+  const quotesKey = STORAGE_KEYS.QUOTES;
 
   const cards = document.querySelectorAll(".cards-grid .card-value");
 
@@ -26,40 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const recentActivityBody = document.getElementById("recentActivityBody");
 
   let financePieChartInstance = null;
-
-  function getData(key) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : [];
-    } catch (error) {
-      console.error(`Error leyendo ${key}:`, error);
-      return [];
-    }
-  }
-
-  function normalizeText(value) {
-    return String(value || "")
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-  }
-
-  function formatCurrency(amount) {
-    return Number(amount || 0).toLocaleString("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    });
-  }
-
-  function formatDate(value) {
-    if (!value) return "-";
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-
-    return date.toLocaleDateString("es-MX");
-  }
 
   function safeTimestamp(value) {
     if (!value) return 0;

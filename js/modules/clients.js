@@ -1,19 +1,18 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { protectPage } from "../services/auth.js";
+import {
+  deleteClientRecord,
+  getClientsCollection,
+  saveClientRecord,
+} from "../services/clients-service.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await protectPage();
+
   const clientForm = document.querySelector("form");
   const clientTableBody = document.querySelector(".table tbody");
   const submitButton = clientForm.querySelector(".btn-primary");
-
-  const STORAGE_KEY = "morfo_clients";
   let editingClientId = null;
-
-  function getClients() {
-    const clients = localStorage.getItem(STORAGE_KEY);
-    return clients ? JSON.parse(clients) : [];
-  }
-
-  function saveClients(clients) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-  }
+  let currentClients = [];
 
   function resetForm() {
     clientForm.reset();
@@ -21,11 +20,17 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.textContent = "Guardar cliente";
   }
 
-  function renderClients() {
-    const clients = getClients();
+  function createCell(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
+
+  async function renderClients() {
+    currentClients = await getClientsCollection();
     clientTableBody.innerHTML = "";
 
-    if (clients.length === 0) {
+    if (currentClients.length === 0) {
       clientTableBody.innerHTML = `
         <tr>
           <td colspan="8" style="text-align: center;">No hay clientes registrados.</td>
@@ -34,23 +39,33 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    clients.forEach((client) => {
+    currentClients.forEach((client) => {
       const row = document.createElement("tr");
 
-      row.innerHTML = `
-        <td>${client.name}</td>
-        <td>${client.contact}</td>
-        <td>${client.email}</td>
-        <td>${client.phone}</td>
-        <td>${client.status}</td>
-        <td>${client.invoiceRequired}</td>
-        <td>
-          <button type="button" class="edit-btn" data-id="${client.id}">Editar</button>
-        </td>
-        <td>
-          <button type="button" class="delete-btn" data-id="${client.id}">Eliminar</button>
-        </td>
-      `;
+      row.appendChild(createCell(client.name));
+      row.appendChild(createCell(client.contact));
+      row.appendChild(createCell(client.email));
+      row.appendChild(createCell(client.phone));
+      row.appendChild(createCell(client.status));
+      row.appendChild(createCell(client.invoiceRequired));
+
+      const editCell = document.createElement("td");
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "edit-btn";
+      editButton.dataset.id = String(client.id);
+      editButton.textContent = "Editar";
+      editCell.appendChild(editButton);
+      row.appendChild(editCell);
+
+      const deleteCell = document.createElement("td");
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "delete-btn";
+      deleteButton.dataset.id = String(client.id);
+      deleteButton.textContent = "Eliminar";
+      deleteCell.appendChild(deleteButton);
+      row.appendChild(deleteCell);
 
       clientTableBody.appendChild(row);
     });
@@ -73,27 +88,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handleEdit(clientId) {
-    const clients = getClients();
-    const clientToEdit = clients.find((client) => client.id === clientId);
+    const clientToEdit = currentClients.find(
+      (client) => String(client.id) === String(clientId),
+    );
 
     if (!clientToEdit) return;
 
     fillForm(clientToEdit);
   }
 
-  function handleDelete(clientId) {
+  async function handleDelete(clientId) {
     const confirmed = confirm("¿Seguro que quieres eliminar este cliente?");
     if (!confirmed) return;
 
-    let clients = getClients();
-    clients = clients.filter((client) => client.id !== clientId);
-    saveClients(clients);
+    await deleteClientRecord(clientId);
 
     if (editingClientId === clientId) {
       resetForm();
     }
 
-    renderClients();
+    await renderClients();
   }
 
   function addTableEvents() {
@@ -102,20 +116,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     editButtons.forEach((button) => {
       button.addEventListener("click", () => {
-        const clientId = Number(button.dataset.id);
+        const clientId = button.dataset.id;
         handleEdit(clientId);
       });
     });
 
     deleteButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const clientId = Number(button.dataset.id);
-        handleDelete(clientId);
+      button.addEventListener("click", async () => {
+        const clientId = button.dataset.id;
+        await handleDelete(clientId);
       });
     });
   }
 
-  clientForm.addEventListener("submit", (event) => {
+  clientForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const name = document.getElementById("client-name").value.trim();
@@ -131,44 +145,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const clients = getClients();
+    await saveClientRecord({
+      id: editingClientId,
+      name,
+      contact,
+      email,
+      phone,
+      status,
+      invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
+      notes,
+    });
 
-    if (editingClientId) {
-      const updatedClients = clients.map((client) =>
-        client.id === editingClientId
-          ? {
-              ...client,
-              name,
-              contact,
-              email,
-              phone,
-              status,
-              invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
-              notes,
-            }
-          : client,
-      );
-
-      saveClients(updatedClients);
-    } else {
-      const newClient = {
-        id: Date.now(),
-        name,
-        contact,
-        email,
-        phone,
-        status,
-        invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
-        notes,
-      };
-
-      clients.push(newClient);
-      saveClients(clients);
-    }
-
-    renderClients();
+    await renderClients();
     resetForm();
   });
 
-  renderClients();
+  await renderClients();
 });

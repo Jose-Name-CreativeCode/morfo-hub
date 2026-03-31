@@ -1,5 +1,11 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const STORAGE_KEY = "morfo_settings";
+import { protectPage } from "../services/auth.js";
+import {
+  getSettingsRecord,
+  saveSettingsRecord,
+} from "../services/settings-service.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await protectPage();
 
   // ===== FORMS =====
   const agencyForm = document.querySelectorAll("form")[0];
@@ -17,21 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const invoiceTax = document.getElementById("invoice-tax");
   const invoiceNote = document.getElementById("invoice-note");
-
-  // ===== GET SETTINGS =====
-  function getSettings() {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : {};
-  }
-
-  // ===== SAVE SETTINGS =====
-  function saveSettings(settings) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }
+  let currentSettings = null;
 
   // ===== LOAD SETTINGS =====
-  function loadSettings() {
-    const settings = getSettings();
+  async function loadSettings() {
+    const settings = await getSettingsRecord();
+    currentSettings = settings;
 
     // Agencia
     agencyName.value = settings.agency?.name || "Morfo Studio";
@@ -66,56 +63,59 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===== SAVE AGENCY =====
-  agencyForm.addEventListener("submit", (e) => {
+  agencyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const settings = getSettings();
-
-    settings.agency = {
+    const settings = await saveSettingsRecord({
+      ...currentSettings,
+      agency: {
       name: agencyName.value,
       email: agencyEmail.value,
       phone: agencyPhone.value,
       address: agencyAddress.value,
       website: agencyWebsite.value,
-    };
+      },
+    });
 
-    saveSettings(settings);
+    currentSettings = settings;
     updateSummaryTable(settings);
 
     alert("Datos de la agencia guardados");
   });
 
   // ===== SAVE TERMS =====
-  termsForm.addEventListener("submit", (e) => {
+  termsForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const settings = getSettings();
+    const settings = await saveSettingsRecord({
+      ...currentSettings,
+      terms: defaultTerms.value,
+    });
 
-    settings.terms = defaultTerms.value;
-
-    saveSettings(settings);
+    currentSettings = settings;
     updateSummaryTable(settings);
 
     alert("Condiciones guardadas");
   });
 
   // ===== SAVE INVOICE =====
-  invoiceForm.addEventListener("submit", (e) => {
+  invoiceForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const settings = getSettings();
+    const settings = await saveSettingsRecord({
+      ...currentSettings,
+      invoice: {
+        tax: Number(invoiceTax.value),
+        note: invoiceNote.value,
+      },
+    });
 
-    settings.invoice = {
-      tax: Number(invoiceTax.value),
-      note: invoiceNote.value,
-    };
-
-    saveSettings(settings);
+    currentSettings = settings;
     updateSummaryTable(settings);
 
     alert("Ajustes fiscales guardados");
   });
 
   // ===== INIT =====
-  loadSettings();
+  await loadSettings();
 });

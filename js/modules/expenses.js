@@ -1,4 +1,10 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { protectPage } from "../services/auth.js";
+import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
+import { formatCurrency } from "../utils.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await protectPage();
+
   const expenseForm = document.querySelector("form");
   const expenseTableBody = document.querySelector(".table tbody");
   const submitButton = expenseForm.querySelector(".btn-primary");
@@ -8,23 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearFiltersBtn = document.getElementById("clear-expense-filters");
   const exportExcelBtn = document.getElementById("export-expense-excel");
 
-  const STORAGE_KEY = "morfo_expenses";
+  const STORAGE_KEY = STORAGE_KEYS.EXPENSES;
   let editingExpenseId = null;
 
   function getExpenses() {
-    const expenses = localStorage.getItem(STORAGE_KEY);
-    return expenses ? JSON.parse(expenses) : [];
+    return getData(STORAGE_KEY, []);
   }
 
   function saveExpenses(expenses) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
-  }
-
-  function formatCurrency(amount) {
-    return Number(amount || 0).toLocaleString("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    });
+    saveData(STORAGE_KEY, expenses);
   }
 
   function resetForm() {

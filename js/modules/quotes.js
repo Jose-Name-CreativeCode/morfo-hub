@@ -1,4 +1,10 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { protectPage } from "../services/auth.js";
+import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
+import { formatCurrency, getTodayISO, normalizeText } from "../utils.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await protectPage();
+
   const quoteForm = document.querySelector("form");
   const quoteTable = document.querySelector(".table");
   const quoteTableHead = document.querySelector(".table thead");
@@ -19,10 +25,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const paymentModalMeta = document.getElementById("payment-modal-meta");
   const paymentForm = document.getElementById("payment-form");
 
-  const STORAGE_KEY = "morfo_quotes";
-  const CLIENTS_KEY = "morfo_clients";
-  const INCOME_KEY = "morfo_income";
-  const SETTINGS_KEY = "morfo_settings";
+  const STORAGE_KEY = STORAGE_KEYS.QUOTES;
+  const CLIENTS_KEY = STORAGE_KEYS.CLIENTS;
+  const INCOME_KEY = STORAGE_KEYS.INCOME;
+  const SETTINGS_KEY = STORAGE_KEYS.SETTINGS;
   const IVA_RATE = 0.16;
 
   let editingQuoteId = null;
@@ -32,31 +38,27 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedClientFilter = "";
 
   function getQuotes() {
-    const quotes = localStorage.getItem(STORAGE_KEY);
-    return quotes ? JSON.parse(quotes) : [];
+    return getData(STORAGE_KEY, []);
   }
 
   function saveQuotes(quotes) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes));
+    saveData(STORAGE_KEY, quotes);
   }
 
   function getClients() {
-    const clients = localStorage.getItem(CLIENTS_KEY);
-    return clients ? JSON.parse(clients) : [];
+    return getData(CLIENTS_KEY, []);
   }
 
   function getIncomes() {
-    const incomes = localStorage.getItem(INCOME_KEY);
-    return incomes ? JSON.parse(incomes) : [];
+    return getData(INCOME_KEY, []);
   }
 
   function saveIncomes(incomes) {
-    localStorage.setItem(INCOME_KEY, JSON.stringify(incomes));
+    saveData(INCOME_KEY, incomes);
   }
 
   function getSettings() {
-    const settings = localStorage.getItem(SETTINGS_KEY);
-    return settings ? JSON.parse(settings) : {};
+    return getData(SETTINGS_KEY, {});
   }
 
   function getSettingsAgencyName() {
@@ -108,25 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (force || !notesField.value.trim()) {
       notesField.value = defaultTerms;
     }
-  }
-
-  function formatCurrency(amount) {
-    return Number(amount || 0).toLocaleString("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    });
-  }
-
-  function getTodayISO() {
-    return new Date().toISOString().split("T")[0];
-  }
-
-  function normalizeText(value) {
-    return String(value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
   }
 
   function extractNumericId(value, prefix) {

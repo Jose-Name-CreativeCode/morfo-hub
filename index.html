@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <main
+      class="login-page"
+      style="
+        min-height: 100vh;
+        padding: 40px 20px;
+        display: grid;
+        place-items: center;
+      "
+    >
+      <section
+        class="login-card"
+        style="max-width: 720px; width: 100%; text-align: left"
+      >
+        <p
+          style="
+            margin: 0 0 12px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: #64748b;
+          "
+        >
+          Morfo Hub
+        </p>
+        <h1 style="margin-bottom: 12px">Panel administrativo de Morfo</h1>
+        <p style="margin-bottom: 28px; color: #475569">
+          Base web interna para clientes, ingresos, gastos, cotizaciones,
+          reportes y configuracion. El proyecto ya corre como app multipagina y
+          ahora tambien queda listo para trabajar con Node.js, Vite y tooling de
+          desarrollo.
+        </p>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+          "
+        >
+          <a
+            href="login.html"
+            class="btn-primary"
+            style="text-align: center; text-decoration: none"
+          >
+            Ir a login
+          </a>
+          <a
+            href="dashboard.html"
+            class="btn-primary"
+            style="text-align: center; text-decoration: none"
+          >
+            Abrir dashboard
+          </a>
+          <a
+            href="quotes.html"
+            class="btn-primary"
+            style="text-align: center; text-decoration: none"
+          >
+            Ver cotizaciones
+          </a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

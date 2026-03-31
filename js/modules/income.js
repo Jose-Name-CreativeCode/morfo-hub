@@ -1,4 +1,10 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { protectPage } from "../services/auth.js";
+import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
+import { formatCurrency, normalizeText } from "../utils.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await protectPage();
+
   console.log("income.js cargado correctamente");
 
   const incomeForm = document.querySelector("form");
@@ -11,38 +17,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearFiltersBtn = document.getElementById("clear-income-filters");
   const exportExcelBtn = document.getElementById("export-income-excel");
 
-  const STORAGE_KEY = "morfo_income";
-  const CLIENTS_KEY = "morfo_clients";
+  const STORAGE_KEY = STORAGE_KEYS.INCOME;
+  const CLIENTS_KEY = STORAGE_KEYS.CLIENTS;
 
   let editingIncomeId = null;
 
   function getIncomes() {
-    const incomes = localStorage.getItem(STORAGE_KEY);
-    return incomes ? JSON.parse(incomes) : [];
+    return getData(STORAGE_KEY, []);
   }
 
   function saveIncomes(incomes) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(incomes));
+    saveData(STORAGE_KEY, incomes);
   }
 
   function getClients() {
-    const clients = localStorage.getItem(CLIENTS_KEY);
-    return clients ? JSON.parse(clients) : [];
-  }
-
-  function formatCurrency(amount) {
-    return Number(amount || 0).toLocaleString("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    });
-  }
-
-  function normalizeText(value) {
-    return String(value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
+    return getData(CLIENTS_KEY, []);
   }
 
   function normalizePaymentStatus(status) {

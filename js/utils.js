@@ -1,10 +1,3 @@
-export function formatCurrency(amount) {
-  return Number(amount || 0).toLocaleString("es-MX", {
-    style: "currency",
-    currency: "MXN",
-  });
-}
-
 export function normalizeText(value) {
   return String(value || "")
     .trim()
@@ -13,15 +6,27 @@ export function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-export function formatDate(value) {
+export function formatCurrency(amount, locale = "es-MX", currency = "MXN") {
+  return Number(amount || 0).toLocaleString(locale, {
+    style: "currency",
+    currency,
+  });
+}
+
+export function formatDate(value, locale = "es-MX") {
   if (!value) return "-";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
-  return date.toLocaleDateString("es-MX");
+  return date.toLocaleDateString(locale);
 }
 
-export function generateId() {
-  return Date.now();
+export function getTodayISO() {
+  const today = new Date();
+  const localDate = new Date(
+    today.getTime() - today.getTimezoneOffset() * 60 * 1000,
+  );
+
+  return localDate.toISOString().split("T")[0];
 }
