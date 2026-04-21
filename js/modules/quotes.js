@@ -49,6 +49,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     "manage-summary-pending",
   );
   const manageSummaryIncome = document.getElementById("manage-summary-income");
+  const manageHistoryToggle = document.getElementById("manage-history-toggle");
+  const managePaymentHistoryList = document.getElementById(
+    "manage-payment-history-list",
+  );
 
   const paymentModal = document.getElementById("payment-modal");
   const paymentOverlay = document.getElementById("payment-overlay");
@@ -555,6 +559,110 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
+  function getPaymentHistoryTypeLabel(type) {
+    const normalized = normalizeText(type);
+    const labels = {
+      anticipo: "Anticipo",
+      liquidacion: "Pago final",
+      pago_total: "Pago total",
+      correccion: "Corrección",
+    };
+
+    return labels[normalized] || "Movimiento";
+  }
+
+  function getPaymentHistoryForQuote(quote, income) {
+    const source =
+      Array.isArray(income?.paymentHistory) && income.paymentHistory.length
+        ? income.paymentHistory
+        : Array.isArray(quote.paymentHistory)
+          ? quote.paymentHistory
+          : [];
+
+    const unique = new Map();
+    source.forEach((entry, index) => {
+      const key = [
+        entry.type || "",
+        entry.date || "",
+        entry.amount || 0,
+        entry.remainingAmount || 0,
+        entry.dueDate || "",
+        entry.method || "",
+        entry.note || "",
+      ].join("|");
+      unique.set(key, {
+        ...entry,
+        _order: index,
+      });
+    });
+
+    return [...unique.values()].sort((a, b) => b._order - a._order);
+  }
+
+  function renderManagePaymentHistory(quote, income) {
+    if (!managePaymentHistoryList) return;
+
+    const history = getPaymentHistoryForQuote(quote, income);
+    const isExpanded =
+      managePaymentHistoryList.dataset.expanded === "true" || false;
+
+    if (manageHistoryToggle) {
+      const historyCount = history.length;
+      manageHistoryToggle.textContent = `${isExpanded ? "Ocultar" : "Ver"} historial de pagos (${historyCount})`;
+      manageHistoryToggle.disabled = historyCount === 0;
+    }
+
+    managePaymentHistoryList.classList.toggle("hidden", !isExpanded);
+    managePaymentHistoryList.replaceChildren();
+
+    if (history.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "payment-history-empty";
+      empty.textContent = "Sin movimientos de pago todavía.";
+      managePaymentHistoryList.appendChild(empty);
+      return;
+    }
+
+    history.slice(0, 8).forEach((entry) => {
+      const item = document.createElement("article");
+      item.className = "payment-history-item";
+
+      const title = document.createElement("strong");
+      title.textContent = getPaymentHistoryTypeLabel(entry.type);
+
+      const meta = document.createElement("span");
+      meta.textContent = [
+        entry.date || "Sin fecha",
+        entry.method || "",
+        entry.dueDate ? `Saldo pactado: ${entry.dueDate}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      const amount = document.createElement("p");
+      amount.textContent = `${formatCurrency(entry.amount || 0)} · Pendiente ${formatCurrency(entry.remainingAmount || 0)}`;
+
+      item.appendChild(title);
+      item.appendChild(meta);
+      item.appendChild(amount);
+
+      if (entry.note) {
+        const note = document.createElement("small");
+        note.textContent = entry.note;
+        item.appendChild(note);
+      }
+
+      managePaymentHistoryList.appendChild(item);
+    });
+
+    if (history.length > 8) {
+      const hiddenCount = document.createElement("p");
+      hiddenCount.className = "payment-history-empty";
+      hiddenCount.textContent = `${history.length - 8} movimientos anteriores ocultos para mantener la vista clara.`;
+      managePaymentHistoryList.appendChild(hiddenCount);
+    }
+  }
+
   function openManageModal(id) {
     const quote = getQuoteById(id);
     if (!quote) return;
@@ -576,6 +684,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     manageSummaryPending.textContent = formatCurrency(pending);
     manageSummaryIncome.textContent =
       income?.publicId || quote.linkedIncomeId || "Sin vincular";
+    managePaymentHistoryList.dataset.expanded = "false";
+    renderManagePaymentHistory(quote, income);
 
     manageModal.classList.add("open");
     manageOverlay.classList.add("open");
@@ -1469,6 +1579,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function bindManageActions() {
+    if (manageHistoryToggle && managePaymentHistoryList) {
+      manageHistoryToggle.addEventListener("click", () => {
+        if (!activeManageQuoteId) return;
+
+        const quote = getQuoteById(activeManageQuoteId);
+        if (!quote) return;
+
+        const isExpanded =
+          managePaymentHistoryList.dataset.expanded === "true";
+        managePaymentHistoryList.dataset.expanded = String(!isExpanded);
+        renderManagePaymentHistory(quote, getIncomeByQuoteId(activeManageQuoteId));
+      });
+    }
+
     document.querySelectorAll(".manage-action").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (!activeManageQuoteId) return;
