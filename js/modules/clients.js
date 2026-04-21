@@ -23,6 +23,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   const clientForm = document.querySelector("form");
   const clientTableBody = document.querySelector(".table tbody");
   const submitButton = clientForm.querySelector(".btn-primary");
+  const clientSearchInput = document.getElementById("client-search");
+  const clientStatusFilter = document.getElementById("client-status-filter");
+  const clearFiltersButton = document.getElementById("client-clear-filters");
+  const clientCounters = {
+    total: document.getElementById("clients-total"),
+    active: document.getElementById("clients-active"),
+    prospect: document.getElementById("clients-prospect"),
+    inactive: document.getElementById("clients-inactive"),
+  };
   const detailModal = document.getElementById("client-detail-modal");
   const detailOverlay = document.getElementById("client-detail-overlay");
   const detailCloseButton = document.getElementById("client-detail-close");
@@ -40,6 +49,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentClients = [];
   let currentQuotes = [];
   let currentIncomes = [];
+  let searchTerm = "";
+  let statusFilter = "";
 
   function resetForm() {
     clientForm.reset();
@@ -91,6 +102,54 @@ document.addEventListener("DOMContentLoaded", async () => {
       pendingBalance,
       lastActivity: dates[0] || "",
     };
+  }
+
+  function updateClientCounters() {
+    const stats = currentClients.reduce(
+      (acc, client) => {
+        const status = normalizeText(client.status);
+        acc.total += 1;
+
+        if (status === "activo") acc.active += 1;
+        if (status === "prospecto") acc.prospect += 1;
+        if (status === "inactivo") acc.inactive += 1;
+
+        return acc;
+      },
+      {
+        total: 0,
+        active: 0,
+        prospect: 0,
+        inactive: 0,
+      },
+    );
+
+    clientCounters.total.textContent = stats.total;
+    clientCounters.active.textContent = stats.active;
+    clientCounters.prospect.textContent = stats.prospect;
+    clientCounters.inactive.textContent = stats.inactive;
+  }
+
+  function getFilteredClients() {
+    const normalizedSearch = normalizeText(searchTerm);
+    const normalizedStatus = normalizeText(statusFilter);
+
+    return currentClients.filter((client) => {
+      const matchesStatus =
+        !normalizedStatus || normalizeText(client.status) === normalizedStatus;
+      const searchableText = [
+        client.name,
+        client.contact,
+        client.email,
+        client.phone,
+      ]
+        .map(normalizeText)
+        .join(" ");
+      const matchesSearch =
+        !normalizedSearch || searchableText.includes(normalizedSearch);
+
+      return matchesStatus && matchesSearch;
+    });
   }
 
   function createDetailItem({ title, meta, amount }) {
@@ -184,17 +243,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       getQuotesCollection(),
       getIncomeCollection(),
     ]);
+    updateClientCounters();
     clientTableBody.replaceChildren();
 
-    if (currentClients.length === 0) {
+    const visibleClients = getFilteredClients();
+
+    if (visibleClients.length === 0) {
       clientTableBody.appendChild(
-        createEmptyStateRow("No hay clientes registrados.", 9),
+        createEmptyStateRow("No hay clientes que coincidan con el filtro.", 9),
       );
       return;
     }
 
-    currentClients.forEach((client) => {
+    visibleClients.forEach((client) => {
       const row = document.createElement("tr");
+      if (normalizeText(client.status) === "inactivo") {
+        row.classList.add("muted-row");
+      }
 
       row.appendChild(createCell(client.name));
       row.appendChild(createCell(client.contact));
@@ -261,9 +326,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function handleDelete(clientId) {
+    const client = currentClients.find(
+      (item) => String(item.id) === String(clientId),
+    );
+    if (!client) return;
+
+    const related = getClientRelatedData(client);
+    const hasHistory =
+      related.quotes.length > 0 || related.incomes.length > 0;
+
+    if (hasHistory) {
+      const confirmed = await askConfirm({
+        title: "Desactivar cliente",
+        message:
+          `${client.name} tiene ${related.quotes.length} cotizaciones y ${related.incomes.length} ingresos relacionados. ` +
+          "Para proteger reportes e historial financiero no se eliminará. ¿Quieres marcarlo como Inactivo?",
+        confirmText: "Desactivar",
+      });
+
+      if (!confirmed) return;
+
+      try {
+        await saveClientRecord({
+          ...client,
+          status: "Inactivo",
+          notes: client.notes || "",
+        });
+
+        if (String(editingClientId) === String(clientId)) {
+          resetForm();
+        }
+
+        await renderClients();
+        showToast("Cliente marcado como Inactivo.", { type: "success" });
+      } catch (error) {
+        console.error("No se pudo desactivar el cliente:", error);
+        showToast(
+          error?.message ||
+            "No se pudo desactivar el cliente. Revisa permisos o conexión.",
+          { type: "error", duration: 4200 },
+        );
+      }
+
+      return;
+    }
+
     const confirmed = await askConfirm({
       title: "Eliminar cliente",
-      message: "¿Seguro que quieres eliminar este cliente?",
+      message: `¿Seguro que quieres eliminar a ${client.name}? No tiene cotizaciones ni ingresos relacionados.`,
       confirmText: "Eliminar",
     });
     if (!confirmed) return;
@@ -374,6 +484,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   detailCloseButton.addEventListener("click", closeClientDetail);
   detailOverlay.addEventListener("click", closeClientDetail);
+
+  clientSearchInput.addEventListener("input", (event) => {
+    searchTerm = event.target.value;
+    void renderClients();
+  });
+
+  clientStatusFilter.addEventListener("change", (event) => {
+    statusFilter = event.target.value;
+    void renderClients();
+  });
+
+  clearFiltersButton.addEventListener("click", () => {
+    searchTerm = "";
+    statusFilter = "";
+    clientSearchInput.value = "";
+    clientStatusFilter.value = "";
+    void renderClients();
+  });
 
   try {
     await renderClients();

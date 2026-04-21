@@ -556,6 +556,14 @@ img {
   line-height: 1.1;
 }
 
+.client-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.muted-row {
+  opacity: 0.62;
+}
+
 .dashboard-panel {
   border-color: rgba(86, 180, 179, 0.08);
   background:

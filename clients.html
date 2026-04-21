@@ -92,6 +92,63 @@
             </form>
           </section>
 
+          <section class="cards-grid section-spacing client-stats-grid">
+            <article class="card metric-card">
+              <div class="card-label">Total clientes</div>
+              <div class="card-value metric-card-value" id="clients-total">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card income">
+              <div class="card-label">Activos</div>
+              <div class="card-value metric-card-value" id="clients-active">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card pending">
+              <div class="card-label">Prospectos</div>
+              <div class="card-value metric-card-value" id="clients-prospect">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card expense">
+              <div class="card-label">Inactivos</div>
+              <div class="card-value metric-card-value" id="clients-inactive">
+                0
+              </div>
+            </article>
+          </section>
+
+          <section class="card form-shell section-spacing">
+            <div class="filters-grid">
+              <div class="form-group form-group-tight">
+                <label for="client-search">Buscar cliente</label>
+                <input
+                  type="search"
+                  id="client-search"
+                  placeholder="Nombre, contacto, correo o teléfono..."
+                />
+              </div>
+
+              <div class="form-group form-group-tight">
+                <label for="client-status-filter">Filtrar por estatus</label>
+                <select id="client-status-filter">
+                  <option value="">Todos</option>
+                  <option value="Activo">Activo</option>
+                  <option value="Prospecto">Prospecto</option>
+                  <option value="Inactivo">Inactivo</option>
+                </select>
+              </div>
+
+              <button type="button" class="btn-primary" id="client-clear-filters">
+                Limpiar filtros
+              </button>
+            </div>
+          </section>
+
           <section class="table-wrapper">
             <table class="table">
               <thead>
