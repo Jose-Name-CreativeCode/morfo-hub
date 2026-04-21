@@ -3,6 +3,7 @@ import { getClientsCollection } from "../services/clients-service.js";
 import {
   getIncomeCollection,
   replaceIncomeCollection,
+  saveIncomeRecord,
 } from "../services/income-service.js";
 import {
   deleteQuoteRecord,
@@ -333,13 +334,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "borrador";
   }
 
-  function getPaymentStatusClass(paymentStatus) {
-    const normalized = normalizeStatus(paymentStatus, "no pagada");
-    if (normalized === "anticipo pagado") return "anticipo-pagado";
-    if (normalized === "pagada total") return "pagada-total";
-    return "no-pagada";
-  }
-
   function getQuoteFunnelStage(quote) {
     const paymentStatus = normalizeStatus(quote.paymentStatus, "no pagada");
     const status = normalizeStatus(quote.status, "borrador");
@@ -362,9 +356,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (paymentStatus === "anticipo pagado") {
       return {
-        key: "active",
-        label: "Cliente activo",
-        className: "funnel-active",
+        key: "advance",
+        label: "Anticipo recibido",
+        className: "funnel-advance",
       };
     }
 
@@ -588,6 +582,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     const alreadyPaid = Number(income?.paidAmount || 0);
     const remaining = Math.max(total - alreadyPaid, 0);
 
+    if (type === "correccion") {
+      if (!income) {
+        showToast(
+          `La cotización ${quote.publicId} todavía no tiene ingreso vinculado para corregir.`,
+          { type: "error", duration: 4200 },
+        );
+        return;
+      }
+
+      activePaymentQuoteId = id;
+      activePaymentType = type;
+
+      paymentModalTitle.textContent = "Corregir pago";
+      paymentModalMeta.textContent = `${quote.publicId} · ${quote.client} · ${quote.title}`;
+
+      document.getElementById("payment-type").value = "Corrección de pago";
+      document.getElementById("payment-date").value =
+        income.date || getTodayISO();
+      document.getElementById("payment-method").value =
+        income.paymentMethod || "";
+      document.getElementById("payment-due-date").value = "";
+      document.getElementById("payment-amount").value = Number(
+        income.paidAmount || 0,
+      ).toFixed(2);
+      document.getElementById("payment-notes").value =
+        `Corrección del pago de la cotización ${quote.publicId}.`;
+
+      paymentModal.classList.add("open");
+      paymentOverlay.classList.add("open");
+      return;
+    }
+
     if (quote.paymentStatus === "pagada total" && income) {
       showToast(
         `La cotización ${quote.publicId} ya fue liquidada por completo. No se puede registrar otro pago.`,
@@ -655,7 +681,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       "Servicio",
       "Total",
       "Estado",
-      "Pago",
       "Etapa",
       "PDF",
       "Gestionar",
@@ -775,7 +800,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (quotes.length === 0) {
       quoteTableBody.appendChild(
-        createEmptyStateRow("No hay cotizaciones registradas.", 11),
+        createEmptyStateRow("No hay cotizaciones registradas.", 10),
       );
       return;
     }
@@ -783,7 +808,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     quotes.forEach((quote) => {
       const row = document.createElement("tr");
       const statusClass = getStatusClass(quote.status);
-      const paymentStatusClass = getPaymentStatusClass(quote.paymentStatus);
       const funnelStage = getQuoteFunnelStage(quote);
       row.appendChild(createCell(quote.publicId || "-"));
       row.appendChild(createCell(quote.date || "-"));
@@ -800,15 +824,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ),
       );
       row.appendChild(statusCell);
-
-      const paymentCell = document.createElement("td");
-      paymentCell.appendChild(
-        createStatusBadge(
-          quote.paymentStatus || "no pagada",
-          `status payment ${paymentStatusClass}`,
-        ),
-      );
-      row.appendChild(paymentCell);
 
       const funnelCell = document.createElement("td");
       funnelCell.appendChild(
@@ -1334,6 +1349,88 @@ document.addEventListener("DOMContentLoaded", async () => {
     return false;
   }
 
+  async function correctLinkedPayment({
+    quoteId,
+    paymentDate,
+    amountPaid,
+    paymentMethod,
+    dueDate,
+    paymentNotes,
+  }) {
+    const quotes = getQuotes();
+    let incomes = getIncomes();
+    const quote = quotes.find((q) => String(q.id) === String(quoteId));
+    const income = incomes.find(
+      (item) => String(item.quoteId) === String(quoteId),
+    );
+
+    if (!quote || !income) {
+      showToast("No se encontró el ingreso vinculado para corregir.", {
+        type: "error",
+      });
+      return false;
+    }
+
+    const quoteTotal = Number(quote.total || 0);
+    const paidAmount = Number(Number(amountPaid || 0).toFixed(2));
+    const remainingAmount = Number(
+      Math.max(quoteTotal - paidAmount, 0).toFixed(2),
+    );
+    const isPaidTotal = paidAmount >= quoteTotal && remainingAmount === 0;
+    const correctedStatus = isPaidTotal ? "Pagado" : "Pago parcial";
+    const correctionNotes = [
+      `[${paymentDate}] Pago corregido manualmente.`,
+      `Pagado: ${formatCurrency(paidAmount)}.`,
+      `Saldo pendiente: ${formatCurrency(remainingAmount)}.`,
+      dueDate ? `Fecha pactada para saldo restante: ${dueDate}.` : "",
+      paymentNotes || "",
+    ]
+      .map((line) => String(line || "").trim())
+      .filter(Boolean)
+      .join("\n");
+
+    const correctedIncome = await saveIncomeRecord({
+      ...income,
+      date: paymentDate,
+      totalAmount: quoteTotal,
+      paidAmount,
+      remainingAmount,
+      paymentStatus: correctedStatus,
+      paymentMethod,
+      notes: correctionNotes,
+      paymentHistory: [
+        ...(income.paymentHistory || []),
+        {
+          type: "correccion",
+          date: paymentDate,
+          amount: paidAmount,
+          remainingAmount,
+          dueDate: dueDate || "",
+          method: paymentMethod,
+          note: paymentNotes || "",
+        },
+      ],
+    });
+
+    incomes = incomes.map((item) =>
+      String(item.id) === String(correctedIncome.id) ? correctedIncome : item,
+    );
+    saveIncomes(incomes);
+
+    const paymentSyncChanged = syncQuotesWithIncomes();
+    if (paymentSyncChanged) {
+      await persistQuotes();
+    }
+
+    renderQuotes();
+    showToast("Pago corregido y cotización sincronizada.", {
+      type: "success",
+      duration: 4200,
+    });
+
+    return true;
+  }
+
   function addTableEvents() {
     document.querySelectorAll(".pdf-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -1725,10 +1822,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    setButtonLoading(paymentSubmitButton, true, "Registrando...");
+    setButtonLoading(
+      paymentSubmitButton,
+      true,
+      activePaymentType === "correccion" ? "Corrigiendo..." : "Registrando...",
+    );
 
     try {
-      const saved = await registerPayment({
+      const payload = {
         quoteId: activePaymentQuoteId,
         paymentType: activePaymentType,
         paymentDate,
@@ -1736,7 +1837,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         paymentMethod,
         dueDate,
         paymentNotes,
-      });
+      };
+
+      const saved =
+        activePaymentType === "correccion"
+          ? await correctLinkedPayment(payload)
+          : await registerPayment(payload);
 
       if (saved) {
         closePaymentModal();

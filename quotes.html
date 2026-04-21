@@ -191,13 +191,14 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
             <table class="table">
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Fecha</th>
                   <th>Cliente</th>
                   <th>Título</th>
                   <th>Servicio</th>
                   <th>Total</th>
                   <th>Estado</th>
-                  <th>Pago</th>
+                  <th>Etapa</th>
                   <th>PDF</th>
                   <th>Gestionar</th>
                 </tr>
@@ -287,6 +288,14 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
                   data-value="total"
                 >
                   Registrar pago total
+                </button>
+                <button
+                  type="button"
+                  class="manage-action payment-btn"
+                  data-action="open-payment"
+                  data-value="correccion"
+                >
+                  Corregir pago
                 </button>
               </div>
             </div>
