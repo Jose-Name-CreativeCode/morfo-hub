@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { key: "expenses", label: "Gastos", href: "expenses.html" },
   { key: "quotes", label: "Cotizaciones", href: "quotes.html" },
   { key: "reports", label: "Reportes", href: "reports.html" },
+  { key: "maintenance", label: "Mantenimiento", href: "maintenance.html" },
   { key: "settings", label: "Configuración", href: "settings.html" },
 ];
 

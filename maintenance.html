@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Morfo Hub | Mantenimiento</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Mantenimiento" data-nav-key="maintenance">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+
+        <main class="page-content">
+          <section class="hero-panel hero-panel-reports">
+            <div class="dashboard-kicker hero-kicker-success">
+              Salud de datos
+            </div>
+            <h1 class="section-title dashboard-title">Mantenimiento</h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Revisa duplicados e inconsistencias antes de limpiar datos en
+              Firebase. Las acciones destructivas siempre piden confirmación.
+            </p>
+          </section>
+
+          <section class="cards-grid section-spacing">
+            <article class="card metric-card">
+              <div class="card-label">Clientes</div>
+              <div class="card-value metric-card-value" id="count-clients">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card income">
+              <div class="card-label">Ingresos</div>
+              <div class="card-value metric-card-value" id="count-income">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card expense">
+              <div class="card-label">Gastos</div>
+              <div class="card-value metric-card-value" id="count-expenses">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card pending">
+              <div class="card-label">Cotizaciones</div>
+              <div class="card-value metric-card-value" id="count-quotes">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card">
+              <div class="card-label">Alertas</div>
+              <div class="card-value metric-card-value" id="count-alerts">
+                0
+              </div>
+            </article>
+          </section>
+
+          <section class="card panel-soft form-shell section-spacing">
+            <div class="hero-row">
+              <div>
+                <h2 class="section-title section-title-sm">
+                  Diagnóstico de datos
+                </h2>
+                <p class="section-subtitle">
+                  Busca grupos duplicados y relaciones incompletas entre
+                  cotizaciones e ingresos.
+                </p>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="button" class="btn-primary" id="refresh-data-btn">
+                  Actualizar diagnóstico
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="table-wrapper section-spacing">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Problema</th>
+                  <th>Detalle</th>
+                  <th>Registros</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="maintenanceIssuesBody"></tbody>
+            </table>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/maintenance.js"></script>
+  </body>
+</html>

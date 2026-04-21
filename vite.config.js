@@ -24,6 +24,7 @@ export default defineConfig({
         expenses: resolve(__dirname, "expenses.html"),
         quotes: resolve(__dirname, "quotes.html"),
         reports: resolve(__dirname, "reports.html"),
+        maintenance: resolve(__dirname, "maintenance.html"),
         settings: resolve(__dirname, "settings.html"),
       },
     },
