@@ -43,6 +43,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const manageCloseBtn = document.getElementById("manage-close");
   const manageQuoteTitle = document.getElementById("manage-quote-title");
   const manageQuoteMeta = document.getElementById("manage-quote-meta");
+  const manageSummaryTotal = document.getElementById("manage-summary-total");
+  const manageSummaryPaid = document.getElementById("manage-summary-paid");
+  const manageSummaryPending = document.getElementById(
+    "manage-summary-pending",
+  );
+  const manageSummaryIncome = document.getElementById("manage-summary-income");
 
   const paymentModal = document.getElementById("payment-modal");
   const paymentOverlay = document.getElementById("payment-overlay");
@@ -553,9 +559,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     const quote = getQuoteById(id);
     if (!quote) return;
 
+    const income = getIncomeByQuoteId(id);
+    const total = Number(quote.total || 0);
+    const paid = Number(quote.totalPaid || income?.paidAmount || 0);
+    const pending =
+      quote.remainingAmount !== undefined && quote.remainingAmount !== null
+        ? Number(quote.remainingAmount || 0)
+        : Math.max(total - paid, 0);
+    const stage = getQuoteFunnelStage(quote);
+
     activeManageQuoteId = id;
     manageQuoteTitle.textContent = `${quote.publicId} · ${quote.title}`;
-    manageQuoteMeta.textContent = `${quote.client} · ${quote.date} · ${formatCurrency(quote.total)}`;
+    manageQuoteMeta.textContent = `${quote.client} · ${quote.date} · ${stage.label}`;
+    manageSummaryTotal.textContent = formatCurrency(total);
+    manageSummaryPaid.textContent = formatCurrency(paid);
+    manageSummaryPending.textContent = formatCurrency(pending);
+    manageSummaryIncome.textContent =
+      income?.publicId || quote.linkedIncomeId || "Sin vincular";
 
     manageModal.classList.add("open");
     manageOverlay.classList.add("open");

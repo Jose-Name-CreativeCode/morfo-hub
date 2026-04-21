@@ -980,6 +980,44 @@ img {
   margin-bottom: 18px;
 }
 
+.manage-payment-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.manage-payment-summary div {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(96, 165, 250, 0.14),
+      transparent 42%
+    ),
+    var(--panel-2);
+}
+
+.manage-payment-summary span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.manage-payment-summary strong {
+  display: block;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
 .manage-section h4 {
   margin-bottom: 10px;
   font-size: 1rem;
@@ -1058,6 +1096,10 @@ img {
 @media (max-width: 700px) {
   .manage-actions-grid {
     grid-template-columns: 1fr;
+  }
+
+  .manage-payment-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
