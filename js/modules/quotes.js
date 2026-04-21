@@ -31,6 +31,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const quoteTableBody = document.querySelector(".table tbody");
   const submitButton = quoteForm.querySelector(".btn-primary");
   const clientSelect = document.getElementById("quote-client");
+  const funnelProspect = document.getElementById("funnel-prospect");
+  const funnelSent = document.getElementById("funnel-sent");
+  const funnelAdvance = document.getElementById("funnel-advance");
+  const funnelActive = document.getElementById("funnel-active");
+  const funnelPaid = document.getElementById("funnel-paid");
 
   const manageModal = document.getElementById("manage-quote-modal");
   const manageOverlay = document.getElementById("manage-overlay");
@@ -334,6 +339,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "no-pagada";
   }
 
+  function getQuoteFunnelStage(quote) {
+    const paymentStatus = normalizeStatus(quote.paymentStatus, "no pagada");
+    const status = normalizeStatus(quote.status, "borrador");
+
+    if (paymentStatus === "pagada total") {
+      return {
+        key: "paid",
+        label: "Pagado total",
+        className: "funnel-paid",
+      };
+    }
+
+    if (paymentStatus === "anticipo pagado") {
+      return {
+        key: "active",
+        label: "Cliente activo",
+        className: "funnel-active",
+      };
+    }
+
+    if (status === "aprobada") {
+      return {
+        key: "advance",
+        label: "Esperando anticipo",
+        className: "funnel-advance",
+      };
+    }
+
+    if (status === "enviada") {
+      return {
+        key: "sent",
+        label: "Cotización enviada",
+        className: "funnel-sent",
+      };
+    }
+
+    return {
+      key: "prospect",
+      label: "Prospecto",
+      className: "funnel-prospect",
+    };
+  }
+
   function normalizeIncomePaymentStatus(value) {
     return String(value || "")
       .toLowerCase()
@@ -598,6 +646,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "Total",
       "Estado",
       "Pago",
+      "Etapa",
       "PDF",
       "Gestionar",
     ].forEach((label) => {
@@ -705,6 +754,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncQuotesWithIncomes();
 
     let quotes = getQuotes();
+    renderFunnelSummary(quotes);
     loadFilterOptions();
 
     if (selectedClientFilter) {
@@ -715,7 +765,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (quotes.length === 0) {
       quoteTableBody.appendChild(
-        createEmptyStateRow("No hay cotizaciones registradas.", 10),
+        createEmptyStateRow("No hay cotizaciones registradas.", 11),
       );
       return;
     }
@@ -724,6 +774,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const row = document.createElement("tr");
       const statusClass = getStatusClass(quote.status);
       const paymentStatusClass = getPaymentStatusClass(quote.paymentStatus);
+      const funnelStage = getQuoteFunnelStage(quote);
       row.appendChild(createCell(quote.publicId || "-"));
       row.appendChild(createCell(quote.date || "-"));
       row.appendChild(createCell(quote.client || "-"));
@@ -749,6 +800,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       row.appendChild(paymentCell);
 
+      const funnelCell = document.createElement("td");
+      funnelCell.appendChild(
+        createStatusBadge(
+          funnelStage.label,
+          `status funnel-status ${funnelStage.className}`,
+        ),
+      );
+      row.appendChild(funnelCell);
+
       const pdfCell = document.createElement("td");
       pdfCell.appendChild(
         createActionButton({
@@ -773,6 +833,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     addTableEvents();
+  }
+
+  function renderFunnelSummary(quotes) {
+    const stats = {
+      prospect: 0,
+      sent: 0,
+      advance: 0,
+      active: 0,
+      paid: 0,
+    };
+
+    quotes.forEach((quote) => {
+      const stage = getQuoteFunnelStage(quote);
+      stats[stage.key] += 1;
+    });
+
+    if (funnelProspect) funnelProspect.textContent = stats.prospect;
+    if (funnelSent) funnelSent.textContent = stats.sent;
+    if (funnelAdvance) funnelAdvance.textContent = stats.advance;
+    if (funnelActive) funnelActive.textContent = stats.active;
+    if (funnelPaid) funnelPaid.textContent = stats.paid;
   }
 
   function fillForm(quote) {

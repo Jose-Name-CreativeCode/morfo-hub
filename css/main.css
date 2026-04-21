@@ -599,6 +599,10 @@ img {
   border-color: rgba(139, 92, 246, 0.16);
 }
 
+.quote-funnel-grid {
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+}
+
 .modal-shell {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
@@ -861,6 +865,30 @@ img {
 .status.payment.pagada-total {
   background: #a5d6a7;
   color: #111827;
+}
+
+.status.funnel-status {
+  color: #111827;
+}
+
+.status.funnel-prospect {
+  background: #dbeafe;
+}
+
+.status.funnel-sent {
+  background: #bfdbfe;
+}
+
+.status.funnel-advance {
+  background: #fde68a;
+}
+
+.status.funnel-active {
+  background: #bbf7d0;
+}
+
+.status.funnel-paid {
+  background: #a7f3d0;
 }
 
 /* MANAGE MODAL */
