@@ -4,8 +4,13 @@ import {
   getClientsCollection,
   saveClientRecord,
 } from "../services/clients-service.js";
+import { getIncomeCollection } from "../services/income-service.js";
+import { getQuotesCollection } from "../services/quotes-service.js";
 import {
   askConfirm,
+  formatCurrency,
+  formatDate,
+  normalizeText,
   setButtonLoading,
   setPageLoading,
   showToast,
@@ -18,8 +23,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   const clientForm = document.querySelector("form");
   const clientTableBody = document.querySelector(".table tbody");
   const submitButton = clientForm.querySelector(".btn-primary");
+  const detailModal = document.getElementById("client-detail-modal");
+  const detailOverlay = document.getElementById("client-detail-overlay");
+  const detailCloseButton = document.getElementById("client-detail-close");
+  const detailTitle = document.getElementById("client-detail-title");
+  const detailMeta = document.getElementById("client-detail-meta");
+  const detailQuotes = document.getElementById("client-detail-quotes");
+  const detailIncome = document.getElementById("client-detail-income");
+  const detailPending = document.getElementById("client-detail-pending");
+  const detailLast = document.getElementById("client-detail-last");
+  const detailQuotesList = document.getElementById(
+    "client-detail-quotes-list",
+  );
+  const detailIncomeList = document.getElementById("client-detail-income-list");
   let editingClientId = null;
   let currentClients = [];
+  let currentQuotes = [];
+  let currentIncomes = [];
 
   function resetForm() {
     clientForm.reset();
@@ -43,13 +63,132 @@ document.addEventListener("DOMContentLoaded", async () => {
     return row;
   }
 
+  function getClientRelatedData(client) {
+    const clientName = normalizeText(client.name);
+    const quotes = currentQuotes.filter(
+      (quote) => normalizeText(quote.client) === clientName,
+    );
+    const incomes = currentIncomes.filter(
+      (income) => normalizeText(income.client) === clientName,
+    );
+    const totalIncome = incomes.reduce(
+      (sum, income) => sum + Number(income.paidAmount || 0),
+      0,
+    );
+    const pendingBalance = incomes.reduce(
+      (sum, income) => sum + Number(income.remainingAmount || 0),
+      0,
+    );
+    const dates = [...quotes, ...incomes]
+      .map((item) => item.date)
+      .filter(Boolean)
+      .sort((a, b) => String(b).localeCompare(String(a)));
+
+    return {
+      quotes,
+      incomes,
+      totalIncome,
+      pendingBalance,
+      lastActivity: dates[0] || "",
+    };
+  }
+
+  function createDetailItem({ title, meta, amount }) {
+    const item = document.createElement("article");
+    item.className = "client-detail-item";
+
+    const itemTitle = document.createElement("strong");
+    itemTitle.textContent = title;
+
+    const itemMeta = document.createElement("span");
+    itemMeta.textContent = meta;
+
+    item.appendChild(itemTitle);
+    item.appendChild(itemMeta);
+
+    if (amount) {
+      const itemAmount = document.createElement("p");
+      itemAmount.textContent = amount;
+      item.appendChild(itemAmount);
+    }
+
+    return item;
+  }
+
+  function renderDetailList(container, items, emptyMessage, renderItem) {
+    container.replaceChildren();
+
+    if (items.length === 0) {
+      container.textContent = emptyMessage;
+      return;
+    }
+
+    items.slice(0, 5).forEach((item) => {
+      container.appendChild(renderItem(item));
+    });
+  }
+
+  function openClientDetail(clientId) {
+    const client = currentClients.find(
+      (item) => String(item.id) === String(clientId),
+    );
+    if (!client) return;
+
+    const related = getClientRelatedData(client);
+
+    detailTitle.textContent = client.name;
+    detailMeta.textContent = `${client.contact} · ${client.email} · ${client.status}`;
+    detailQuotes.textContent = String(related.quotes.length);
+    detailIncome.textContent = formatCurrency(related.totalIncome);
+    detailPending.textContent = formatCurrency(related.pendingBalance);
+    detailLast.textContent = related.lastActivity
+      ? formatDate(related.lastActivity)
+      : "-";
+
+    renderDetailList(
+      detailQuotesList,
+      related.quotes,
+      "Sin cotizaciones todavía.",
+      (quote) =>
+        createDetailItem({
+          title: `${quote.publicId || "-"} · ${quote.title || "-"}`,
+          meta: `${formatDate(quote.date)} · ${quote.status || "-"} · ${quote.paymentStatus || "sin pago"}`,
+          amount: formatCurrency(quote.total || 0),
+        }),
+    );
+
+    renderDetailList(
+      detailIncomeList,
+      related.incomes,
+      "Sin ingresos todavía.",
+      (income) =>
+        createDetailItem({
+          title: `${income.publicId || "-"} · ${income.concept || "-"}`,
+          meta: `${formatDate(income.date)} · ${income.paymentStatus || "-"}`,
+          amount: `${formatCurrency(income.paidAmount || 0)} pagado · ${formatCurrency(income.remainingAmount || 0)} pendiente`,
+        }),
+    );
+
+    detailModal.classList.add("open");
+    detailOverlay.classList.add("open");
+  }
+
+  function closeClientDetail() {
+    detailModal.classList.remove("open");
+    detailOverlay.classList.remove("open");
+  }
+
   async function renderClients() {
-    currentClients = await getClientsCollection();
+    [currentClients, currentQuotes, currentIncomes] = await Promise.all([
+      getClientsCollection(),
+      getQuotesCollection(),
+      getIncomeCollection(),
+    ]);
     clientTableBody.replaceChildren();
 
     if (currentClients.length === 0) {
       clientTableBody.appendChild(
-        createEmptyStateRow("No hay clientes registrados.", 8),
+        createEmptyStateRow("No hay clientes registrados.", 9),
       );
       return;
     }
@@ -63,6 +202,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.appendChild(createCell(client.phone));
       row.appendChild(createCell(client.status));
       row.appendChild(createCell(client.invoiceRequired));
+
+      const detailCell = document.createElement("td");
+      const detailButton = document.createElement("button");
+      detailButton.type = "button";
+      detailButton.className = "pdf-btn client-detail-btn";
+      detailButton.dataset.id = String(client.id);
+      detailButton.textContent = "Ver";
+      detailCell.appendChild(detailButton);
+      row.appendChild(detailCell);
 
       const editCell = document.createElement("td");
       const editButton = document.createElement("button");
@@ -140,8 +288,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function addTableEvents() {
+    const detailButtons = document.querySelectorAll(".client-detail-btn");
     const editButtons = document.querySelectorAll(".edit-btn");
     const deleteButtons = document.querySelectorAll(".delete-btn");
+
+    detailButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        openClientDetail(button.dataset.id);
+      });
+    });
 
     editButtons.forEach((button) => {
       button.addEventListener("click", () => {
@@ -216,6 +371,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       setButtonLoading(submitButton, false);
     }
   });
+
+  detailCloseButton.addEventListener("click", closeClientDetail);
+  detailOverlay.addEventListener("click", closeClientDetail);
 
   try {
     await renderClients();

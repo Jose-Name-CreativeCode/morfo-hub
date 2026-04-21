@@ -1128,6 +1128,37 @@ img {
   color: var(--muted);
 }
 
+.client-detail-list {
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.client-detail-item {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.client-detail-item strong {
+  display: block;
+  color: var(--text);
+}
+
+.client-detail-item span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.client-detail-item p {
+  margin-top: 8px;
+  color: #bfdbfe;
+  font-weight: 800;
+}
+
 .manage-section h4 {
   margin-bottom: 10px;
   font-size: 1rem;
