@@ -34,6 +34,43 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentIncomes = [];
   let currentClients = [];
 
+  function normalizeDuplicateValue(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+
+  function getIncomeDuplicateKey(income) {
+    if (income.quoteId) {
+      return `quote:${normalizeDuplicateValue(income.quoteId)}`;
+    }
+
+    return [
+      "manual",
+      normalizeDuplicateValue(income.client),
+      normalizeDuplicateValue(income.date),
+      normalizeDuplicateValue(income.concept),
+      Number(income.totalAmount || 0).toFixed(2),
+      Number(income.paidAmount || 0).toFixed(2),
+      normalizeDuplicateValue(income.paymentStatus),
+      normalizeDuplicateValue(income.paymentMethod),
+      normalizeDuplicateValue(income.invoiceRequired),
+    ].join("|");
+  }
+
+  function findDuplicateIncomeIds(incomeId) {
+    const targetIncome = currentIncomes.find(
+      (income) => String(income.id) === String(incomeId),
+    );
+
+    if (!targetIncome) return [incomeId];
+
+    const duplicateKey = getIncomeDuplicateKey(targetIncome);
+    const duplicatedIncomes = currentIncomes.filter(
+      (income) => getIncomeDuplicateKey(income) === duplicateKey,
+    );
+
+    return duplicatedIncomes.map((income) => income.id);
+  }
+
   function normalizePaymentStatus(status) {
     const normalized = normalizeText(status);
 
@@ -276,23 +313,52 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function handleDelete(incomeId) {
+    const incomeIdsToDelete = findDuplicateIncomeIds(incomeId);
+    const duplicateCount = incomeIdsToDelete.length;
+
     const confirmed = await askConfirm({
       title: "Eliminar ingreso",
-      message: "¿Seguro que quieres eliminar este ingreso?",
+      message:
+        duplicateCount > 1
+          ? `Se encontraron ${duplicateCount} ingresos duplicados con los mismos datos. ¿Quieres eliminarlos todos?`
+          : "¿Seguro que quieres eliminar este ingreso?",
       confirmText: "Eliminar",
     });
     if (!confirmed) return;
 
-    await deleteIncomeRecord(incomeId);
+    try {
+      await Promise.all(
+        incomeIdsToDelete.map((id) => deleteIncomeRecord(String(id))),
+      );
 
-    if (editingIncomeId === incomeId) {
-      resetForm();
+      if (
+        incomeIdsToDelete.some(
+          (id) => String(id) === String(editingIncomeId),
+        )
+      ) {
+        resetForm();
+      }
+
+      currentIncomes = currentIncomes.filter(
+        (income) =>
+          !incomeIdsToDelete.some((id) => String(id) === String(income.id)),
+      );
+      loadYearOptions();
+      renderIncomes();
+      showToast(
+        duplicateCount > 1
+          ? "Ingresos duplicados eliminados correctamente."
+          : "Ingreso eliminado correctamente.",
+        { type: "success" },
+      );
+    } catch (error) {
+      console.error("No se pudo eliminar el ingreso:", error);
+      showToast(
+        error?.message ||
+          "No se pudo eliminar el ingreso. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
     }
-
-    currentIncomes = await getIncomeCollection();
-    loadYearOptions();
-    renderIncomes();
-    showToast("Ingreso eliminado correctamente.", { type: "success" });
   }
 
   function addTableEvents() {

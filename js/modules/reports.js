@@ -124,6 +124,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     return baseAmount;
   }
 
+  function getIncomePendingAmount(item) {
+    const explicitRemaining = Number(item.remainingAmount);
+    if (Number.isFinite(explicitRemaining) && explicitRemaining > 0) {
+      return explicitRemaining;
+    }
+
+    const totalAmount = Number(item.totalAmount || 0);
+    const paidAmount = Number(item.paidAmount || 0);
+
+    if (totalAmount <= 0) return 0;
+
+    return Math.max(totalAmount - paidAmount, 0);
+  }
+
+  function shouldCountIncomeAsReceivable(item) {
+    const paymentStatus = normalizeText(item.paymentStatus);
+    const pendingAmount = getIncomePendingAmount(item);
+
+    if (pendingAmount <= 0) return false;
+
+    return (
+      paymentStatus === "parcial" ||
+      paymentStatus === "pago parcial" ||
+      paymentStatus === "anticipo pagado" ||
+      paymentStatus === "pendiente" ||
+      paymentStatus === "no pagada" ||
+      paymentStatus === "no_pagada"
+    );
+  }
+
   function getExpenseAmount(item) {
     return Number(item.amount || item.totalAmount || 0);
   }
@@ -133,6 +163,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getQuotePaidAmount(item) {
+    const quoteTotalPaid = Number(item.totalPaid || 0);
+    if (quoteTotalPaid > 0) return quoteTotalPaid;
+
     const explicitPaid = Number(item.paidAmount || 0);
     const partialPaid = Number(
       item.partialPayment?.amount ||
@@ -161,9 +194,37 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getQuotePendingAmount(item) {
+    const explicitRemaining = Number(item.remainingAmount);
+    if (Number.isFinite(explicitRemaining) && explicitRemaining >= 0) {
+      return explicitRemaining;
+    }
+
     const total = getQuoteTotal(item);
     const paid = getQuotePaidAmount(item);
     return Math.max(total - paid, 0);
+  }
+
+  function getLinkedIncomeForQuote(quote, incomes) {
+    return incomes.find((income) => {
+      const quoteIdMatches =
+        income.quoteId &&
+        quote.id &&
+        String(income.quoteId) === String(quote.id);
+      const quotePublicIdMatches =
+        income.quotePublicId &&
+        quote.publicId &&
+        String(income.quotePublicId) === String(quote.publicId);
+      const linkedIncomeMatches =
+        quote.linkedIncomeId &&
+        income.publicId &&
+        String(quote.linkedIncomeId) === String(income.publicId);
+
+      return quoteIdMatches || quotePublicIdMatches || linkedIncomeMatches;
+    });
+  }
+
+  function hasLinkedIncomeForQuote(quote, incomes) {
+    return Boolean(getLinkedIncomeForQuote(quote, incomes));
   }
 
   function shouldCountQuoteAsReceivable(item) {
@@ -361,8 +422,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         amount: formatCurrency(getExpenseAmount(item)),
         type: "Gasto",
       })),
+      ...incomes
+        .filter((item) => shouldCountIncomeAsReceivable(item))
+        .map((item) => ({
+          concept:
+            item.concept ||
+            item.clientName ||
+            item.client ||
+            "Saldo pendiente",
+          category: "Por cobrar / Parcial",
+          date: formatDate(item.date || item.createdAt),
+          amount: formatCurrency(getIncomePendingAmount(item)),
+          type: "Por cobrar",
+        })),
       ...quotes
-        .filter((item) => shouldCountQuoteAsReceivable(item))
+        .filter(
+          (item) =>
+            shouldCountQuoteAsReceivable(item) &&
+            !hasLinkedIncomeForQuote(item, incomes),
+        )
         .map((item) => ({
           concept:
             item.title ||
@@ -418,9 +496,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const estimatedUtility = totalIncome - totalExpenses;
 
-    const pendingAmount = quotes
-      .filter((item) => shouldCountQuoteAsReceivable(item))
+    const incomePendingAmount = incomes
+      .filter((item) => shouldCountIncomeAsReceivable(item))
+      .reduce((sum, item) => sum + getIncomePendingAmount(item), 0);
+
+    const quotePendingAmount = quotes
+      .filter(
+        (item) =>
+          shouldCountQuoteAsReceivable(item) &&
+          !hasLinkedIncomeForQuote(item, incomes),
+      )
       .reduce((sum, item) => sum + getQuotePendingAmount(item), 0);
+
+    const pendingAmount = incomePendingAmount + quotePendingAmount;
 
     const selectedRows = buildSelectedRows(
       reportType,

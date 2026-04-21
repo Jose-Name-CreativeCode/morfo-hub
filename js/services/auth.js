@@ -112,7 +112,9 @@ export function setHeaderUser(user) {
   actions.replaceChildren();
 
   if (!user?.email) {
-    headerUser.textContent = "Modo local";
+    headerUser.textContent = isAuthEnabled()
+      ? "Sesión no iniciada"
+      : "Firebase no configurado";
     return;
   }
 
@@ -132,7 +134,7 @@ export function setHeaderUser(user) {
 
 export async function protectPage({
   loginPath = getLoginUrl(),
-  allowLocalFallback = true,
+  allowLocalFallback = false,
 } = {}) {
   if (!isAuthEnabled()) {
     if (!allowLocalFallback) {

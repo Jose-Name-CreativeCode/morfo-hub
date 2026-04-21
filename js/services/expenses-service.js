@@ -1,17 +1,16 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
 const COLLECTION_NAME = "expenses";
+const MIGRATED_KEY = `${STORAGE_KEYS.EXPENSES}_firestore_migrated`;
 
 function sortExpenses(expenses) {
   return [...expenses].sort((a, b) => {
@@ -28,8 +27,9 @@ function mapExpenseFromDoc(snapshot) {
   const data = snapshot.data();
 
   return {
-    id: snapshot.id,
     ...data,
+    id: snapshot.id,
+    legacyId: data.legacyId || data.id || "",
     createdAtMs: data.createdAt?.toMillis?.() || 0,
     updatedAtMs: data.updatedAt?.toMillis?.() || 0,
   };
@@ -40,14 +40,22 @@ function getLegacyExpenses() {
 }
 
 async function migrateLegacyExpensesIfNeeded() {
+  if (localStorage.getItem(MIGRATED_KEY) === "true") return;
+
   const legacyExpenses = getLegacyExpenses();
 
-  if (!legacyExpenses.length) return;
+  if (!legacyExpenses.length) {
+    localStorage.setItem(MIGRATED_KEY, "true");
+    return;
+  }
 
   const collectionRef = collection(db, COLLECTION_NAME);
   const snapshot = await getDocs(collectionRef);
 
-  if (!snapshot.empty) return;
+  if (!snapshot.empty) {
+    localStorage.setItem(MIGRATED_KEY, "true");
+    return;
+  }
 
   await Promise.all(
     legacyExpenses.map((expense) =>
@@ -59,6 +67,8 @@ async function migrateLegacyExpensesIfNeeded() {
       }),
     ),
   );
+
+  localStorage.setItem(MIGRATED_KEY, "true");
 }
 
 export function isExpensesRemoteEnabled() {
@@ -84,14 +94,21 @@ export async function saveExpenseRecord(expense) {
     const expenses = getLegacyExpenses();
 
     if (expense.id) {
-      const updated = expenses.map((item) => (item.id === expense.id ? expense : item));
-      saveData(STORAGE_KEYS.EXPENSES, updated);
+      const exists = expenses.some(
+        (item) => String(item.id) === String(expense.id),
+      );
+      const updated = exists
+        ? expenses.map((item) =>
+            String(item.id) === String(expense.id) ? expense : item,
+          )
+        : [...expenses, expense];
+      saveData(STORAGE_KEYS.EXPENSES, sortExpenses(updated));
       return expense;
     }
 
     const newExpense = { ...expense, id: Date.now() };
     expenses.push(newExpense);
-    saveData(STORAGE_KEYS.EXPENSES, expenses);
+    saveData(STORAGE_KEYS.EXPENSES, sortExpenses(expenses));
     return newExpense;
   }
 
@@ -103,16 +120,37 @@ export async function saveExpenseRecord(expense) {
   if (expense.id) {
     const rest = { ...payload };
     delete rest.id;
-    await updateDoc(doc(db, COLLECTION_NAME, String(expense.id)), rest);
-    return { ...expense };
+    await setDoc(doc(db, COLLECTION_NAME, String(expense.id)), rest, {
+      merge: true,
+    });
+    const updatedExpense = { ...expense };
+    const cachedExpenses = getLegacyExpenses();
+    const nextExpenses = cachedExpenses.some(
+      (item) => String(item.id) === String(expense.id),
+    )
+      ? cachedExpenses.map((item) =>
+          String(item.id) === String(expense.id) ? updatedExpense : item,
+        )
+      : [...cachedExpenses, updatedExpense];
+    saveData(STORAGE_KEYS.EXPENSES, sortExpenses(nextExpenses));
+    return updatedExpense;
   }
 
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...payload,
+  const docRef = doc(collection(db, COLLECTION_NAME));
+  const rest = { ...payload };
+  delete rest.id;
+
+  await setDoc(docRef, {
+    ...rest,
     createdAt: serverTimestamp(),
   });
 
-  return { ...expense, id: docRef.id };
+  const newExpense = { ...expense, id: docRef.id };
+  saveData(
+    STORAGE_KEYS.EXPENSES,
+    sortExpenses([...getLegacyExpenses(), newExpense]),
+  );
+  return newExpense;
 }
 
 export async function deleteExpenseRecord(expenseId) {
@@ -125,4 +163,10 @@ export async function deleteExpenseRecord(expenseId) {
   }
 
   await deleteDoc(doc(db, COLLECTION_NAME, String(expenseId)));
+
+  const cachedExpenses = getLegacyExpenses().filter(
+    (expense) => String(expense.id) !== String(expenseId),
+  );
+  saveData(STORAGE_KEYS.EXPENSES, sortExpenses(cachedExpenses));
+  localStorage.setItem(MIGRATED_KEY, "true");
 }

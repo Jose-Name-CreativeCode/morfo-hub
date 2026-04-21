@@ -14,21 +14,21 @@
         <header class="header" data-app-header></header>
 
         <main class="page-content">
-          <h1 class="section-title">Gestión de cotizaciones</h1>
-          <p class="section-subtitle">
-            Crea propuestas personalizadas para redes sociales, páginas web,
-            mantenimiento, hosting y servicios adicionales.
-          </p>
+          <section class="hero-panel hero-panel-quotes">
+            <div class="dashboard-kicker hero-kicker-quotes">
+              Propuestas comerciales
+            </div>
+            <h1 class="section-title dashboard-title">Gestión de cotizaciones</h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Crea propuestas personalizadas para redes sociales, páginas web,
+              mantenimiento, hosting y servicios adicionales.
+            </p>
+          </section>
 
-          <section class="card" style="margin-bottom: 24px">
-            <h2
-              class="section-title"
-              style="font-size: 1.1rem; margin-bottom: 16px"
-            >
-              Nueva cotización
-            </h2>
+          <section class="card panel-soft form-shell section-spacing">
+            <h2 class="section-title section-title-sm">Nueva cotización</h2>
 
-            <form>
+            <form class="quote-form-grid">
               <div class="form-group">
                 <label for="quote-client">Cliente</label>
                 <select id="quote-client">
@@ -63,7 +63,7 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group form-group-full">
                 <label for="quote-description">Descripción general</label>
                 <textarea
                   id="quote-description"
@@ -72,7 +72,7 @@
                 ></textarea>
               </div>
 
-              <div class="form-group">
+              <div class="form-group form-group-full">
                 <label for="quote-includes">Incluye</label>
                 <textarea
                   id="quote-includes"
@@ -120,7 +120,7 @@
                 />
               </div>
 
-              <div class="form-group">
+              <div class="form-group form-group-full">
                 <label for="quote-notes">Condiciones / observaciones</label>
                 <textarea id="quote-notes" rows="14">
 Nota:
@@ -148,13 +148,15 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
                 >
               </div>
 
-              <button type="submit" class="btn-primary">
-                Guardar cotización
-              </button>
+              <div class="form-group form-group-full form-group-tight">
+                <button type="submit" class="btn-primary">
+                  Guardar cotización
+                </button>
+              </div>
             </form>
           </section>
 
-          <section class="table-wrapper" style="margin-bottom: 24px">
+          <section class="table-wrapper quote-table-shell section-spacing">
             <table class="table">
               <thead>
                 <tr>
@@ -175,7 +177,7 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
 
           <div id="manage-overlay" class="manage-overlay"></div>
 
-          <div id="manage-quote-modal" class="manage-modal">
+          <div id="manage-quote-modal" class="manage-modal modal-shell">
             <div class="manage-modal-header">
               <div>
                 <h3 id="manage-quote-title">Gestionar cotización</h3>
@@ -261,7 +263,7 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
 
           <div id="payment-overlay" class="manage-overlay"></div>
 
-          <div id="payment-modal" class="manage-modal">
+          <div id="payment-modal" class="manage-modal modal-shell">
             <div class="manage-modal-header">
               <div>
                 <h3 id="payment-modal-title">Registrar pago</h3>

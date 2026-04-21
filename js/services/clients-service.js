@@ -1,12 +1,10 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
@@ -92,14 +90,21 @@ export async function saveClientRecord(client) {
     const clients = getLegacyClients();
 
     if (client.id) {
-      const updated = clients.map((item) => (item.id === client.id ? client : item));
-      saveData(STORAGE_KEYS.CLIENTS, updated);
+      const exists = clients.some(
+        (item) => String(item.id) === String(client.id),
+      );
+      const updated = exists
+        ? clients.map((item) =>
+            String(item.id) === String(client.id) ? client : item,
+          )
+        : [...clients, client];
+      saveData(STORAGE_KEYS.CLIENTS, sortClients(updated));
       return client;
     }
 
     const newClient = { ...client, id: Date.now() };
     clients.push(newClient);
-    saveData(STORAGE_KEYS.CLIENTS, clients);
+    saveData(STORAGE_KEYS.CLIENTS, sortClients(clients));
     return newClient;
   }
 
@@ -115,24 +120,46 @@ export async function saveClientRecord(client) {
   };
 
   if (client.id) {
-    await updateDoc(doc(db, COLLECTION_NAME, String(client.id)), payload);
-    return { ...client };
+    await setDoc(doc(db, COLLECTION_NAME, String(client.id)), payload, {
+      merge: true,
+    });
+    const updatedClient = { ...client };
+    const cachedClients = getLegacyClients();
+    const nextClients = cachedClients.some(
+      (item) => String(item.id) === String(client.id),
+    )
+      ? cachedClients.map((item) =>
+          String(item.id) === String(client.id) ? updatedClient : item,
+        )
+      : [...cachedClients, updatedClient];
+    saveData(STORAGE_KEYS.CLIENTS, sortClients(nextClients));
+    return updatedClient;
   }
 
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+  const docRef = doc(collection(db, COLLECTION_NAME));
+  await setDoc(docRef, {
     ...payload,
     createdAt: serverTimestamp(),
   });
 
-  return { ...client, id: docRef.id };
+  const newClient = { ...client, id: docRef.id };
+  saveData(STORAGE_KEYS.CLIENTS, sortClients([...getLegacyClients(), newClient]));
+  return newClient;
 }
 
 export async function deleteClientRecord(clientId) {
   if (!isClientsRemoteEnabled()) {
-    const clients = getLegacyClients().filter((client) => client.id !== clientId);
+    const clients = getLegacyClients().filter(
+      (client) => String(client.id) !== String(clientId),
+    );
     saveData(STORAGE_KEYS.CLIENTS, clients);
     return;
   }
 
   await deleteDoc(doc(db, COLLECTION_NAME, String(clientId)));
+
+  const cachedClients = getLegacyClients().filter(
+    (client) => String(client.id) !== String(clientId),
+  );
+  saveData(STORAGE_KEYS.CLIENTS, cachedClients);
 }

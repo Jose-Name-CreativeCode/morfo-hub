@@ -4,7 +4,12 @@ import {
   getClientsCollection,
   saveClientRecord,
 } from "../services/clients-service.js";
-import { askConfirm, setPageLoading, showToast } from "../utils.js";
+import {
+  askConfirm,
+  setButtonLoading,
+  setPageLoading,
+  showToast,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   setPageLoading(true);
@@ -115,14 +120,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     if (!confirmed) return;
 
-    await deleteClientRecord(clientId);
+    try {
+      await deleteClientRecord(clientId);
 
-    if (editingClientId === clientId) {
-      resetForm();
+      if (editingClientId === clientId) {
+        resetForm();
+      }
+
+      await renderClients();
+      showToast("Cliente eliminado correctamente.", { type: "success" });
+    } catch (error) {
+      console.error("No se pudo eliminar el cliente:", error);
+      showToast(
+        error?.message ||
+          "No se pudo eliminar el cliente. Revisa permisos o conexión.",
+        { type: "error", duration: 4200 },
+      );
     }
-
-    await renderClients();
-    showToast("Cliente eliminado correctamente.", { type: "success" });
   }
 
   function addTableEvents() {
@@ -162,20 +176,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    await saveClientRecord({
-      id: editingClientId,
-      name,
-      contact,
-      email,
-      phone,
-      status,
-      invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
-      notes,
-    });
+    setButtonLoading(
+      submitButton,
+      true,
+      editingClientId ? "Actualizando..." : "Guardando...",
+    );
 
-    await renderClients();
-    resetForm();
-    showToast("Cliente guardado correctamente.", { type: "success" });
+    try {
+      const savedClient = await saveClientRecord({
+        id: editingClientId,
+        name,
+        contact,
+        email,
+        phone,
+        status,
+        invoiceRequired: invoiceRequired === "yes" ? "Sí" : "No",
+        notes,
+      });
+
+      if (editingClientId) {
+        currentClients = currentClients.map((client) =>
+          String(client.id) === String(editingClientId) ? savedClient : client,
+        );
+      } else {
+        currentClients = [savedClient, ...currentClients];
+      }
+
+      resetForm();
+      await renderClients();
+      showToast("Cliente guardado correctamente.", { type: "success" });
+    } catch (error) {
+      console.error("No se pudo guardar el cliente:", error);
+      showToast(
+        error?.message ||
+          "No se pudo guardar el cliente. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
   });
 
   try {

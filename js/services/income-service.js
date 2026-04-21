@@ -1,17 +1,16 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
 const COLLECTION_NAME = "income";
+const MIGRATED_KEY = `${STORAGE_KEYS.INCOME}_firestore_migrated`;
 
 function sortIncomes(incomes) {
   return [...incomes].sort((a, b) => {
@@ -28,8 +27,9 @@ function mapIncomeFromDoc(snapshot) {
   const data = snapshot.data();
 
   return {
-    id: snapshot.id,
     ...data,
+    id: snapshot.id,
+    legacyId: data.legacyId || data.id || "",
     createdAtMs: data.createdAt?.toMillis?.() || 0,
     updatedAtMs: data.updatedAt?.toMillis?.() || 0,
   };
@@ -40,14 +40,22 @@ function getLegacyIncomes() {
 }
 
 async function migrateLegacyIncomesIfNeeded() {
+  if (localStorage.getItem(MIGRATED_KEY) === "true") return;
+
   const legacyIncomes = getLegacyIncomes();
 
-  if (!legacyIncomes.length) return;
+  if (!legacyIncomes.length) {
+    localStorage.setItem(MIGRATED_KEY, "true");
+    return;
+  }
 
   const collectionRef = collection(db, COLLECTION_NAME);
   const snapshot = await getDocs(collectionRef);
 
-  if (!snapshot.empty) return;
+  if (!snapshot.empty) {
+    localStorage.setItem(MIGRATED_KEY, "true");
+    return;
+  }
 
   await Promise.all(
     legacyIncomes.map((income) =>
@@ -59,6 +67,8 @@ async function migrateLegacyIncomesIfNeeded() {
       }),
     ),
   );
+
+  localStorage.setItem(MIGRATED_KEY, "true");
 }
 
 export function isIncomeRemoteEnabled() {
@@ -84,14 +94,21 @@ export async function saveIncomeRecord(income) {
     const incomes = getLegacyIncomes();
 
     if (income.id) {
-      const updated = incomes.map((item) => (item.id === income.id ? income : item));
-      saveData(STORAGE_KEYS.INCOME, updated);
+      const exists = incomes.some(
+        (item) => String(item.id) === String(income.id),
+      );
+      const updated = exists
+        ? incomes.map((item) =>
+            String(item.id) === String(income.id) ? income : item,
+          )
+        : [...incomes, income];
+      saveData(STORAGE_KEYS.INCOME, sortIncomes(updated));
       return income;
     }
 
     const newIncome = { ...income, id: Date.now() };
     incomes.push(newIncome);
-    saveData(STORAGE_KEYS.INCOME, incomes);
+    saveData(STORAGE_KEYS.INCOME, sortIncomes(incomes));
     return newIncome;
   }
 
@@ -103,16 +120,34 @@ export async function saveIncomeRecord(income) {
   if (income.id) {
     const rest = { ...payload };
     delete rest.id;
-    await updateDoc(doc(db, COLLECTION_NAME, String(income.id)), rest);
-    return { ...income };
+    await setDoc(doc(db, COLLECTION_NAME, String(income.id)), rest, {
+      merge: true,
+    });
+    const updatedIncome = { ...income };
+    const cachedIncomes = getLegacyIncomes();
+    const nextIncomes = cachedIncomes.some(
+      (item) => String(item.id) === String(income.id),
+    )
+      ? cachedIncomes.map((item) =>
+          String(item.id) === String(income.id) ? updatedIncome : item,
+        )
+      : [...cachedIncomes, updatedIncome];
+    saveData(STORAGE_KEYS.INCOME, sortIncomes(nextIncomes));
+    return updatedIncome;
   }
 
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...payload,
+  const docRef = doc(collection(db, COLLECTION_NAME));
+  const rest = { ...payload };
+  delete rest.id;
+
+  await setDoc(docRef, {
+    ...rest,
     createdAt: serverTimestamp(),
   });
 
-  return { ...income, id: docRef.id };
+  const newIncome = { ...income, id: docRef.id };
+  saveData(STORAGE_KEYS.INCOME, sortIncomes([...getLegacyIncomes(), newIncome]));
+  return newIncome;
 }
 
 export async function replaceIncomeCollection(incomes) {
@@ -131,4 +166,10 @@ export async function deleteIncomeRecord(incomeId) {
   }
 
   await deleteDoc(doc(db, COLLECTION_NAME, String(incomeId)));
+
+  const cachedIncomes = getLegacyIncomes().filter(
+    (income) => String(income.id) !== String(incomeId),
+  );
+  saveData(STORAGE_KEYS.INCOME, sortIncomes(cachedIncomes));
+  localStorage.setItem(MIGRATED_KEY, "true");
 }

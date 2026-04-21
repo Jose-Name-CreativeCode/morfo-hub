@@ -54,7 +54,7 @@ function renderHeader(header, pageTitle) {
 
   const user = document.createElement("div");
   user.className = "header-user";
-  user.textContent = "Modo local";
+  user.textContent = "Verificando sesión...";
 
   header.appendChild(title);
   header.appendChild(user);

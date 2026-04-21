@@ -7,6 +7,7 @@ import {
 import {
   deleteQuoteRecord,
   getQuotesCollection,
+  saveQuoteRecord,
   replaceQuotesCollection,
 } from "../services/quotes-service.js";
 import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
@@ -60,8 +61,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     return currentQuotes;
   }
 
+  function sortQuotes(quotes) {
+    return [...quotes].sort((a, b) => {
+      const dateDiff = String(b.date || "").localeCompare(String(a.date || ""));
+      if (dateDiff !== 0) return dateDiff;
+
+      const updatedA = Number(a.updatedAtMs || a.createdAtMs || 0);
+      const updatedB = Number(b.updatedAtMs || b.createdAtMs || 0);
+      return updatedB - updatedA;
+    });
+  }
+
   function saveQuotes(quotes) {
-    currentQuotes = [...quotes];
+    currentQuotes = sortQuotes(quotes);
     saveData(STORAGE_KEYS.QUOTES, currentQuotes);
   }
 
@@ -801,15 +813,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     if (!confirmed) return;
 
-    let quotes = getQuotes();
-    quotes = quotes.filter((q) => String(q.id) !== String(id));
-    saveQuotes(quotes);
-    await deleteQuoteRecord(id);
+    try {
+      await deleteQuoteRecord(id);
 
-    if (editingQuoteId === id) resetForm();
-    closeManageModal();
-    renderQuotes();
-    showToast("Cotización eliminada correctamente.", { type: "success" });
+      let quotes = getQuotes();
+      quotes = quotes.filter((q) => String(q.id) !== String(id));
+      saveQuotes(quotes);
+
+      if (String(editingQuoteId) === String(id)) resetForm();
+      closeManageModal();
+      renderQuotes();
+      showToast("Cotización eliminada correctamente.", { type: "success" });
+    } catch (error) {
+      console.error("No se pudo eliminar la cotización:", error);
+      showToast(
+        error?.message ||
+          "No se pudo eliminar la cotización. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
+    }
   }
 
   async function updateStatus(id, newStatus) {
@@ -886,7 +908,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     paymentNotes,
   }) {
     const quotes = getQuotes();
-    let incomes = ensureIncomeIds();
+    ensureIncomeIds();
+    let incomes = getIncomes();
 
     const quote = quotes.find((q) => String(q.id) === String(quoteId));
     if (!quote) {
@@ -1174,61 +1197,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     return false;
-  }
-
-  function repairMissingIncomes() {
-    const quotes = getQuotes();
-    let incomes = ensureIncomeIds();
-    let repaired = false;
-
-    quotes.forEach((quote) => {
-      const hasIncome = incomes.some(
-        (income) => String(income.quoteId) === String(quote.id),
-      );
-
-      if (
-        !hasIncome &&
-        (quote.paymentStatus === "pagada total" ||
-          quote.paymentStatus === "anticipo pagado")
-      ) {
-        const nextIncomeId = buildSequentialId("ING", incomes, "publicId");
-        const totalAmount = Number(quote.total) || 0;
-        const isAdvance = quote.paymentStatus === "anticipo pagado";
-        const paidAmount = isAdvance
-          ? Number((totalAmount * 0.5).toFixed(2))
-          : totalAmount;
-
-        const remainingAmount = Number((totalAmount - paidAmount).toFixed(2));
-
-        incomes.push({
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          publicId: nextIncomeId,
-          quoteId: quote.id,
-          quotePublicId: quote.publicId,
-          client: quote.client,
-          date: quote.date || getTodayISO(),
-          concept: `${quote.title} (${quote.publicId})`,
-          totalAmount,
-          paidAmount,
-          remainingAmount,
-          paymentStatus: isAdvance ? "Parcial" : "Pagado",
-          paymentMethod: quote.paymentMethod || "",
-          invoiceRequired: quote.invoiceRequired || "No",
-          notes:
-            quote.paymentNotes ||
-            `Ingreso reconstruido automáticamente para ${quote.publicId}.`,
-          paymentHistory: quote.paymentHistory || [],
-        });
-
-        repaired = true;
-      }
-    });
-
-    if (repaired) {
-      saveIncomes(incomes);
-    }
-
-    return repaired;
   }
 
   function addTableEvents() {
@@ -1685,30 +1653,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         const currentQuote = quotes.find(
           (q) => String(q.id) === String(editingQuoteId),
         );
+        const updatedQuote = {
+          ...currentQuote,
+          client,
+          date,
+          title,
+          serviceType,
+          description,
+          includes,
+          subtotal,
+          invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
+          iva,
+          total,
+          notes,
+          publicId: currentQuote?.publicId,
+          paymentHistory: currentQuote?.paymentHistory || [],
+        };
 
+        const savedQuote = await saveQuoteRecord(updatedQuote);
         quotes = quotes.map((quote) =>
-          String(quote.id) === String(editingQuoteId)
-            ? {
-                ...quote,
-                client,
-                date,
-                title,
-                serviceType,
-                description,
-                includes,
-                subtotal,
-                invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
-                iva,
-                total,
-                notes,
-                publicId: currentQuote?.publicId || quote.publicId,
-                paymentHistory: quote.paymentHistory || [],
-              }
-            : quote,
+          String(quote.id) === String(editingQuoteId) ? savedQuote : quote,
         );
-
         saveQuotes(quotes);
-        await persistQuotes();
       } else {
         const existingQuotes = getQuotes();
         const newQuote = {
@@ -1731,16 +1697,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           remainingAmount: total,
           paymentHistory: [],
         };
-
-        existingQuotes.push(newQuote);
-        saveQuotes(existingQuotes);
-        await persistQuotes();
+        const savedQuote = await saveQuoteRecord(newQuote);
+        saveQuotes([...existingQuotes, savedQuote]);
       }
 
       syncQuotesWithIncomes();
       renderQuotes();
       resetForm();
-      await loadClientOptions();
       loadFilterOptions();
       showToast("Cotización guardada correctamente.", { type: "success" });
     } finally {
@@ -1754,13 +1717,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const quoteIdsRepaired = ensureQuoteIds();
     const incomeIdsRepaired = ensureIncomeIds();
-    const missingIncomesRepaired = repairMissingIncomes();
 
     if (quoteIdsRepaired) {
       await persistQuotes();
     }
 
-    if (incomeIdsRepaired || missingIncomesRepaired) {
+    if (incomeIdsRepaired) {
       await persistIncomes();
     }
 
@@ -1770,6 +1732,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadClientOptions();
     renderQuotes();
     resetForm();
+  } catch (error) {
+    console.error("No se pudo inicializar cotizaciones:", error);
+    showToast(
+      error?.message ||
+        "No se pudieron cargar las cotizaciones. Revisa clientes e ingresos.",
+      {
+        type: "error",
+        duration: 4200,
+      },
+    );
   } finally {
     setPageLoading(false);
   }

@@ -181,16 +181,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     if (!confirmed) return;
 
-    await deleteExpenseRecord(expenseId);
+    try {
+      await deleteExpenseRecord(expenseId);
 
-    if (editingExpenseId === expenseId) {
-      resetForm();
+      if (String(editingExpenseId) === String(expenseId)) {
+        resetForm();
+      }
+
+      currentExpenses = currentExpenses.filter(
+        (expense) => String(expense.id) !== String(expenseId),
+      );
+      loadYearOptions();
+      renderExpenses();
+      showToast("Gasto eliminado correctamente.", { type: "success" });
+    } catch (error) {
+      console.error("No se pudo eliminar el gasto:", error);
+      showToast(
+        error?.message ||
+          "No se pudo eliminar el gasto. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
     }
-
-    currentExpenses = await getExpensesCollection();
-    loadYearOptions();
-    renderExpenses();
-    showToast("Gasto eliminado correctamente.", { type: "success" });
   }
 
   function addTableEvents() {
@@ -440,7 +451,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     try {
-      await saveExpenseRecord({
+      const savedExpense = await saveExpenseRecord({
         ...existingExpense,
         id: editingExpenseId,
         date,
@@ -452,11 +463,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         notes,
       });
 
-      currentExpenses = await getExpensesCollection();
-      renderExpenses();
+      if (editingExpenseId) {
+        currentExpenses = currentExpenses.map((expense) =>
+          String(expense.id) === String(editingExpenseId)
+            ? savedExpense
+            : expense,
+        );
+      } else {
+        currentExpenses = [savedExpense, ...currentExpenses];
+      }
+
       resetForm();
       loadYearOptions();
+      renderExpenses();
       showToast("Gasto guardado correctamente.", { type: "success" });
+    } catch (error) {
+      console.error("No se pudo guardar el gasto:", error);
+      showToast(
+        error?.message ||
+          "No se pudo guardar el gasto. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
     } finally {
       setButtonLoading(submitButton, false);
     }

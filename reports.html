@@ -14,21 +14,21 @@
         <header class="header" data-app-header></header>
 
         <main class="page-content">
-          <h1 class="section-title">Reportes generales</h1>
-          <p class="section-subtitle">
-            Consulta resúmenes mensuales de ingresos, gastos, utilidad estimada
-            y saldos pendientes.
-          </p>
+          <section class="hero-panel hero-panel-reports">
+            <div class="dashboard-kicker hero-kicker-success">
+              Visión ejecutiva
+            </div>
+            <h1 class="section-title dashboard-title">Reportes generales</h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Consulta resúmenes mensuales de ingresos, gastos, utilidad
+              estimada y saldos pendientes.
+            </p>
+          </section>
 
-          <section class="card" style="margin-bottom: 24px">
-            <h2
-              class="section-title"
-              style="font-size: 1.1rem; margin-bottom: 16px"
-            >
-              Filtros del reporte
-            </h2>
+          <section class="card panel-soft form-shell section-spacing">
+            <h2 class="section-title section-title-sm">Filtros del reporte</h2>
 
-            <form>
+            <form class="report-filters-form">
               <div class="form-group">
                 <label for="report-month">Mes</label>
                 <select id="report-month">
@@ -65,38 +65,42 @@
                 </select>
               </div>
 
-              <button type="submit" class="btn-primary">Generar reporte</button>
+              <div class="form-group form-group-tight">
+                <button type="submit" class="btn-primary">
+                  Generar reporte
+                </button>
+              </div>
             </form>
           </section>
 
-          <section class="cards-grid" style="margin-bottom: 24px">
-            <article class="card income">
+          <section class="cards-grid section-spacing">
+            <article class="card metric-card income">
               <div class="card-label">Ingresos del periodo</div>
-              <div class="card-value">$0.00</div>
+              <div class="card-value metric-card-value">$0.00</div>
             </article>
 
-            <article class="card expense">
+            <article class="card metric-card expense">
               <div class="card-label">Gastos del periodo</div>
-              <div class="card-value">$0.00</div>
+              <div class="card-value metric-card-value">$0.00</div>
             </article>
 
-            <article class="card">
+            <article class="card metric-card">
               <div class="card-label">Utilidad estimada</div>
-              <div class="card-value">$0.00</div>
+              <div class="card-value metric-card-value">$0.00</div>
             </article>
 
-            <article class="card pending">
+            <article class="card metric-card pending">
               <div class="card-label">Pendiente por cobrar</div>
-              <div class="card-value">$0.00</div>
+              <div class="card-value metric-card-value">$0.00</div>
             </article>
 
-            <article class="card">
+            <article class="card metric-card">
               <div class="card-label">Cotizaciones del periodo</div>
-              <div class="card-value">0</div>
+              <div class="card-value metric-card-value">0</div>
             </article>
           </section>
 
-          <section class="table-wrapper" style="margin-bottom: 24px">
+          <section class="table-wrapper section-spacing">
             <table class="table">
               <thead>
                 <tr>
@@ -107,33 +111,13 @@
                   <th>Tipo</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td>Plan mensual redes sociales</td>
-                  <td>Ingreso</td>
-                  <td>2026-03-24</td>
-                  <td>$8,000.00</td>
-                  <td>Ingreso</td>
-                </tr>
-                <tr>
-                  <td>Meta Ads</td>
-                  <td>Publicidad</td>
-                  <td>2026-03-24</td>
-                  <td>$2,500.00</td>
-                  <td>Gasto</td>
-                </tr>
-              </tbody>
+              <tbody></tbody>
             </table>
           </section>
 
-          <section class="card">
-            <h2
-              class="section-title"
-              style="font-size: 1.1rem; margin-bottom: 16px"
-            >
-              Exportación
-            </h2>
-            <p class="section-subtitle" style="margin-bottom: 16px">
+          <section class="card panel-soft">
+            <h2 class="section-title section-title-sm">Exportación</h2>
+            <p class="section-subtitle">
               Exporta este reporte en PDF para revisión interna o para
               compartirlo con el contador.
             </p>

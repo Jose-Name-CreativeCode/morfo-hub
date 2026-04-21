@@ -1,17 +1,16 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
 const COLLECTION_NAME = "quotes";
+const MIGRATED_KEY = `${STORAGE_KEYS.QUOTES}_firestore_migrated`;
 
 function sortQuotes(quotes) {
   return [...quotes].sort((a, b) => {
@@ -28,8 +27,9 @@ function mapQuoteFromDoc(snapshot) {
   const data = snapshot.data();
 
   return {
-    id: snapshot.id,
     ...data,
+    id: snapshot.id,
+    legacyId: data.legacyId || data.id || "",
     createdAtMs: data.createdAt?.toMillis?.() || 0,
     updatedAtMs: data.updatedAt?.toMillis?.() || 0,
   };
@@ -40,14 +40,22 @@ function getLegacyQuotes() {
 }
 
 async function migrateLegacyQuotesIfNeeded() {
+  if (localStorage.getItem(MIGRATED_KEY) === "true") return;
+
   const legacyQuotes = getLegacyQuotes();
 
-  if (!legacyQuotes.length) return;
+  if (!legacyQuotes.length) {
+    localStorage.setItem(MIGRATED_KEY, "true");
+    return;
+  }
 
   const collectionRef = collection(db, COLLECTION_NAME);
   const snapshot = await getDocs(collectionRef);
 
-  if (!snapshot.empty) return;
+  if (!snapshot.empty) {
+    localStorage.setItem(MIGRATED_KEY, "true");
+    return;
+  }
 
   await Promise.all(
     legacyQuotes.map((quote) =>
@@ -59,6 +67,8 @@ async function migrateLegacyQuotesIfNeeded() {
       }),
     ),
   );
+
+  localStorage.setItem(MIGRATED_KEY, "true");
 }
 
 export function isQuotesRemoteEnabled() {
@@ -84,14 +94,19 @@ export async function saveQuoteRecord(quote) {
     const quotes = getLegacyQuotes();
 
     if (quote.id) {
-      const updated = quotes.map((item) => (item.id === quote.id ? quote : item));
-      saveData(STORAGE_KEYS.QUOTES, updated);
+      const exists = quotes.some((item) => String(item.id) === String(quote.id));
+      const updated = exists
+        ? quotes.map((item) =>
+            String(item.id) === String(quote.id) ? quote : item,
+          )
+        : [...quotes, quote];
+      saveData(STORAGE_KEYS.QUOTES, sortQuotes(updated));
       return quote;
     }
 
     const newQuote = { ...quote, id: Date.now() };
     quotes.push(newQuote);
-    saveData(STORAGE_KEYS.QUOTES, quotes);
+    saveData(STORAGE_KEYS.QUOTES, sortQuotes(quotes));
     return newQuote;
   }
 
@@ -103,16 +118,39 @@ export async function saveQuoteRecord(quote) {
   if (quote.id) {
     const rest = { ...payload };
     delete rest.id;
-    await updateDoc(doc(db, COLLECTION_NAME, String(quote.id)), rest);
-    return { ...quote };
+    await setDoc(
+      doc(db, COLLECTION_NAME, String(quote.id)),
+      {
+        ...rest,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+    const updatedQuote = { ...quote };
+    const cachedQuotes = getLegacyQuotes();
+    const nextQuotes = cachedQuotes.some(
+      (item) => String(item.id) === String(quote.id),
+    )
+      ? cachedQuotes.map((item) =>
+          String(item.id) === String(quote.id) ? updatedQuote : item,
+        )
+      : [...cachedQuotes, updatedQuote];
+    saveData(STORAGE_KEYS.QUOTES, sortQuotes(nextQuotes));
+    return updatedQuote;
   }
 
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...payload,
+  const docRef = doc(collection(db, COLLECTION_NAME));
+  const rest = { ...payload };
+  delete rest.id;
+
+  await setDoc(docRef, {
+    ...rest,
     createdAt: serverTimestamp(),
   });
 
-  return { ...quote, id: docRef.id };
+  const newQuote = { ...quote, id: docRef.id };
+  saveData(STORAGE_KEYS.QUOTES, sortQuotes([...getLegacyQuotes(), newQuote]));
+  return newQuote;
 }
 
 export async function replaceQuotesCollection(quotes) {
@@ -131,4 +169,10 @@ export async function deleteQuoteRecord(quoteId) {
   }
 
   await deleteDoc(doc(db, COLLECTION_NAME, String(quoteId)));
+
+  const cachedQuotes = getLegacyQuotes().filter(
+    (quote) => String(quote.id) !== String(quoteId),
+  );
+  saveData(STORAGE_KEYS.QUOTES, sortQuotes(cachedQuotes));
+  localStorage.setItem(MIGRATED_KEY, "true");
 }
