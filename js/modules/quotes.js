@@ -295,6 +295,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function applyClientFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const clientName = params.get("client");
+    if (!clientName) return;
+
+    const hasClientOption = [...clientSelect.options].some(
+      (option) => option.value === clientName,
+    );
+    if (!hasClientOption) return;
+
+    clientSelect.value = clientName;
+    showToast(`Cliente preseleccionado: ${clientName}`, {
+      type: "success",
+      duration: 2600,
+    });
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.pathname,
+    );
+  }
+
   function calculateTotals() {
     const subtotalInput = document.getElementById("quote-subtotal");
     const invoiceSelect = document.getElementById("quote-invoice");
@@ -2144,6 +2166,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadClientOptions();
     renderQuotes();
     resetForm();
+    applyClientFromUrl();
   } catch (error) {
     console.error("No se pudo inicializar cotizaciones:", error);
     showToast(

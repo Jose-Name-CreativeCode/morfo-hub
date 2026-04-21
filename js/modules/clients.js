@@ -41,6 +41,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const detailIncome = document.getElementById("client-detail-income");
   const detailPending = document.getElementById("client-detail-pending");
   const detailLast = document.getElementById("client-detail-last");
+  const detailNewQuoteLink = document.getElementById(
+    "client-detail-new-quote",
+  );
   const detailQuotesList = document.getElementById(
     "client-detail-quotes-list",
   );
@@ -203,6 +206,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     detailLast.textContent = related.lastActivity
       ? formatDate(related.lastActivity)
       : "-";
+    detailNewQuoteLink.href = `quotes.html?client=${encodeURIComponent(client.name)}`;
 
     renderDetailList(
       detailQuotesList,
