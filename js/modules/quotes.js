@@ -329,6 +329,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (normalized === "aprobada") return "aprobada";
     if (normalized === "enviada") return "enviada";
     if (normalized === "rechazada") return "rechazada";
+    if (normalized === "archivada") return "archivada";
     return "borrador";
   }
 
@@ -342,6 +343,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   function getQuoteFunnelStage(quote) {
     const paymentStatus = normalizeStatus(quote.paymentStatus, "no pagada");
     const status = normalizeStatus(quote.status, "borrador");
+
+    if (status === "archivada") {
+      return {
+        key: "archived",
+        label: "Archivada",
+        className: "funnel-archived",
+      };
+    }
 
     if (paymentStatus === "pagada total") {
       return {
@@ -427,6 +436,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (
       incomeStatus === "parcial" ||
+      incomeStatus === "pago parcial" ||
       incomeStatus === "anticipo pagado" ||
       incomeStatus === "anticipo_pagado"
     ) {
@@ -531,7 +541,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveQuotes(updatedQuotes);
     }
 
-    return updatedQuotes;
+    return changed;
   }
 
   function getQuoteById(id) {
@@ -842,6 +852,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       advance: 0,
       active: 0,
       paid: 0,
+      archived: 0,
     };
 
     quotes.forEach((quote) => {
@@ -886,6 +897,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function handleDelete(id) {
     const quote = getQuoteById(id);
     if (!quote) return;
+
+    const linkedIncome = getIncomeByQuoteId(id);
+
+    if (linkedIncome) {
+      const archiveConfirmed = await askConfirm({
+        title: "Archivar cotización",
+        message:
+          `La cotización ${quote.publicId} tiene un ingreso vinculado (${linkedIncome.publicId || linkedIncome.id}). ` +
+          "Para proteger el historial financiero no se puede eliminar. ¿Quieres archivarla?",
+        confirmText: "Archivar",
+      });
+
+      if (!archiveConfirmed) return;
+
+      try {
+        const updatedQuote = {
+          ...quote,
+          status: "archivada",
+          archivedAt: new Date().toISOString(),
+        };
+        const savedQuote = await saveQuoteRecord(updatedQuote);
+        const quotes = getQuotes().map((item) =>
+          String(item.id) === String(id) ? savedQuote : item,
+        );
+        saveQuotes(quotes);
+
+        if (String(editingQuoteId) === String(id)) resetForm();
+        closeManageModal();
+        renderQuotes();
+        showToast("Cotización archivada correctamente.", {
+          type: "success",
+        });
+      } catch (error) {
+        console.error("No se pudo archivar la cotización:", error);
+        showToast(
+          error?.message ||
+            "No se pudo archivar la cotización. Revisa permisos o conexión.",
+          { type: "error", duration: 5000 },
+        );
+      }
+
+      return;
+    }
 
     const confirmed = await askConfirm({
       title: "Eliminar cotización",
@@ -1782,7 +1836,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         saveQuotes([...existingQuotes, savedQuote]);
       }
 
-      syncQuotesWithIncomes();
+      const paymentSyncChanged = syncQuotesWithIncomes();
+      if (paymentSyncChanged) {
+        await persistQuotes();
+      }
       renderQuotes();
       resetForm();
       loadFilterOptions();
@@ -1807,7 +1864,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       await persistIncomes();
     }
 
-    syncQuotesWithIncomes();
+    const paymentSyncChanged = syncQuotesWithIncomes();
+    if (paymentSyncChanged) {
+      await persistQuotes();
+    }
     ensureFilterUI();
     bindManageActions();
     await loadClientOptions();
@@ -1831,7 +1891,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentQuotes = await getQuotesCollection();
     currentIncomes = await getIncomeCollection();
     await loadClientOptions();
-    syncQuotesWithIncomes();
+    const paymentSyncChanged = syncQuotesWithIncomes();
+    if (paymentSyncChanged) {
+      await persistQuotes();
+    }
     renderQuotes();
 
     if (!editingQuoteId) {

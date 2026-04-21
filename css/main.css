@@ -852,6 +852,10 @@ img {
   background: #ef9a9a;
 }
 
+.status.archivada {
+  background: #cbd5e1;
+}
+
 .status.payment.no-pagada {
   background: #f5c6cb;
   color: #111827;
@@ -889,6 +893,10 @@ img {
 
 .status.funnel-paid {
   background: #a7f3d0;
+}
+
+.status.funnel-archived {
+  background: #cbd5e1;
 }
 
 /* MANAGE MODAL */
