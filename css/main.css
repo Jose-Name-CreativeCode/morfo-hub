@@ -809,6 +809,10 @@ img {
   background: var(--danger);
 }
 
+.maintenance-clean-btn {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
 .pdf-btn {
   background: var(--secondary);
 }

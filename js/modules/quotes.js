@@ -579,6 +579,19 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? quote.paymentHistory
           : [];
 
+    const latestCorrectionIndex = source.findLastIndex(
+      (entry) => normalizeText(entry.type) === "correccion",
+    );
+
+    if (latestCorrectionIndex >= 0) {
+      return [
+        {
+          ...source[latestCorrectionIndex],
+          _order: latestCorrectionIndex,
+        },
+      ];
+    }
+
     const unique = new Map();
     source.forEach((entry, index) => {
       const key = [
@@ -1508,6 +1521,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     const isPaidTotal = paidAmount >= quoteTotal && remainingAmount === 0;
     const correctedStatus = isPaidTotal ? "Pagado" : "Pago parcial";
+    const correctedHistory = [
+      {
+        type: "correccion",
+        date: paymentDate,
+        amount: paidAmount,
+        remainingAmount,
+        dueDate: dueDate || "",
+        method: paymentMethod,
+        note: paymentNotes || "",
+      },
+    ];
     const correctionNotes = [
       `[${paymentDate}] Pago corregido manualmente.`,
       `Pagado: ${formatCurrency(paidAmount)}.`,
@@ -1528,18 +1552,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       paymentStatus: correctedStatus,
       paymentMethod,
       notes: correctionNotes,
-      paymentHistory: [
-        ...(income.paymentHistory || []),
-        {
-          type: "correccion",
-          date: paymentDate,
-          amount: paidAmount,
-          remainingAmount,
-          dueDate: dueDate || "",
-          method: paymentMethod,
-          note: paymentNotes || "",
-        },
-      ],
+      paymentHistory: correctedHistory,
     });
 
     incomes = incomes.map((item) =>
@@ -1547,10 +1560,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     saveIncomes(incomes);
 
-    const paymentSyncChanged = syncQuotesWithIncomes();
-    if (paymentSyncChanged) {
-      await persistQuotes();
-    }
+    syncQuotesWithIncomes();
+    saveQuotes(
+      getQuotes().map((item) =>
+        String(item.id) === String(quoteId)
+          ? {
+              ...item,
+              paymentHistory: correctedHistory,
+            }
+          : item,
+      ),
+    );
+    await persistQuotes();
 
     renderQuotes();
     showToast("Pago corregido y cotización sincronizada.", {

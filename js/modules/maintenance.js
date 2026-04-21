@@ -7,10 +7,12 @@ import {
 import {
   deleteIncomeRecord,
   getIncomeCollection,
+  saveIncomeRecord,
 } from "../services/income-service.js";
 import {
   deleteQuoteRecord,
   getQuotesCollection,
+  saveQuoteRecord,
 } from "../services/quotes-service.js";
 import {
   askConfirm,
@@ -121,6 +123,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     return [...groups.values()].filter((group) => group.length > 1);
   }
 
+  function getPaymentHistoryKey(entry) {
+    return [
+      normalizeValue(entry.type),
+      normalizeValue(entry.date),
+      Number(entry.amount || 0).toFixed(2),
+      Number(entry.remainingAmount || 0).toFixed(2),
+      normalizeValue(entry.dueDate),
+      normalizeValue(entry.method),
+      normalizeValue(entry.note),
+    ].join("|");
+  }
+
+  function dedupePaymentHistory(history = []) {
+    const seen = new Set();
+    const deduped = [];
+
+    history.forEach((entry) => {
+      const key = getPaymentHistoryKey(entry);
+      if (seen.has(key)) return;
+
+      seen.add(key);
+      deduped.push(entry);
+    });
+
+    return deduped;
+  }
+
+  function compactPaymentHistory(record) {
+    const history = Array.isArray(record.paymentHistory)
+      ? record.paymentHistory
+      : [];
+    const latestCorrectionIndex = history.findLastIndex(
+      (entry) => normalizeValue(entry.type) === "correccion",
+    );
+
+    if (latestCorrectionIndex >= 0) {
+      return [history[latestCorrectionIndex]];
+    }
+
+    const deduped = dedupePaymentHistory(history);
+    const remainingAmount = Number(record.remainingAmount || 0);
+
+    if (remainingAmount <= 0) return deduped;
+
+    return deduped.filter((entry) => {
+      const type = normalizeValue(entry.type);
+      const entryRemaining = Number(entry.remainingAmount || 0);
+      const isFinalPayment = type === "liquidacion" || type === "pago_total";
+
+      return !(isFinalPayment && entryRemaining === 0);
+    });
+  }
+
+  function getPaymentHistoryDuplicateCount(record) {
+    if (!Array.isArray(record.paymentHistory)) return 0;
+    return record.paymentHistory.length - compactPaymentHistory(record).length;
+  }
+
   function findDuplicateIssues() {
     const duplicateIncomeGroups = groupDuplicates(
       currentData.incomes,
@@ -164,6 +224,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         deleteFn: deleteQuoteRecord,
       })),
     ];
+  }
+
+  function findPaymentHistoryIssues() {
+    const incomeIssues = currentData.incomes
+      .map((income, index) => ({
+        record: income,
+        duplicateCount: getPaymentHistoryDuplicateCount(income),
+        index,
+      }))
+      .filter((item) => item.duplicateCount > 0)
+      .map(({ record, duplicateCount, index }) => ({
+        id: `income-payment-history-${index}`,
+        type: "Ingresos",
+        problem: "Historial obsoleto",
+        detail: `${record.publicId || record.id || "-"} · ${record.concept || record.client || "-"}`,
+        records: [record],
+        duplicateCount,
+        actionLabel: "Limpiar historial",
+        cleanFn: cleanPaymentHistoryIssue,
+      }));
+
+    const quoteIssues = currentData.quotes
+      .map((quote, index) => ({
+        record: quote,
+        duplicateCount: getPaymentHistoryDuplicateCount(quote),
+        index,
+      }))
+      .filter((item) => item.duplicateCount > 0)
+      .map(({ record, duplicateCount, index }) => ({
+        id: `quote-payment-history-${index}`,
+        type: "Cotizaciones",
+        problem: "Historial obsoleto",
+        detail: `${record.publicId || record.id || "-"} · ${record.title || record.client || "-"}`,
+        records: [record],
+        duplicateCount,
+        actionLabel: "Limpiar historial",
+        cleanFn: cleanPaymentHistoryIssue,
+      }));
+
+    return [...incomeIssues, ...quoteIssues];
   }
 
   function findRelationIssues() {
@@ -234,6 +334,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         button.dataset.issueId = issue.id;
         button.textContent = issue.actionLabel;
         actionCell.appendChild(button);
+      } else if (issue.cleanFn) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "maintenance-clean-btn";
+        button.dataset.cleanIssueId = issue.id;
+        button.textContent = issue.actionLabel;
+        actionCell.appendChild(button);
       } else {
         actionCell.textContent = "Revisar manualmente";
       }
@@ -245,6 +352,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     issuesBody.querySelectorAll("[data-issue-id]").forEach((button) => {
       button.addEventListener("click", async () => {
         await cleanDuplicateIssue(button.dataset.issueId, button);
+      });
+    });
+
+    issuesBody.querySelectorAll("[data-clean-issue-id]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await cleanPaymentHistoryIssue(button.dataset.cleanIssueId, button);
       });
     });
   }
@@ -267,7 +380,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         quotes,
       };
 
-      currentIssues = [...findDuplicateIssues(), ...findRelationIssues()];
+      currentIssues = [
+        ...findDuplicateIssues(),
+        ...findPaymentHistoryIssues(),
+        ...findRelationIssues(),
+      ];
 
       updateCounters();
       renderIssues();
@@ -302,6 +419,47 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToast(
         error?.message ||
           "No se pudieron eliminar los duplicados. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
+    } finally {
+      setButtonLoading(button, false);
+    }
+  }
+
+  async function cleanPaymentHistoryIssue(issueId, button) {
+    const issue = currentIssues.find((item) => item.id === issueId);
+    if (!issue?.cleanFn || issue.records.length !== 1) return;
+
+    const record = issue.records[0];
+    const confirmed = await askConfirm({
+      title: "Limpiar historial de pagos",
+      message: `Se quitarán ${issue.duplicateCount} movimientos duplicados del historial de ${issue.detail}. No se eliminará el ingreso ni la cotización. ¿Continuar?`,
+      confirmText: "Limpiar historial",
+    });
+
+    if (!confirmed) return;
+
+    setButtonLoading(button, true, "Limpiando...");
+
+    try {
+      const cleanedRecord = {
+        ...record,
+        paymentHistory: compactPaymentHistory(record),
+      };
+
+      if (issue.type === "Ingresos") {
+        await saveIncomeRecord(cleanedRecord);
+      } else if (issue.type === "Cotizaciones") {
+        await saveQuoteRecord(cleanedRecord);
+      }
+
+      showToast("Historial limpiado correctamente.", { type: "success" });
+      await refreshDiagnostics();
+    } catch (error) {
+      console.error("No se pudo limpiar el historial:", error);
+      showToast(
+        error?.message ||
+          "No se pudo limpiar el historial. Revisa permisos o conexión.",
         { type: "error", duration: 5000 },
       );
     } finally {
