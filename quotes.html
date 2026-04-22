@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Cotizaciones</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
@@ -82,12 +83,32 @@
               </div>
 
               <div class="form-group">
-                <label for="quote-subtotal">Subtotal</label>
+                <label for="quote-service-amount">Servicio</label>
                 <input
                   type="number"
-                  id="quote-subtotal"
+                  id="quote-service-amount"
                   placeholder="0.00"
                   step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-ad-required">¿Requiere pauta?</label>
+                <select id="quote-ad-required">
+                  <option value="">Selecciona una opción</option>
+                  <option value="yes">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="quote-ad-spend">Monto de pauta</label>
+                <input
+                  type="number"
+                  id="quote-ad-spend"
+                  placeholder="0.00"
+                  step="0.01"
+                  disabled
                 />
               </div>
 
@@ -111,12 +132,24 @@
               </div>
 
               <div class="form-group">
-                <label for="quote-total">Total</label>
+                <label for="quote-invoice-total">Total facturable</label>
+                <input
+                  type="number"
+                  id="quote-invoice-total"
+                  placeholder="0.00"
+                  step="0.01"
+                  readonly
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="quote-total">Total general</label>
                 <input
                   type="number"
                   id="quote-total"
                   placeholder="0.00"
                   step="0.01"
+                  readonly
                 />
               </div>
 
@@ -141,7 +174,9 @@ cliente para asegurar que se logre el resultado final deseado.
 Los trabajos adicionales fuera del alcance de esta cotización se negociarán por
 separado.
 
-Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
+Si se requiere factura, el IVA se calcula únicamente sobre el servicio de gestión.
+La pauta publicitaria se entrega a la plataforma correspondiente y no forma parte
+del servicio de Morfo Studio.
 
 ¡Muchas gracias!
 “Morfo Studio”</textarea

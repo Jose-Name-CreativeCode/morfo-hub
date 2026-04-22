@@ -27,8 +27,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const filterYearSelect = document.getElementById("filter-income-year");
   const filterMonthSelect = document.getElementById("filter-income-month");
+  const filterClientSelect = document.getElementById("filter-income-client");
+  const filterStatusSelect = document.getElementById("filter-income-status");
+  const filterMethodSelect = document.getElementById("filter-income-method");
   const clearFiltersBtn = document.getElementById("clear-income-filters");
   const exportExcelBtn = document.getElementById("export-income-excel");
+  const incomeCounters = {
+    totalBilled: document.getElementById("income-total-billed"),
+    totalPaid: document.getElementById("income-total-paid"),
+    totalPending: document.getElementById("income-total-pending"),
+    periodCount: document.getElementById("income-period-count"),
+  };
 
   let editingIncomeId = null;
   let currentIncomes = [];
@@ -205,6 +214,46 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterYearSelect.value = years.includes(currentValue) ? currentValue : "";
   }
 
+  function loadDynamicFilterOptions() {
+    const selects = [
+      {
+        element: filterClientSelect,
+        values: currentIncomes.map((income) => income.client),
+        label: "Todos",
+      },
+      {
+        element: filterMethodSelect,
+        values: currentIncomes.map((income) => income.paymentMethod),
+        label: "Todos",
+      },
+    ];
+
+    selects.forEach(({ element, values, label }) => {
+      if (!element) return;
+
+      const currentValue = element.value;
+      const uniqueValues = [...new Set(values.filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b), "es-MX"),
+      );
+
+      element.replaceChildren();
+
+      const allOption = document.createElement("option");
+      allOption.value = "";
+      allOption.textContent = label;
+      element.appendChild(allOption);
+
+      uniqueValues.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        element.appendChild(option);
+      });
+
+      element.value = uniqueValues.includes(currentValue) ? currentValue : "";
+    });
+  }
+
   function resetForm() {
     incomeForm.reset();
     editingIncomeId = null;
@@ -216,6 +265,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const selectedYear = filterYearSelect ? filterYearSelect.value : "";
     const selectedMonth = filterMonthSelect ? filterMonthSelect.value : "";
+    const selectedClient = filterClientSelect ? filterClientSelect.value : "";
+    const selectedStatus = filterStatusSelect ? filterStatusSelect.value : "";
+    const selectedMethod = filterMethodSelect ? filterMethodSelect.value : "";
 
     if (selectedYear) {
       incomes = incomes.filter(
@@ -231,27 +283,75 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
+    if (selectedClient) {
+      incomes = incomes.filter(
+        (income) => normalizeText(income.client) === normalizeText(selectedClient),
+      );
+    }
+
+    if (selectedStatus) {
+      incomes = incomes.filter(
+        (income) =>
+          normalizeText(normalizePaymentStatus(income.paymentStatus)) ===
+          normalizeText(selectedStatus),
+      );
+    }
+
+    if (selectedMethod) {
+      incomes = incomes.filter(
+        (income) =>
+          normalizeText(income.paymentMethod) === normalizeText(selectedMethod),
+      );
+    }
+
     return incomes.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  }
+
+  function updateIncomeCounters(incomes) {
+    const totalBilled = incomes.reduce(
+      (sum, income) => sum + Number(income.totalAmount || 0),
+      0,
+    );
+    const totalPaid = incomes.reduce(
+      (sum, income) => sum + Number(income.paidAmount || 0),
+      0,
+    );
+    const totalPending = incomes.reduce(
+      (sum, income) => sum + Number(getPendingAmount(income)),
+      0,
+    );
+
+    incomeCounters.totalBilled.textContent = formatCurrency(totalBilled);
+    incomeCounters.totalPaid.textContent = formatCurrency(totalPaid);
+    incomeCounters.totalPending.textContent = formatCurrency(totalPending);
+    incomeCounters.periodCount.textContent = String(incomes.length);
   }
 
   function renderIncomes() {
     const incomes = getFilteredIncomes();
+    updateIncomeCounters(incomes);
     incomeTableBody.replaceChildren();
 
     if (incomes.length === 0) {
       incomeTableBody.appendChild(
-        createEmptyStateRow("No hay ingresos registrados.", 9),
+        createEmptyStateRow("No hay ingresos registrados.", 10),
       );
       return;
     }
 
     incomes.forEach((income) => {
       const row = document.createElement("tr");
+      const pendingAmount = getPendingAmount(income);
+      if (pendingAmount > 0) {
+        row.classList.add("income-pending-row");
+      }
+
       row.appendChild(createCell(income.client || "-"));
       row.appendChild(createCell(income.date || "-"));
       row.appendChild(createCell(income.concept || "-"));
       row.appendChild(createCell(formatCurrency(income.totalAmount)));
       row.appendChild(createCell(formatCurrency(income.paidAmount)));
+      row.appendChild(createCell(formatCurrency(pendingAmount)));
 
       const statusCell = document.createElement("td");
       statusCell.appendChild(getPaymentStatusBadge(income.paymentStatus));
@@ -344,6 +444,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           !incomeIdsToDelete.some((id) => String(id) === String(income.id)),
       );
       loadYearOptions();
+      loadDynamicFilterOptions();
       renderIncomes();
       showToast(
         duplicateCount > 1
@@ -682,6 +783,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentIncomes = await getIncomeCollection();
       await loadClientOptions();
       loadYearOptions();
+      loadDynamicFilterOptions();
       renderIncomes();
       showToast("Ingreso guardado correctamente.", { type: "success" });
     } finally {
@@ -697,10 +799,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterMonthSelect.addEventListener("change", renderIncomes);
   }
 
+  if (filterClientSelect) {
+    filterClientSelect.addEventListener("change", renderIncomes);
+  }
+
+  if (filterStatusSelect) {
+    filterStatusSelect.addEventListener("change", renderIncomes);
+  }
+
+  if (filterMethodSelect) {
+    filterMethodSelect.addEventListener("change", renderIncomes);
+  }
+
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener("click", () => {
       if (filterYearSelect) filterYearSelect.value = "";
       if (filterMonthSelect) filterMonthSelect.value = "";
+      if (filterClientSelect) filterClientSelect.value = "";
+      if (filterStatusSelect) filterStatusSelect.value = "";
+      if (filterMethodSelect) filterMethodSelect.value = "";
       renderIncomes();
     });
   }
@@ -714,6 +831,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentIncomes = await getIncomeCollection();
     await loadClientOptions();
     loadYearOptions();
+    loadDynamicFilterOptions();
     renderIncomes();
   });
 
@@ -721,6 +839,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentIncomes = await getIncomeCollection();
     await loadClientOptions();
     loadYearOptions();
+    loadDynamicFilterOptions();
     renderIncomes();
   } finally {
     setPageLoading(false);

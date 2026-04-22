@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:github-pages": "VITE_BASE_PATH=/morfo-hub/ vite build",
     "preview": "vite preview",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:firebase": "npm run build && firebase deploy",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",

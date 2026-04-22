@@ -17,6 +17,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const reportForm = document.querySelector("form");
   const exportPdfBtn = document.getElementById("exportReportPdfBtn");
+  const reportClientSelect = document.getElementById("report-client");
+  const reportServiceSelect = document.getElementById("report-service");
+  const reportPaymentStatusSelect = document.getElementById(
+    "report-payment-status",
+  );
 
   const cards = document.querySelectorAll(".card-value");
   const incomeCard = cards[0];
@@ -30,6 +35,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     month: "",
     year: "",
     reportType: "general",
+    client: "",
+    serviceType: "",
+    paymentStatus: "",
     incomes: [],
     expenses: [],
     quotes: [],
@@ -106,6 +114,49 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       return matchesMonth && matchesYear;
     });
+  }
+
+  function fillSelectOptions(select, values, placeholder) {
+    if (!select) return;
+
+    const currentValue = select.value;
+    const uniqueValues = [...new Set(values.filter(Boolean))].sort((a, b) =>
+      String(a).localeCompare(String(b), "es-MX"),
+    );
+
+    select.replaceChildren();
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = placeholder;
+    select.appendChild(allOption);
+
+    uniqueValues.forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      select.appendChild(option);
+    });
+
+    select.value = uniqueValues.includes(currentValue) ? currentValue : "";
+  }
+
+  function loadReportFilterOptions({ incomes, quotes, clients }) {
+    fillSelectOptions(
+      reportClientSelect,
+      [
+        ...clients.map((client) => client.name),
+        ...incomes.map((income) => income.client),
+        ...quotes.map((quote) => quote.client),
+      ],
+      "Todos los clientes",
+    );
+
+    fillSelectOptions(
+      reportServiceSelect,
+      quotes.map((quote) => quote.serviceType),
+      "Todos los servicios",
+    );
   }
 
   function getIncomeAmount(item) {
@@ -286,6 +337,107 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "Pendiente";
   }
 
+  function getPaymentFilterKeyFromIncome(item) {
+    const status = normalizeText(getIncomeStatusLabel(item));
+
+    if (status === "pagado") return "pagado";
+    if (status === "parcial" || status === "pago parcial") return "parcial";
+    return "pendiente";
+  }
+
+  function getPaymentFilterKeyFromQuote(item) {
+    const paymentStatus = normalizeText(
+      item.paymentStatus || item.payment_state,
+    );
+
+    if (paymentStatus === "pagada total" || paymentStatus === "pagada_total") {
+      return "pagado";
+    }
+
+    if (
+      paymentStatus === "anticipo pagado" ||
+      paymentStatus === "anticipo_pagado" ||
+      paymentStatus === "parcial" ||
+      paymentStatus === "partial"
+    ) {
+      return "parcial";
+    }
+
+    return "pendiente";
+  }
+
+  function applyAdvancedFilters({
+    incomes,
+    expenses,
+    quotes,
+    clients,
+    client,
+    serviceType,
+    paymentStatus,
+  }) {
+    const normalizedClient = normalizeText(client);
+    const normalizedService = normalizeText(serviceType);
+    const normalizedPayment = normalizeText(paymentStatus);
+
+    let filteredIncomes = incomes;
+    let filteredExpenses = expenses;
+    let filteredQuotes = quotes;
+    let filteredClients = clients;
+
+    if (normalizedClient) {
+      filteredIncomes = filteredIncomes.filter(
+        (income) => normalizeText(income.client) === normalizedClient,
+      );
+      filteredQuotes = filteredQuotes.filter(
+        (quote) => normalizeText(quote.client) === normalizedClient,
+      );
+      filteredClients = filteredClients.filter(
+        (item) => normalizeText(item.name) === normalizedClient,
+      );
+      filteredExpenses = [];
+    }
+
+    if (normalizedService) {
+      filteredQuotes = filteredQuotes.filter(
+        (quote) => normalizeText(quote.serviceType) === normalizedService,
+      );
+      filteredIncomes = filteredIncomes.filter((income) =>
+        filteredQuotes.some((quote) => {
+          const quoteIdMatches =
+            income.quoteId &&
+            quote.id &&
+            String(income.quoteId) === String(quote.id);
+          const quotePublicIdMatches =
+            income.quotePublicId &&
+            quote.publicId &&
+            String(income.quotePublicId) === String(quote.publicId);
+
+          return quoteIdMatches || quotePublicIdMatches;
+        }),
+      );
+      filteredExpenses = [];
+      filteredClients = [];
+    }
+
+    if (normalizedPayment) {
+      filteredIncomes = filteredIncomes.filter(
+        (income) => getPaymentFilterKeyFromIncome(income) === normalizedPayment,
+      );
+      filteredQuotes = filteredQuotes.filter(
+        (quote) => getPaymentFilterKeyFromQuote(quote) === normalizedPayment,
+      );
+      filteredExpenses = [];
+      filteredClients = [];
+    }
+
+    return {
+      incomes: filteredIncomes,
+      expenses: filteredExpenses,
+      quotes: filteredQuotes,
+      clients: filteredClients,
+    };
+  }
+
   function createCell(text) {
     const cell = document.createElement("td");
     cell.textContent = text;
@@ -455,7 +607,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     ]);
   }
 
-  async function generateReport(month, year, reportTypeRaw) {
+  async function generateReport(
+    month,
+    year,
+    reportTypeRaw,
+    advancedFilters = {},
+  ) {
     const reportType = normalizeReportType(reportTypeRaw);
 
     const [allIncomes, allExpenses, allQuotes, clients] = await Promise.all([
@@ -484,27 +641,48 @@ document.addEventListener("DOMContentLoaded", async () => {
       year,
     );
 
-    const totalIncome = incomes.reduce(
+    loadReportFilterOptions({
+      incomes: allIncomes,
+      quotes: allQuotes,
+      clients,
+    });
+
+    const filtered = applyAdvancedFilters({
+      incomes,
+      expenses,
+      quotes,
+      clients,
+      client: advancedFilters.client || "",
+      serviceType: advancedFilters.serviceType || "",
+      paymentStatus: advancedFilters.paymentStatus || "",
+    });
+
+    const reportIncomes = filtered.incomes;
+    const reportExpenses = filtered.expenses;
+    const reportQuotes = filtered.quotes;
+    const reportClients = filtered.clients;
+
+    const totalIncome = reportIncomes.reduce(
       (sum, item) => sum + getIncomeAmount(item),
       0,
     );
 
-    const totalExpenses = expenses.reduce(
+    const totalExpenses = reportExpenses.reduce(
       (sum, item) => sum + getExpenseAmount(item),
       0,
     );
 
     const estimatedUtility = totalIncome - totalExpenses;
 
-    const incomePendingAmount = incomes
+    const incomePendingAmount = reportIncomes
       .filter((item) => shouldCountIncomeAsReceivable(item))
       .reduce((sum, item) => sum + getIncomePendingAmount(item), 0);
 
-    const quotePendingAmount = quotes
+    const quotePendingAmount = reportQuotes
       .filter(
         (item) =>
           shouldCountQuoteAsReceivable(item) &&
-          !hasLinkedIncomeForQuote(item, incomes),
+          !hasLinkedIncomeForQuote(item, reportIncomes),
       )
       .reduce((sum, item) => sum + getQuotePendingAmount(item), 0);
 
@@ -512,17 +690,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const selectedRows = buildSelectedRows(
       reportType,
-      incomes,
-      expenses,
-      clients,
-      quotes,
+      reportIncomes,
+      reportExpenses,
+      reportClients,
+      reportQuotes,
     );
 
     incomeCard.textContent = formatCurrency(totalIncome);
     expenseCard.textContent = formatCurrency(totalExpenses);
     utilityCard.textContent = formatCurrency(estimatedUtility);
     pendingCard.textContent = formatCurrency(pendingAmount);
-    quotesCard.textContent = quotes.length;
+    quotesCard.textContent = reportQuotes.length;
 
     renderTableRows(selectedRows);
 
@@ -530,10 +708,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       month,
       year,
       reportType,
-      incomes,
-      expenses,
-      quotes,
-      clients,
+      client: advancedFilters.client || "",
+      serviceType: advancedFilters.serviceType || "",
+      paymentStatus: advancedFilters.paymentStatus || "",
+      incomes: reportIncomes,
+      expenses: reportExpenses,
+      quotes: reportQuotes,
+      clients: reportClients,
       totalIncome,
       totalExpenses,
       estimatedUtility,
@@ -591,6 +772,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       month,
       year,
       reportType,
+      client,
+      serviceType,
+      paymentStatus,
       totalIncome,
       totalExpenses,
       estimatedUtility,
@@ -640,7 +824,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       y + 13,
     );
 
-    y += 28;
+    doc.text(
+      `Cliente: ${client || "Todos"}   |   Servicio: ${serviceType || "Todos"}   |   Pago: ${paymentStatus || "Todos"}`,
+      20,
+      y + 18,
+    );
+
+    y += 34;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
@@ -745,8 +935,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const month = document.getElementById("report-month").value;
       const year = document.getElementById("report-year").value.trim();
       const reportTypeRaw = document.getElementById("report-type").value;
+      const client = reportClientSelect.value;
+      const serviceType = reportServiceSelect.value;
+      const paymentStatus = reportPaymentStatusSelect.value;
 
-      await generateReport(month, year, reportTypeRaw);
+      await generateReport(month, year, reportTypeRaw, {
+        client,
+        serviceType,
+        paymentStatus,
+      });
     });
   }
 
@@ -765,6 +962,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentReportState.month,
       currentReportState.year,
       currentReportState.reportType,
+      {
+        client: currentReportState.client,
+        serviceType: currentReportState.serviceType,
+        paymentStatus: currentReportState.paymentStatus,
+      },
     );
   });
 });

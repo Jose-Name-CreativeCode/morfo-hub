@@ -7,6 +7,8 @@ import {
 import {
   askConfirm,
   formatCurrency,
+  formatDate,
+  normalizeText,
   setButtonLoading,
   setPageLoading,
   showToast,
@@ -22,8 +24,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const filterYearSelect = document.getElementById("filter-expense-year");
   const filterMonthSelect = document.getElementById("filter-expense-month");
+  const filterCategorySelect = document.getElementById(
+    "filter-expense-category",
+  );
+  const filterMethodSelect = document.getElementById("filter-expense-method");
   const clearFiltersBtn = document.getElementById("clear-expense-filters");
   const exportExcelBtn = document.getElementById("export-expense-excel");
+  const expenseCounters = {
+    total: document.getElementById("expense-total"),
+    topCategory: document.getElementById("expense-top-category"),
+    invoiced: document.getElementById("expense-invoiced"),
+    count: document.getElementById("expense-count"),
+  };
+  const detailModal = document.getElementById("expense-detail-modal");
+  const detailOverlay = document.getElementById("expense-detail-overlay");
+  const detailCloseButton = document.getElementById("expense-detail-close");
+  const detailTitle = document.getElementById("expense-detail-title");
+  const detailMeta = document.getElementById("expense-detail-meta");
+  const detailAmount = document.getElementById("expense-detail-amount");
+  const detailCategory = document.getElementById("expense-detail-category");
+  const detailMethod = document.getElementById("expense-detail-method");
+  const detailInvoice = document.getElementById("expense-detail-invoice");
+  const detailNotes = document.getElementById("expense-detail-notes");
 
   let editingExpenseId = null;
   let currentExpenses = [];
@@ -80,11 +102,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterYearSelect.value = years.includes(currentValue) ? currentValue : "";
   }
 
+  function loadDynamicFilterOptions() {
+    const selects = [
+      {
+        element: filterCategorySelect,
+        values: currentExpenses.map((expense) => expense.category),
+        label: "Todas",
+      },
+      {
+        element: filterMethodSelect,
+        values: currentExpenses.map((expense) => expense.paymentMethod),
+        label: "Todos",
+      },
+    ];
+
+    selects.forEach(({ element, values, label }) => {
+      if (!element) return;
+
+      const currentValue = element.value;
+      const uniqueValues = [...new Set(values.filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b), "es-MX"),
+      );
+
+      element.replaceChildren();
+
+      const allOption = document.createElement("option");
+      allOption.value = "";
+      allOption.textContent = label;
+      element.appendChild(allOption);
+
+      uniqueValues.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        element.appendChild(option);
+      });
+
+      element.value = uniqueValues.includes(currentValue) ? currentValue : "";
+    });
+  }
+
   function getFilteredExpenses() {
     let expenses = [...currentExpenses];
 
     const selectedYear = filterYearSelect ? filterYearSelect.value : "";
     const selectedMonth = filterMonthSelect ? filterMonthSelect.value : "";
+    const selectedCategory = filterCategorySelect
+      ? filterCategorySelect.value
+      : "";
+    const selectedMethod = filterMethodSelect ? filterMethodSelect.value : "";
 
     if (selectedYear) {
       expenses = expenses.filter(
@@ -101,16 +167,51 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
+    if (selectedCategory) {
+      expenses = expenses.filter(
+        (expense) =>
+          normalizeText(expense.category) === normalizeText(selectedCategory),
+      );
+    }
+
+    if (selectedMethod) {
+      expenses = expenses.filter(
+        (expense) =>
+          normalizeText(expense.paymentMethod) === normalizeText(selectedMethod),
+      );
+    }
+
     return expenses.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  }
+
+  function updateExpenseCounters(expenses) {
+    const total = expenses.reduce(
+      (sum, expense) => sum + Number(expense.amount || 0),
+      0,
+    );
+    const invoiced = expenses.filter((expense) => expense.invoice === "Sí");
+    const byCategory = expenses.reduce((acc, expense) => {
+      const category = expense.category || "Sin categoría";
+      acc[category] = (acc[category] || 0) + Number(expense.amount || 0);
+      return acc;
+    }, {});
+    const topCategory =
+      Object.entries(byCategory).sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
+
+    expenseCounters.total.textContent = formatCurrency(total);
+    expenseCounters.topCategory.textContent = topCategory;
+    expenseCounters.invoiced.textContent = String(invoiced.length);
+    expenseCounters.count.textContent = String(expenses.length);
   }
 
   function renderExpenses() {
     const expenses = getFilteredExpenses();
+    updateExpenseCounters(expenses);
     expenseTableBody.replaceChildren();
 
     if (expenses.length === 0) {
       expenseTableBody.appendChild(
-        createEmptyStateRow("No hay gastos registrados.", 8),
+        createEmptyStateRow("No hay gastos registrados.", 9),
       );
       return;
     }
@@ -123,6 +224,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.appendChild(createCell(formatCurrency(expense.amount)));
       row.appendChild(createCell(expense.paymentMethod || "-"));
       row.appendChild(createCell(expense.invoice || "-"));
+
+      const detailCell = document.createElement("td");
+      const detailButton = document.createElement("button");
+      detailButton.type = "button";
+      detailButton.className = "pdf-btn expense-detail-btn";
+      detailButton.dataset.id = String(expense.id);
+      detailButton.textContent = "Ver";
+      detailCell.appendChild(detailButton);
+      row.appendChild(detailCell);
 
       const editCell = document.createElement("td");
       const editButton = document.createElement("button");
@@ -173,6 +283,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     fillForm(expenseToEdit);
   }
 
+  function openExpenseDetail(expenseId) {
+    const expense = currentExpenses.find(
+      (item) => String(item.id) === String(expenseId),
+    );
+    if (!expense) return;
+
+    detailTitle.textContent = expense.concept || "Gasto";
+    detailMeta.textContent = `${formatDate(expense.date)} · ${expense.category || "-"}`;
+    detailAmount.textContent = formatCurrency(expense.amount || 0);
+    detailCategory.textContent = expense.category || "-";
+    detailMethod.textContent = expense.paymentMethod || "-";
+    detailInvoice.textContent = expense.invoice || "-";
+    detailNotes.textContent = expense.notes || "Sin observaciones.";
+
+    detailModal.classList.add("open");
+    detailOverlay.classList.add("open");
+  }
+
+  function closeExpenseDetail() {
+    detailModal.classList.remove("open");
+    detailOverlay.classList.remove("open");
+  }
+
   async function handleDelete(expenseId) {
     const confirmed = await askConfirm({
       title: "Eliminar gasto",
@@ -205,8 +338,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function addTableEvents() {
+    const detailButtons = document.querySelectorAll(".expense-detail-btn");
     const editButtons = document.querySelectorAll(".edit-btn");
     const deleteButtons = document.querySelectorAll(".delete-btn");
+
+    detailButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        openExpenseDetail(button.dataset.id);
+      });
+    });
 
     editButtons.forEach((button) => {
       button.addEventListener("click", () => {
@@ -501,23 +641,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     clearFiltersBtn.addEventListener("click", () => {
       if (filterYearSelect) filterYearSelect.value = "";
       if (filterMonthSelect) filterMonthSelect.value = "";
+      if (filterCategorySelect) filterCategorySelect.value = "";
+      if (filterMethodSelect) filterMethodSelect.value = "";
       renderExpenses();
     });
+  }
+
+  if (filterCategorySelect) {
+    filterCategorySelect.addEventListener("change", renderExpenses);
+  }
+
+  if (filterMethodSelect) {
+    filterMethodSelect.addEventListener("change", renderExpenses);
   }
 
   if (exportExcelBtn) {
     exportExcelBtn.addEventListener("click", exportFilteredExpensesToExcel);
   }
 
+  detailCloseButton.addEventListener("click", closeExpenseDetail);
+  detailOverlay.addEventListener("click", closeExpenseDetail);
+
   window.addEventListener("focus", async () => {
     currentExpenses = await getExpensesCollection();
     loadYearOptions();
+    loadDynamicFilterOptions();
     renderExpenses();
   });
 
   try {
     currentExpenses = await getExpensesCollection();
     loadYearOptions();
+    loadDynamicFilterOptions();
     renderExpenses();
   } finally {
     setPageLoading(false);

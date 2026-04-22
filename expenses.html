@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Gastos</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
@@ -99,6 +100,36 @@
             </form>
           </section>
 
+          <section class="cards-grid section-spacing expense-stats-grid">
+            <article class="card metric-card expense">
+              <div class="card-label">Gastos del filtro</div>
+              <div class="card-value metric-card-value" id="expense-total">
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card pending">
+              <div class="card-label">Categoría principal</div>
+              <div class="card-value metric-card-value" id="expense-top-category">
+                -
+              </div>
+            </article>
+
+            <article class="card metric-card">
+              <div class="card-label">Con factura</div>
+              <div class="card-value metric-card-value" id="expense-invoiced">
+                0
+              </div>
+            </article>
+
+            <article class="card metric-card income">
+              <div class="card-label">Registros</div>
+              <div class="card-value metric-card-value" id="expense-count">
+                0
+              </div>
+            </article>
+          </section>
+
           <section class="card section-spacing">
             <h2 class="section-title section-title-sm">Filtros</h2>
 
@@ -126,6 +157,20 @@
                   <option value="10">Octubre</option>
                   <option value="11">Noviembre</option>
                   <option value="12">Diciembre</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-tight">
+                <label for="filter-expense-category">Categoría</label>
+                <select id="filter-expense-category">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-tight">
+                <label for="filter-expense-method">Método de pago</label>
+                <select id="filter-expense-method">
+                  <option value="">Todos</option>
                 </select>
               </div>
 
@@ -161,6 +206,7 @@
                   <th>Monto</th>
                   <th>Método de pago</th>
                   <th>Factura</th>
+                  <th>Ficha</th>
                   <th>Editar</th>
                   <th>Eliminar</th>
                 </tr>
@@ -168,6 +214,50 @@
               <tbody></tbody>
             </table>
           </section>
+
+          <div id="expense-detail-overlay" class="manage-overlay"></div>
+
+          <div id="expense-detail-modal" class="manage-modal modal-shell">
+            <div class="manage-modal-header">
+              <div>
+                <h3 id="expense-detail-title">Ficha del gasto</h3>
+                <p id="expense-detail-meta"></p>
+              </div>
+              <button
+                type="button"
+                id="expense-detail-close"
+                class="manage-close-btn"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="manage-payment-summary">
+              <div>
+                <span>Monto</span>
+                <strong id="expense-detail-amount">$0.00</strong>
+              </div>
+              <div>
+                <span>Categoría</span>
+                <strong id="expense-detail-category">-</strong>
+              </div>
+              <div>
+                <span>Método</span>
+                <strong id="expense-detail-method">-</strong>
+              </div>
+              <div>
+                <span>Factura</span>
+                <strong id="expense-detail-invoice">-</strong>
+              </div>
+            </div>
+
+            <div class="manage-section">
+              <h4>Observaciones</h4>
+              <div id="expense-detail-notes" class="client-detail-list">
+                Sin observaciones.
+              </div>
+            </div>
+          </div>
         </main>
       </div>
     </div>

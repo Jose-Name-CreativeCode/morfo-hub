@@ -25,7 +25,6 @@ subgraph CAPA2["Capa de Controladores"]
     C7["EnvioController<br/>- solicitud de envio<br/>- calculo de opciones<br/>- seguimiento de envio"]
     C8["ReporteController<br/>- seguimiento de ventas<br/>- reportes por periodo<br/>- metricas por producto"]
     C9["ProveedorController<br/>- compras a proveedor<br/>- abastecimiento<br/>- seguimiento de ordenes"]
-    C10["BitacoraController<br/>- auditoria de accesos<br/>- eventos de seguridad"]
 end
 
 subgraph CAPA3["Capa de Servicios / Logica de Negocio"]
@@ -39,7 +38,6 @@ subgraph CAPA3["Capa de Servicios / Logica de Negocio"]
     S8["Modulo Envio"]
     S9["Modulo Reportes"]
     S10["Modulo Proveedores"]
-    S11["Modulo Bitacora"]
 end
 
 subgraph CAPA4["Capa de Modelo de Datos"]
@@ -57,7 +55,6 @@ subgraph CAPA4["Capa de Modelo de Datos"]
     M12["Envio"]
     M13["Proveedor"]
     M14["CompraProveedor"]
-    M15["BitacoraAcceso"]
     M16["DireccionEnvio"]
 end
 
@@ -71,7 +68,6 @@ subgraph CAPA5["Capa de Persistencia"]
     R7["PagoRepository"]
     R8["EnvioRepository"]
     R9["ProveedorRepository"]
-    R10["BitacoraRepository"]
 end
 
 subgraph TEC["Lenguajes y Tecnologias"]
@@ -96,7 +92,6 @@ UI3 --> C2
 UI3 --> C5
 UI3 --> C8
 UI3 --> C9
-UI3 --> C10
 
 C1 --> S1
 C2 --> S2
@@ -107,14 +102,12 @@ C6 --> S7
 C7 --> S8
 C8 --> S9
 C9 --> S10
-C10 --> S11
 
 S5 --> S1
 S5 --> S4
 S5 --> S6
 S5 --> S7
 S5 --> S8
-S2 --> S11
 S10 --> S4
 S9 --> S5
 
@@ -134,7 +127,6 @@ S7 --> M11
 S8 --> M12
 S10 --> M13
 S10 --> M14
-S11 --> M15
 
 M1 --> R1
 M2 --> R2
@@ -145,7 +137,6 @@ M10 --> R6
 M11 --> R7
 M12 --> R8
 M13 --> R9
-M15 --> R10
 
 R1 --> T5
 R2 --> T5
@@ -156,7 +147,6 @@ R6 --> T5
 R7 --> T5
 R8 --> T5
 R9 --> T5
-R10 --> T5
 
 T1 --> C1
 T1 --> C2
@@ -167,7 +157,6 @@ T1 --> C6
 T1 --> C7
 T1 --> C8
 T1 --> C9
-T1 --> C10
 
 T2 --> UI1
 T2 --> UI2
@@ -181,7 +170,6 @@ T3 --> C6
 T3 --> C7
 T3 --> C8
 T3 --> C9
-T3 --> C10
 T4 --> R1
 T4 --> R2
 T4 --> R3
@@ -191,9 +179,7 @@ T4 --> R6
 T4 --> R7
 T4 --> R8
 T4 --> R9
-T4 --> R10
 T6 --> C2
-T6 --> C10
 ```
 
 ## Lectura del modelo

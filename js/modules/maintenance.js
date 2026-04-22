@@ -1,8 +1,13 @@
 import { protectPage } from "../services/auth.js";
-import { getClientsCollection } from "../services/clients-service.js";
+import {
+  deleteClientRecord,
+  getClientsCollection,
+  saveClientRecord,
+} from "../services/clients-service.js";
 import {
   deleteExpenseRecord,
   getExpensesCollection,
+  saveExpenseRecord,
 } from "../services/expenses-service.js";
 import {
   deleteIncomeRecord,
@@ -14,6 +19,10 @@ import {
   getQuotesCollection,
   saveQuoteRecord,
 } from "../services/quotes-service.js";
+import {
+  getSettingsRecord,
+  saveSettingsRecord,
+} from "../services/settings-service.js";
 import {
   askConfirm,
   setButtonLoading,
@@ -27,6 +36,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const issuesBody = document.getElementById("maintenanceIssuesBody");
   const refreshButton = document.getElementById("refresh-data-btn");
+  const exportBackupButton = document.getElementById("export-backup-btn");
+  const restoreBackupInput = document.getElementById("restore-backup-file");
+  const restoreBackupButton = document.getElementById("restore-backup-btn");
+  const backupPreview = document.getElementById("backup-preview");
 
   const counters = {
     clients: document.getElementById("count-clients"),
@@ -44,6 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   let currentIssues = [];
+  let pendingBackup = null;
 
   function normalizeValue(value) {
     return String(value ?? "").trim().toLowerCase();
@@ -393,6 +407,269 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function downloadJsonFile(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportBackup(button = exportBackupButton) {
+    setButtonLoading(button, true, "Preparando...");
+
+    try {
+      const [clients, incomes, expenses, quotes, settings] = await Promise.all([
+        getClientsCollection(),
+        getIncomeCollection(),
+        getExpensesCollection(),
+        getQuotesCollection(),
+        getSettingsRecord(),
+      ]);
+
+      const createdAt = new Date();
+      const backup = {
+        app: "Morfo Hub",
+        version: 1,
+        createdAt: createdAt.toISOString(),
+        collections: {
+          clients,
+          income: incomes,
+          expenses,
+          quotes,
+          settings,
+        },
+      };
+      const filename = `morfo-hub-backup-${createdAt.toISOString().slice(0, 10)}.json`;
+
+      downloadJsonFile(filename, backup);
+      showToast("Respaldo descargado correctamente.", { type: "success" });
+    } catch (error) {
+      console.error("No se pudo generar el respaldo:", error);
+      showToast(
+        error?.message ||
+          "No se pudo generar el respaldo. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
+    } finally {
+      setButtonLoading(button, false);
+    }
+  }
+
+  function normalizeBackupPayload(payload) {
+    const collections = payload?.collections || {};
+    const clients = collections.clients;
+    const income = collections.income;
+    const expenses = collections.expenses;
+    const quotes = collections.quotes;
+    const settings = collections.settings;
+
+    if (
+      !Array.isArray(clients) ||
+      !Array.isArray(income) ||
+      !Array.isArray(expenses) ||
+      !Array.isArray(quotes) ||
+      !settings ||
+      typeof settings !== "object"
+    ) {
+      throw new Error(
+        "El archivo no parece ser un respaldo válido de Morfo Hub.",
+      );
+    }
+
+    return {
+      createdAt: payload.createdAt || "",
+      collections: {
+        clients,
+        income,
+        expenses,
+        quotes,
+        settings,
+      },
+    };
+  }
+
+  function renderBackupPreview(backup) {
+    const { collections, createdAt } = backup;
+    const dateLabel = createdAt
+      ? new Date(createdAt).toLocaleString("es-MX", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : "Fecha no disponible";
+
+    backupPreview.replaceChildren();
+
+    const title = document.createElement("strong");
+    title.textContent = `Respaldo detectado: ${dateLabel}`;
+
+    const list = document.createElement("ul");
+    [
+      `Clientes: ${collections.clients.length}`,
+      `Ingresos: ${collections.income.length}`,
+      `Gastos: ${collections.expenses.length}`,
+      `Cotizaciones: ${collections.quotes.length}`,
+      "Configuración: incluida",
+    ].forEach((item) => {
+      const listItem = document.createElement("li");
+      listItem.textContent = item;
+      list.appendChild(listItem);
+    });
+
+    backupPreview.appendChild(title);
+    backupPreview.appendChild(list);
+  }
+
+  function resetBackupPreview(message) {
+    pendingBackup = null;
+    restoreBackupButton.disabled = true;
+    backupPreview.textContent = message;
+  }
+
+  async function readBackupFile(file) {
+    if (!file) {
+      resetBackupPreview("Selecciona un respaldo JSON para ver la vista previa.");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      pendingBackup = normalizeBackupPayload(payload);
+      renderBackupPreview(pendingBackup);
+      restoreBackupButton.disabled = false;
+    } catch (error) {
+      console.error("No se pudo leer el respaldo:", error);
+      resetBackupPreview(
+        error?.message || "No se pudo leer el respaldo seleccionado.",
+      );
+      showToast("El respaldo seleccionado no es válido.", {
+        type: "error",
+        duration: 4200,
+      });
+    }
+  }
+
+  async function replaceCollection(currentRecords, backupRecords, deleteFn, saveFn) {
+    await Promise.all(
+      currentRecords.map((record) => deleteFn(String(record.id))),
+    );
+    await Promise.all(
+      backupRecords.map((record) => saveFn(sanitizeBackupRecord(record))),
+    );
+  }
+
+  function sanitizeBackupRecord(record) {
+    const {
+      createdAt,
+      updatedAt,
+      createdAtMs,
+      updatedAtMs,
+      ...rest
+    } = record || {};
+
+    void createdAt;
+    void updatedAt;
+    void createdAtMs;
+    void updatedAtMs;
+
+    return rest;
+  }
+
+  function sanitizeBackupSettings(settings) {
+    const {
+      createdAt,
+      updatedAt,
+      createdAtMs,
+      updatedAtMs,
+      ...rest
+    } = settings || {};
+
+    void createdAt;
+    void updatedAt;
+    void createdAtMs;
+    void updatedAtMs;
+
+    return rest;
+  }
+
+  async function restoreBackup(button = restoreBackupButton) {
+    if (!pendingBackup) return;
+
+    const { collections } = pendingBackup;
+    const confirmed = await askConfirm({
+      title: "Restaurar respaldo",
+      message:
+        "Esta acción reemplazará clientes, ingresos, gastos, cotizaciones y configuración actuales con el contenido del respaldo. ¿Continuar?",
+      confirmText: "Restaurar",
+    });
+
+    if (!confirmed) return;
+
+    setButtonLoading(button, true, "Restaurando...");
+    setPageLoading(true);
+
+    try {
+      const [clients, incomes, expenses, quotes] = await Promise.all([
+        getClientsCollection(),
+        getIncomeCollection(),
+        getExpensesCollection(),
+        getQuotesCollection(),
+      ]);
+
+      await replaceCollection(
+        clients,
+        collections.clients,
+        deleteClientRecord,
+        saveClientRecord,
+      );
+      await replaceCollection(
+        incomes,
+        collections.income,
+        deleteIncomeRecord,
+        saveIncomeRecord,
+      );
+      await replaceCollection(
+        expenses,
+        collections.expenses,
+        deleteExpenseRecord,
+        saveExpenseRecord,
+      );
+      await replaceCollection(
+        quotes,
+        collections.quotes,
+        deleteQuoteRecord,
+        saveQuoteRecord,
+      );
+      await saveSettingsRecord(sanitizeBackupSettings(collections.settings));
+
+      restoreBackupInput.value = "";
+      resetBackupPreview("Respaldo restaurado correctamente.");
+      showToast("Respaldo restaurado correctamente.", { type: "success" });
+      await refreshDiagnostics();
+    } catch (error) {
+      console.error("No se pudo restaurar el respaldo:", error);
+      showToast(
+        error?.message ||
+          "No se pudo restaurar el respaldo. Revisa permisos o conexión.",
+        { type: "error", duration: 5200 },
+      );
+    } finally {
+      setPageLoading(false);
+      setButtonLoading(button, false);
+      if (!pendingBackup) {
+        button.disabled = true;
+      }
+    }
+  }
+
   async function cleanDuplicateIssue(issueId, button) {
     const issue = currentIssues.find((item) => item.id === issueId);
     if (!issue || !issue.deleteFn) return;
@@ -469,6 +746,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (refreshButton) {
     refreshButton.addEventListener("click", refreshDiagnostics);
+  }
+
+  if (exportBackupButton) {
+    exportBackupButton.addEventListener("click", () => {
+      void exportBackup(exportBackupButton);
+    });
+  }
+
+  if (restoreBackupInput) {
+    restoreBackupInput.addEventListener("change", () => {
+      void readBackupFile(restoreBackupInput.files?.[0]);
+    });
+  }
+
+  if (restoreBackupButton) {
+    restoreBackupButton.addEventListener("click", () => {
+      void restoreBackup(restoreBackupButton);
+    });
   }
 
   await refreshDiagnostics();

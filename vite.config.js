@@ -1,10 +1,13 @@
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import process from "node:process";
 import { defineConfig } from "vite";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const base = process.env.VITE_BASE_PATH || "/";
 
 export default defineConfig({
+  base,
   server: {
     port: 5173,
     open: "/index.html",

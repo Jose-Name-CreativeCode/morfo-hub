@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Mantenimiento</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
@@ -95,6 +96,50 @@
               </thead>
               <tbody id="maintenanceIssuesBody"></tbody>
             </table>
+          </section>
+
+          <section class="card panel-soft form-shell section-spacing">
+            <div class="hero-row">
+              <div>
+                <h2 class="section-title section-title-sm">
+                  Respaldo de datos
+                </h2>
+                <p class="section-subtitle">
+                  Descarga un archivo JSON con clientes, ingresos, gastos,
+                  cotizaciones y configuración.
+                </p>
+              </div>
+
+              <div class="dashboard-actions">
+                <button type="button" class="btn-primary" id="export-backup-btn">
+                  Descargar respaldo JSON
+                </button>
+              </div>
+            </div>
+
+            <div class="backup-restore-panel">
+              <div class="form-group">
+                <label for="restore-backup-file">Restaurar desde respaldo</label>
+                <input
+                  type="file"
+                  id="restore-backup-file"
+                  accept="application/json,.json"
+                />
+              </div>
+
+              <div class="backup-preview" id="backup-preview">
+                Selecciona un respaldo JSON para ver la vista previa.
+              </div>
+
+              <button
+                type="button"
+                class="delete-btn backup-restore-btn"
+                id="restore-backup-btn"
+                disabled
+              >
+                Restaurar respaldo
+              </button>
+            </div>
           </section>
         </main>
       </div>

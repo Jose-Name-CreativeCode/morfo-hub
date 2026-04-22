@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Configuración</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
@@ -100,7 +101,9 @@ cliente para asegurar que se logre el resultado final deseado.
 Los trabajos adicionales fuera del alcance de esta cotización se negociarán por
 separado.
 
-Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
+Si se requiere factura, el IVA se calcula únicamente sobre el servicio de gestión.
+La pauta publicitaria se entrega a la plataforma correspondiente y no forma parte
+del servicio de Morfo Studio.
 
 ¡Muchas gracias!
 “Morfo Studio”</textarea
@@ -127,12 +130,157 @@ Si se requiere factura, se añadirá un 16% adicional a los montos indicados.
               <div class="form-group">
                 <label for="invoice-note">Nota fiscal por defecto</label>
                 <textarea id="invoice-note" rows="4">
-Si se requiere factura, se añadirá un 16% adicional a los montos indicados.</textarea
+Si se requiere factura, el IVA se calcula únicamente sobre el servicio de gestión.
+La pauta publicitaria se entrega a la plataforma correspondiente y no forma parte
+del servicio de Morfo Studio.</textarea
                 >
               </div>
 
               <button type="submit" class="btn-primary">
                 Guardar ajustes fiscales
+              </button>
+            </form>
+          </section>
+
+          <section class="card section-spacing">
+            <h2 class="section-title section-title-sm">
+              Configuración avanzada
+            </h2>
+
+            <form>
+              <div class="form-group">
+                <label for="advance-percent">Anticipo por defecto (%)</label>
+                <input
+                  type="number"
+                  id="advance-percent"
+                  value="50"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="payment-methods">Métodos de pago disponibles</label>
+                <textarea
+                  id="payment-methods"
+                  rows="4"
+                  placeholder="Un método por línea. Ej. Transferencia, Efectivo, Tarjeta"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="bank-details-invoice">
+                  Datos bancarios con factura
+                </label>
+                <textarea
+                  id="bank-details-invoice"
+                  rows="5"
+                  placeholder="Ej. Banco BBVA&#10;Titular: Morfo Studio S.A. de C.V.&#10;CLABE: 012345678901234567&#10;RFC: MOR000000XXX"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="bank-details-no-invoice">
+                  Datos bancarios sin factura
+                </label>
+                <textarea
+                  id="bank-details-no-invoice"
+                  rows="5"
+                  placeholder="Ej. Banco Nu&#10;Titular: Nombre Apellido&#10;CLABE: 987654321098765432&#10;Concepto: Nombre del cliente + servicio"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="legal-note">Texto legal / aceptación</label>
+                <textarea
+                  id="legal-note"
+                  rows="5"
+                  placeholder="Condiciones legales, vigencia, aceptación de propuesta, etc."
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar configuración avanzada
+              </button>
+            </form>
+          </section>
+
+          <section class="card section-spacing">
+            <h2 class="section-title section-title-sm">
+              Plantillas de servicios para cotizaciones
+            </h2>
+            <p class="section-subtitle">
+              Configura la descripción general y lo que incluye cada tipo de
+              servicio. Estos textos se llenarán automáticamente al crear una
+              cotización.
+            </p>
+
+            <form>
+              <div class="service-template-manager">
+                <div class="filters-grid">
+                  <div class="form-group form-group-tight">
+                    <label for="service-template-select">
+                      Plantilla a configurar
+                    </label>
+                    <select id="service-template-select"></select>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    id="add-service-template"
+                  >
+                    Agregar servicio
+                  </button>
+
+                  <button
+                    type="button"
+                    class="delete-btn service-template-delete-btn"
+                    id="delete-service-template"
+                  >
+                    Eliminar servicio
+                  </button>
+                </div>
+
+                <div class="service-template-card">
+                  <div class="form-group">
+                    <label for="service-template-name">Nombre del servicio</label>
+                    <input
+                      type="text"
+                      id="service-template-name"
+                      placeholder="Ej. Levantamiento de contenido"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="service-template-title">Nombre sugerido</label>
+                    <input
+                      type="text"
+                      id="service-template-title"
+                      placeholder="Ej. Plan mensual + pauta Meta"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="service-template-description">
+                      Descripción general
+                    </label>
+                    <textarea
+                      id="service-template-description"
+                      rows="6"
+                    ></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="service-template-includes">Incluye</label>
+                    <textarea id="service-template-includes" rows="9"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                Guardar plantillas de servicios
               </button>
             </form>
           </section>

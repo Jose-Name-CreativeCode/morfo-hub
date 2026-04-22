@@ -11,6 +11,7 @@ import {
   saveQuoteRecord,
   replaceQuotesCollection,
 } from "../services/quotes-service.js";
+import { getSettingsRecord } from "../services/settings-service.js";
 import { STORAGE_KEYS, getData, saveData } from "../services/storage.js";
 import {
   askConfirm,
@@ -69,9 +70,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   let activePaymentQuoteId = null;
   let activePaymentType = null;
   let selectedClientFilter = "";
+  let currentSettings = getData(SETTINGS_KEY, {});
   let currentQuotes = [];
   let currentClients = [];
   let currentIncomes = [];
+  let lastAppliedServiceTemplate = {
+    description: "",
+    includes: "",
+  };
+
+  function isYesValue(value) {
+    return ["yes", "si", "sí", "true"].includes(
+      String(value || "")
+        .trim()
+        .toLowerCase(),
+    );
+  }
+
+  function syncAdSpendField() {
+    const adRequiredSelect = document.getElementById("quote-ad-required");
+    const adSpendInput = document.getElementById("quote-ad-spend");
+    if (!adRequiredSelect || !adSpendInput) return false;
+
+    const requiresAdSpend = isYesValue(adRequiredSelect.value);
+    adSpendInput.disabled = !requiresAdSpend;
+    adSpendInput.readOnly = !requiresAdSpend;
+
+    if (!requiresAdSpend) {
+      adSpendInput.value = "";
+    }
+
+    return requiresAdSpend;
+  }
 
   function getQuotes() {
     return currentQuotes;
@@ -139,7 +169,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getSettings() {
-    return getData(SETTINGS_KEY, {});
+    return currentSettings || getData(SETTINGS_KEY, {});
+  }
+
+  async function loadSettingsCache() {
+    currentSettings = await getSettingsRecord();
+    return currentSettings;
   }
 
   function getSettingsAgencyName() {
@@ -182,6 +217,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     return settings.invoice?.note || "";
   }
 
+  function getPaymentMethodsText() {
+    const settings = getSettings();
+    return (settings.commercial?.paymentMethods || []).join(", ");
+  }
+
+  function getBankDetailsByInvoice(invoiceRequired) {
+    const settings = getSettings();
+    const requiresInvoice = invoiceRequired === "Sí" || invoiceRequired === true;
+
+    if (requiresInvoice) {
+      return (
+        settings.commercial?.bankDetailsInvoice ||
+        settings.commercial?.bankDetails ||
+        ""
+      );
+    }
+
+    return (
+      settings.commercial?.bankDetailsNoInvoice ||
+      settings.commercial?.bankDetails ||
+      ""
+    );
+  }
+
+  function getLegalNote() {
+    const settings = getSettings();
+    return settings.commercial?.legalNote || "";
+  }
+
+  function getServiceTemplate(serviceType) {
+    const settings = getSettings();
+    return settings.serviceTemplates?.[serviceType] || null;
+  }
+
+  function getConfiguredServiceTypes() {
+    const settings = getSettings();
+    return Object.keys(settings.serviceTemplates || {});
+  }
+
+  function loadServiceTypeOptions(selectedValue = "") {
+    const serviceTypeSelect = document.getElementById("quote-service-type");
+    const serviceTypes = getConfiguredServiceTypes();
+    const optionValues = [...serviceTypes];
+
+    if (selectedValue && !optionValues.includes(selectedValue)) {
+      optionValues.push(selectedValue);
+    }
+
+    serviceTypeSelect.replaceChildren();
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Selecciona una opción";
+    serviceTypeSelect.appendChild(placeholderOption);
+
+    optionValues.forEach((serviceType) => {
+      const option = document.createElement("option");
+      option.value = serviceType;
+      option.textContent = serviceType;
+      serviceTypeSelect.appendChild(option);
+    });
+
+    serviceTypeSelect.value = selectedValue || "";
+  }
+
   function applyDefaultTermsToQuoteForm(force = false) {
     const notesField = document.getElementById("quote-notes");
     if (!notesField) return;
@@ -190,6 +290,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (force || !notesField.value.trim()) {
       notesField.value = defaultTerms;
+    }
+  }
+
+  function applyServiceTemplateToQuoteForm() {
+    const serviceType = document.getElementById("quote-service-type").value;
+    const titleField = document.getElementById("quote-title");
+    const descriptionField = document.getElementById("quote-description");
+    const includesField = document.getElementById("quote-includes");
+    const template = getServiceTemplate(serviceType);
+
+    if (!template) return;
+
+    if (!titleField.value.trim() && template.title) {
+      titleField.value = template.title;
+    }
+
+    const canReplaceDescription =
+      !descriptionField.value.trim() ||
+      descriptionField.value === lastAppliedServiceTemplate.description;
+    const canReplaceIncludes =
+      !includesField.value.trim() ||
+      includesField.value === lastAppliedServiceTemplate.includes;
+
+    if (canReplaceDescription) {
+      descriptionField.value = template.description || "";
+    }
+
+    if (canReplaceIncludes) {
+      includesField.value = template.includes || "";
+    }
+
+    lastAppliedServiceTemplate = {
+      description: template.description || "",
+      includes: template.includes || "",
+    };
+
+    if (!canReplaceDescription || !canReplaceIncludes) {
+      showToast(
+        "No se sobrescribieron campos que ya tenían texto personalizado.",
+        { type: "info", duration: 3200 },
+      );
     }
   }
 
@@ -318,28 +459,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function calculateTotals() {
-    const subtotalInput = document.getElementById("quote-subtotal");
+    const serviceAmountInput = document.getElementById("quote-service-amount");
+    const adSpendInput = document.getElementById("quote-ad-spend");
     const invoiceSelect = document.getElementById("quote-invoice");
     const ivaInput = document.getElementById("quote-iva");
+    const invoiceTotalInput = document.getElementById("quote-invoice-total");
     const totalInput = document.getElementById("quote-total");
 
-    const subtotal = Number(subtotalInput.value) || 0;
+    const serviceAmount = Number(serviceAmountInput.value) || 0;
+    const requiresAdSpend = syncAdSpendField();
+    const adSpend = requiresAdSpend ? Number(adSpendInput.value) || 0 : 0;
     const requiresInvoice = invoiceSelect.value === "yes";
     const taxRate = getDefaultInvoiceTax() / 100;
 
-    const iva = requiresInvoice ? subtotal * taxRate : 0;
-    const total = subtotal + iva;
+    const iva = requiresInvoice ? serviceAmount * taxRate : 0;
+    const invoiceTotal = serviceAmount + iva;
+    const total = invoiceTotal + adSpend;
 
     ivaInput.value = iva.toFixed(2);
+    invoiceTotalInput.value = invoiceTotal.toFixed(2);
     totalInput.value = total.toFixed(2);
   }
 
   function resetForm() {
     quoteForm.reset();
     editingQuoteId = null;
+    lastAppliedServiceTemplate = {
+      description: "",
+      includes: "",
+    };
     submitButton.textContent = "Guardar cotización";
     document.getElementById("quote-iva").value = "";
+    document.getElementById("quote-invoice-total").value = "";
     document.getElementById("quote-total").value = "";
+    syncAdSpendField();
 
     applyDefaultTermsToQuoteForm(true);
   }
@@ -1051,13 +1204,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("quote-client").value = quote.client;
     document.getElementById("quote-date").value = quote.date;
     document.getElementById("quote-title").value = quote.title;
-    document.getElementById("quote-service-type").value = quote.serviceType;
+    loadServiceTypeOptions(quote.serviceType);
     document.getElementById("quote-description").value = quote.description;
     document.getElementById("quote-includes").value = quote.includes;
-    document.getElementById("quote-subtotal").value = quote.subtotal;
+    document.getElementById("quote-service-amount").value =
+      quote.serviceAmount ?? quote.subtotal;
+    const hasAdSpend =
+      quote.adSpendRequired === "Sí" || Number(quote.adSpend) > 0;
+    document.getElementById("quote-ad-required").value = hasAdSpend
+      ? "yes"
+      : "no";
+    syncAdSpendField();
+    document.getElementById("quote-ad-spend").value = hasAdSpend
+      ? quote.adSpend || 0
+      : "";
     document.getElementById("quote-invoice").value =
       quote.invoiceRequired === "Sí" ? "yes" : "no";
     document.getElementById("quote-iva").value = quote.iva;
+    document.getElementById("quote-invoice-total").value =
+      quote.invoiceTotal ??
+      Number(quote.serviceAmount ?? quote.subtotal ?? 0) +
+        Number(quote.iva || 0);
     document.getElementById("quote-total").value = quote.total;
     document.getElementById("quote-notes").value =
       quote.notes || getDefaultTerms();
@@ -1681,8 +1848,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     const agencyAddress = getSettingsAgencyAddress();
     const defaultTerms = getDefaultTerms();
     const defaultInvoiceNote = getDefaultInvoiceNote();
+    const paymentMethodsText = getPaymentMethodsText();
+    const bankDetails = getBankDetailsByInvoice(quote.invoiceRequired);
+    const legalNote = getLegalNote();
+    const serviceAmount = Number(quote.serviceAmount ?? quote.subtotal ?? 0);
+    const adSpend = Number(quote.adSpend || 0);
+    const invoiceTotal =
+      Number(quote.invoiceTotal) || serviceAmount + Number(quote.iva || 0);
 
-    const dynamicNotes = [quote.notes || "", defaultInvoiceNote || ""]
+    const dynamicNotes = [
+      quote.notes || "",
+      defaultInvoiceNote || "",
+      legalNote || "",
+    ]
       .map((item) => String(item || "").trim())
       .filter(Boolean)
       .join("\n\n");
@@ -1819,7 +1997,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function drawTotalsBox() {
-      ensureSpace(130);
+      ensureSpace(188);
 
       const boxWidth = 240;
       const boxX = pageWidth - marginX - boxWidth;
@@ -1827,42 +2005,54 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       doc.setFillColor(...colors.lightBg);
       doc.setDrawColor(...colors.border);
-      doc.roundedRect(boxX, y, boxWidth, 98, 10, 10, "FD");
+      doc.roundedRect(boxX, y, boxWidth, 158, 10, 10, "FD");
 
       doc.setTextColor(...colors.text);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
 
-      doc.text("Subtotal", boxX + 16, y + 22);
-      doc.text(money(quote.subtotal), boxX + boxWidth - 16, y + 22, {
+      doc.text("Servicio facturable", boxX + 16, y + 22);
+      doc.text(money(serviceAmount), boxX + boxWidth - 16, y + 22, {
         align: "right",
       });
 
-      doc.text("IVA", boxX + 16, y + 22 + rowH);
+      doc.text("IVA servicio", boxX + 16, y + 22 + rowH);
       doc.text(money(quote.iva), boxX + boxWidth - 16, y + 22 + rowH, {
+        align: "right",
+      });
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Total facturable", boxX + 16, y + 22 + rowH * 2);
+      doc.text(money(invoiceTotal), boxX + boxWidth - 16, y + 22 + rowH * 2, {
+        align: "right",
+      });
+
+      doc.setFont("helvetica", "normal");
+      doc.text("Pauta publicitaria", boxX + 16, y + 22 + rowH * 3);
+      doc.text(money(adSpend), boxX + boxWidth - 16, y + 22 + rowH * 3, {
         align: "right",
       });
 
       doc.setDrawColor(...colors.border);
       doc.line(
         boxX + 12,
-        y + 22 + rowH + 10,
+        y + 22 + rowH * 3 + 10,
         boxX + boxWidth - 12,
-        y + 22 + rowH + 10,
+        y + 22 + rowH * 3 + 10,
       );
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...colors.highlight);
       doc.setFontSize(14);
-      doc.text("Total", boxX + 16, y + 22 + rowH * 2 + 4);
+      doc.text("Total general", boxX + 16, y + 22 + rowH * 4 + 4);
       doc.text(
         money(quote.total),
         boxX + boxWidth - 16,
-        y + 22 + rowH * 2 + 4,
+        y + 22 + rowH * 4 + 4,
         { align: "right" },
       );
 
-      y += 120;
+      y += 180;
     }
 
     async function loadImageAsDataURL(path) {
@@ -1952,6 +2142,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     drawSectionTitle("Resumen económico");
     drawTotalsBox();
 
+    if (paymentMethodsText || bankDetails) {
+      drawSectionTitle("Datos de pago");
+      drawParagraph(
+        [
+          paymentMethodsText
+            ? `Métodos disponibles: ${paymentMethodsText}`
+            : "",
+          bankDetails,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        10.5,
+        colors.text,
+        12,
+      );
+    }
+
     drawSectionTitle("Condiciones y observaciones");
     drawParagraph(dynamicNotes || defaultTerms || "-", 10.5, colors.text, 10);
 
@@ -1968,11 +2175,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   document
-    .getElementById("quote-subtotal")
+    .getElementById("quote-service-amount")
+    .addEventListener("input", calculateTotals);
+  document
+    .getElementById("quote-ad-required")
+    .addEventListener("change", calculateTotals);
+  document
+    .getElementById("quote-ad-required")
+    .addEventListener("input", calculateTotals);
+  document
+    .getElementById("quote-ad-spend")
     .addEventListener("input", calculateTotals);
   document
     .getElementById("quote-invoice")
     .addEventListener("change", calculateTotals);
+
+  document
+    .getElementById("quote-service-type")
+    .addEventListener("change", applyServiceTemplateToQuoteForm);
 
   manageCloseBtn.addEventListener("click", closeManageModal);
   manageOverlay.addEventListener("click", closeManageModal);
@@ -2050,9 +2270,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       .getElementById("quote-description")
       .value.trim();
     const includes = document.getElementById("quote-includes").value.trim();
-    const subtotal = Number(document.getElementById("quote-subtotal").value);
+    const serviceAmount = Number(
+      document.getElementById("quote-service-amount").value,
+    );
+    const adRequiredValue = document.getElementById("quote-ad-required").value;
+    const adSpend =
+      adRequiredValue === "yes"
+        ? Number(document.getElementById("quote-ad-spend").value) || 0
+        : 0;
+    const subtotal = serviceAmount;
     const invoiceValue = document.getElementById("quote-invoice").value;
     const iva = Number(document.getElementById("quote-iva").value) || 0;
+    const invoiceTotal =
+      Number(document.getElementById("quote-invoice-total").value) || 0;
     const total = Number(document.getElementById("quote-total").value) || 0;
     const rawNotes = document.getElementById("quote-notes").value.trim();
     const notes = rawNotes || getDefaultTerms();
@@ -2062,10 +2292,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       !date ||
       !title ||
       !serviceType ||
-      !subtotal ||
+      !serviceAmount ||
+      !adRequiredValue ||
       !invoiceValue
     ) {
       showToast("Completa los campos obligatorios.", { type: "error" });
+      return;
+    }
+
+    if (adRequiredValue === "yes" && adSpend <= 0) {
+      showToast("Agrega el monto de pauta publicitaria.", { type: "error" });
       return;
     }
 
@@ -2089,9 +2325,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           serviceType,
           description,
           includes,
+          serviceAmount,
+          adSpendRequired: adRequiredValue === "yes" ? "Sí" : "No",
+          adSpend,
           subtotal,
           invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
           iva,
+          invoiceTotal,
           total,
           notes,
           publicId: currentQuote?.publicId,
@@ -2114,9 +2354,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           serviceType,
           description,
           includes,
+          serviceAmount,
+          adSpendRequired: adRequiredValue === "yes" ? "Sí" : "No",
+          adSpend,
           subtotal,
           invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
           iva,
+          invoiceTotal,
           total,
           notes,
           status: "borrador",
@@ -2143,6 +2387,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
+    await loadSettingsCache();
     currentQuotes = await getQuotesCollection();
     currentIncomes = await getIncomeCollection();
 
@@ -2164,6 +2409,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     ensureFilterUI();
     bindManageActions();
     await loadClientOptions();
+    loadServiceTypeOptions();
     renderQuotes();
     resetForm();
     applyClientFromUrl();
@@ -2182,9 +2428,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   window.addEventListener("focus", async () => {
+    await loadSettingsCache();
     currentQuotes = await getQuotesCollection();
     currentIncomes = await getIncomeCollection();
     await loadClientOptions();
+    const selectedServiceType =
+      document.getElementById("quote-service-type").value;
+    loadServiceTypeOptions(selectedServiceType);
     const paymentSyncChanged = syncQuotesWithIncomes();
     if (paymentSyncChanged) {
       await persistQuotes();
@@ -2198,6 +2448,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   window.addEventListener("storage", (event) => {
+    if (event.key === SETTINGS_KEY) {
+      currentSettings = getData(SETTINGS_KEY, {});
+      const selectedServiceType =
+        document.getElementById("quote-service-type").value;
+      loadServiceTypeOptions(selectedServiceType);
+    }
+
     if (event.key === SETTINGS_KEY && !editingQuoteId) {
       applyDefaultTermsToQuoteForm(true);
       calculateTotals();

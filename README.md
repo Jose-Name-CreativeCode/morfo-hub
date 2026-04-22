@@ -22,7 +22,10 @@ cotizaciones, reportes y configuracion.
 - `npm install`: instala dependencias
 - `npm run dev`: levanta el entorno local con Vite
 - `npm run build`: genera el build de produccion en `dist/`
+- `npm run build:github-pages`: genera build usando `/morfo-hub/` como base
 - `npm run preview`: sirve el build generado
+- `npm run deploy:hosting`: genera build y publica Firebase Hosting
+- `npm run deploy:firebase`: genera build y publica hosting/reglas Firebase
 - `npm run lint`: revisa JavaScript con ESLint
 - `npm run lint:fix`: corrige problemas autoarreglables
 - `npm run format`: formatea el proyecto con Prettier
@@ -48,11 +51,10 @@ cotizaciones, reportes y configuracion.
 
 ## Siguiente etapa recomendada
 
-- mover configuracion sensible de Firebase a variables `VITE_*`
-- reemplazar renderizado inseguro con `innerHTML` por nodos seguros
-- centralizar componentes de layout compartidos
-- agregar autenticacion real
-- preparar migracion desde `localStorage` a backend o Firebase
+- publicar reglas definitivas de Firestore desde `firestore.rules`
+- fortalecer el panel de mantenimiento con exportacion y recalculos
+- pulir el PDF de cotizaciones con identidad visual final
+- preparar deploy estable en GitHub Pages
 
 ## Firebase
 
@@ -72,13 +74,15 @@ entorno de Vite.
 ### Flujo actual integrado
 
 - `login.html` usa Firebase Auth con email y contrasena
-- `clients.html` ya puede leer y escribir clientes en Firestore
-- si existen clientes en `localStorage` y la coleccion remota aun esta vacia,
-  se migran automaticamente la primera vez
+- `clients.html`, `income.html`, `expenses.html`, `quotes.html` y
+  `settings.html` leen y escriben en Firestore
+- si existen datos en `localStorage` y la coleccion remota aun esta vacia, se
+  migran automaticamente la primera vez
 
-### Siguientes migraciones sugeridas
+### Documentacion relacionada
 
-1. `income`
-2. `expenses`
-3. `quotes`
-4. `settings`
+- [Firebase Setup](docs/firebase-setup.md)
+- [Firebase Hosting](docs/firebase-hosting.md)
+- [GitHub Pages](docs/github-pages.md)
+- [Checklist de prueba completa](docs/qa-checklist.md)
+- [Mapa de modulos](docs/modules.md)

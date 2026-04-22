@@ -3,7 +3,12 @@ import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
-import { setButtonLoading, setPageLoading, showToast } from "../utils.js";
+import {
+  askConfirm,
+  setButtonLoading,
+  setPageLoading,
+  showToast,
+} from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   setPageLoading(true);
@@ -13,6 +18,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const agencyForm = document.querySelectorAll("form")[0];
   const termsForm = document.querySelectorAll("form")[1];
   const invoiceForm = document.querySelectorAll("form")[2];
+  const advancedForm = document.querySelectorAll("form")[3];
+  const serviceTemplatesForm = document.querySelectorAll("form")[4];
 
   // ===== INPUTS =====
   const agencyName = document.getElementById("agency-name");
@@ -25,8 +32,96 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const invoiceTax = document.getElementById("invoice-tax");
   const invoiceNote = document.getElementById("invoice-note");
+  const advancePercent = document.getElementById("advance-percent");
+  const paymentMethods = document.getElementById("payment-methods");
+  const bankDetailsInvoice = document.getElementById("bank-details-invoice");
+  const bankDetailsNoInvoice = document.getElementById(
+    "bank-details-no-invoice",
+  );
+  const legalNote = document.getElementById("legal-note");
+  const serviceTemplateSelect = document.getElementById(
+    "service-template-select",
+  );
+  const addServiceTemplateButton = document.getElementById(
+    "add-service-template",
+  );
+  const deleteServiceTemplateButton = document.getElementById(
+    "delete-service-template",
+  );
+  const serviceTemplateName = document.getElementById("service-template-name");
+  const serviceTemplateTitle = document.getElementById("service-template-title");
+  const serviceTemplateDescription = document.getElementById(
+    "service-template-description",
+  );
+  const serviceTemplateIncludes = document.getElementById(
+    "service-template-includes",
+  );
   const summaryTableBody = document.querySelector(".table tbody");
   let currentSettings = null;
+
+  function getServiceTemplates() {
+    return currentSettings?.serviceTemplates || {};
+  }
+
+  function getSelectedServiceTemplateName() {
+    return serviceTemplateSelect.value || "";
+  }
+
+  function setServiceTemplateEditor(serviceName) {
+    const templates = getServiceTemplates();
+    const template = templates[serviceName] || {};
+
+    serviceTemplateName.value = serviceName || "";
+    serviceTemplateTitle.value = template.title || "";
+    serviceTemplateDescription.value = template.description || "";
+    serviceTemplateIncludes.value = template.includes || "";
+    deleteServiceTemplateButton.disabled = !serviceName;
+  }
+
+  function renderServiceTemplateSelect(selectedService = "") {
+    const templates = getServiceTemplates();
+    const serviceNames = Object.keys(templates).sort((a, b) =>
+      a.localeCompare(b, "es-MX"),
+    );
+
+    serviceTemplateSelect.replaceChildren();
+
+    serviceNames.forEach((serviceName) => {
+      const option = document.createElement("option");
+      option.value = serviceName;
+      option.textContent = serviceName;
+      serviceTemplateSelect.appendChild(option);
+    });
+
+    const nextSelected = serviceNames.includes(selectedService)
+      ? selectedService
+      : serviceNames[0] || "";
+
+    serviceTemplateSelect.value = nextSelected;
+    setServiceTemplateEditor(nextSelected);
+  }
+
+  function getEditedServiceTemplates() {
+    const templates = {
+      ...getServiceTemplates(),
+    };
+    const previousName = getSelectedServiceTemplateName();
+    const nextName = serviceTemplateName.value.trim();
+
+    if (previousName && previousName !== nextName) {
+      delete templates[previousName];
+    }
+
+    if (nextName) {
+      templates[nextName] = {
+        title: serviceTemplateTitle.value.trim(),
+        description: serviceTemplateDescription.value.trim(),
+        includes: serviceTemplateIncludes.value.trim(),
+      };
+    }
+
+    return templates;
+  }
 
   // ===== LOAD SETTINGS =====
   async function loadSettings() {
@@ -46,6 +141,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Invoice
     invoiceTax.value = settings.invoice?.tax || 16;
     invoiceNote.value = settings.invoice?.note || invoiceNote.value;
+
+    // Advanced
+    advancePercent.value = settings.commercial?.advancePercent || 50;
+    paymentMethods.value = (settings.commercial?.paymentMethods || []).join(
+      "\n",
+    );
+    bankDetailsInvoice.value =
+      settings.commercial?.bankDetailsInvoice ||
+      settings.commercial?.bankDetails ||
+      "";
+    bankDetailsNoInvoice.value =
+      settings.commercial?.bankDetailsNoInvoice || "";
+    legalNote.value = settings.commercial?.legalNote || "";
+    renderServiceTemplateSelect();
 
     updateSummaryTable(settings);
   }
@@ -67,7 +176,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
       {
         label: "Anticipo sugerido",
-        value: "50%",
+        value: `${settings.commercial?.advancePercent || 50}%`,
+      },
+      {
+        label: "Métodos de pago",
+        value: (settings.commercial?.paymentMethods || []).join(", ") || "-",
+      },
+      {
+        label: "Datos bancarios",
+        value:
+          settings.commercial?.bankDetailsInvoice ||
+          settings.commercial?.bankDetailsNoInvoice ||
+          settings.commercial?.bankDetails
+            ? "Configurados"
+            : "Pendientes",
+      },
+      {
+        label: "Plantillas de servicios",
+        value: `${Object.keys(settings.serviceTemplates || {}).length} configuradas`,
       },
     ];
 
@@ -158,6 +284,108 @@ document.addEventListener("DOMContentLoaded", async () => {
     } finally {
       setButtonLoading(button, false);
     }
+  });
+
+  // ===== SAVE ADVANCED =====
+  advancedForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const button = advancedForm.querySelector(".btn-primary");
+    setButtonLoading(button, true, "Guardando...");
+
+    try {
+      const methods = paymentMethods.value
+        .split("\n")
+        .map((method) => method.trim())
+        .filter(Boolean);
+
+      const settings = await saveSettingsRecord({
+        ...currentSettings,
+        commercial: {
+          advancePercent: Number(advancePercent.value) || 0,
+          paymentMethods: methods,
+          bankDetailsInvoice: bankDetailsInvoice.value,
+          bankDetailsNoInvoice: bankDetailsNoInvoice.value,
+          legalNote: legalNote.value,
+        },
+      });
+
+      currentSettings = settings;
+      updateSummaryTable(settings);
+
+      showToast("Configuración avanzada guardada.", { type: "success" });
+    } finally {
+      setButtonLoading(button, false);
+    }
+  });
+
+  // ===== SAVE SERVICE TEMPLATES =====
+  serviceTemplatesForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const button = serviceTemplatesForm.querySelector(".btn-primary");
+    setButtonLoading(button, true, "Guardando...");
+
+    try {
+      const serviceTemplates = getEditedServiceTemplates();
+      const selectedService = serviceTemplateName.value.trim();
+
+      const settings = await saveSettingsRecord({
+        ...currentSettings,
+        serviceTemplates,
+      });
+
+      currentSettings = settings;
+      renderServiceTemplateSelect(selectedService);
+      updateSummaryTable(settings);
+
+      showToast("Plantillas de servicios guardadas.", { type: "success" });
+    } finally {
+      setButtonLoading(button, false);
+    }
+  });
+
+  serviceTemplateSelect.addEventListener("change", () => {
+    setServiceTemplateEditor(getSelectedServiceTemplateName());
+  });
+
+  addServiceTemplateButton.addEventListener("click", () => {
+    serviceTemplateSelect.value = "";
+    serviceTemplateName.value = "";
+    serviceTemplateTitle.value = "";
+    serviceTemplateDescription.value = "";
+    serviceTemplateIncludes.value = "";
+    deleteServiceTemplateButton.disabled = true;
+    serviceTemplateName.focus();
+  });
+
+  deleteServiceTemplateButton.addEventListener("click", async () => {
+    const selectedService = getSelectedServiceTemplateName();
+    if (!selectedService) return;
+
+    const confirmed = await askConfirm({
+      title: "Eliminar plantilla",
+      message: `¿Eliminar la plantilla "${selectedService}"? También dejará de aparecer como tipo de servicio en cotizaciones.`,
+      confirmText: "Eliminar",
+      cancelText: "Cancelar",
+    });
+
+    if (!confirmed) return;
+
+    const serviceTemplates = {
+      ...getServiceTemplates(),
+    };
+    delete serviceTemplates[selectedService];
+
+    const settings = await saveSettingsRecord({
+      ...currentSettings,
+      serviceTemplates,
+    });
+
+    currentSettings = settings;
+    renderServiceTemplateSelect();
+    updateSummaryTable(settings);
+    showToast("Plantilla eliminada.", { type: "success" });
   });
 
   // ===== INIT =====

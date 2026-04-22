@@ -32,14 +32,28 @@ VITE_ALLOWED_EMAILS=tu-correo@ejemplo.com,pareja@ejemplo.com
 
 ## 4. Colecciones actuales
 
-La primera coleccion remota integrada es:
+Las colecciones remotas integradas son:
 
 - `clients`
+- `income`
+- `expenses`
+- `quotes`
+- `app/settings`
 
-## 5. Reglas base sugeridas para Firestore
+## 5. Mantenimiento y respaldo
 
-Estas reglas permiten acceso solo a usuarios autenticados cuyos correos esten en
-la lista autorizada:
+`maintenance.html` permite:
+
+- revisar duplicados e inconsistencias
+- descargar respaldo JSON con las colecciones principales
+- restaurar un respaldo JSON con confirmacion manual
+
+Conviene descargar un respaldo antes de hacer limpiezas o cambios masivos.
+
+## 6. Reglas base sugeridas para Firestore
+
+Estas reglas permiten acceso solo a usuarios autenticados cuyos correos esten
+autorizados. Tambien estan guardadas en `firestore.rules`.
 
 ```txt
 rules_version = '2';
@@ -49,8 +63,8 @@ service cloud.firestore {
       return request.auth != null &&
         request.auth.token.email_verified == true &&
         request.auth.token.email in [
-          "tu-correo@ejemplo.com",
-          "pareja@ejemplo.com"
+          "manolonat17@gmail.com",
+          "verogr2000@gmail.com"
         ];
     }
 
@@ -61,7 +75,35 @@ service cloud.firestore {
 }
 ```
 
-## 6. Nota importante
+## 7. Publicar reglas
 
-Si tus cuentas no tienen `email_verified == true`, quita temporalmente esa
-validacion mientras haces pruebas.
+Si tienes Firebase CLI instalado:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+Tambien puedes copiar el contenido de `firestore.rules` y pegarlo en Firebase
+Console, dentro de Firestore > Rules.
+
+## 8. Hosting
+
+La configuracion de Firebase Hosting vive en `firebase.json` y publica la
+carpeta `dist/`.
+
+Para publicar solo Hosting:
+
+```bash
+npm run deploy:hosting
+```
+
+Para publicar Hosting y reglas:
+
+```bash
+npm run deploy:firebase
+```
+
+## 9. Nota importante
+
+Las reglas exigen `email_verified == true`. Antes de publicarlas, confirma que
+ambas cuentas autorizadas aparezcan como verificadas en Firebase Authentication.

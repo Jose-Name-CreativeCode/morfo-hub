@@ -16,7 +16,6 @@ Este plan alinea la base de datos con la arquitectura funcional definida en
 - `Pago`: transacciones y confirmaciones.
 - `Envio`: datos logisticos y seguimiento.
 - `Proveedor` y `CompraProveedor`: abastecimiento.
-- `BitacoraAcceso`: auditoria y seguridad.
 
 ## Relaciones clave
 
@@ -47,7 +46,5 @@ Este plan alinea la base de datos con la arquitectura funcional definida en
 
 - Base de datos objetivo: PostgreSQL.
 - Acceso a datos sugerido: JPA/Hibernate.
-- Conviene agregar campos de auditoria como `created_at`, `updated_at` y
+- Conviene agregar campos de control como `created_at`, `updated_at` y
   `status` en tablas transaccionales.
-- Los catalogos de seguridad y bitacora pueden entrar en una segunda etapa si
-  la primera entrega se concentra en ventas y operacion.

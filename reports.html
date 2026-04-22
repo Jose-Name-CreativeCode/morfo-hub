@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Reportes</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
@@ -62,6 +63,30 @@
                   <option value="expenses">Gastos</option>
                   <option value="clients">Clientes</option>
                   <option value="quotes">Cotizaciones</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="report-client">Cliente</label>
+                <select id="report-client">
+                  <option value="">Todos los clientes</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="report-service">Tipo de servicio</label>
+                <select id="report-service">
+                  <option value="">Todos los servicios</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="report-payment-status">Estado de pago</label>
+                <select id="report-payment-status">
+                  <option value="">Todos los estados</option>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="parcial">Parcial / anticipo</option>
+                  <option value="pagado">Pagado</option>
                 </select>
               </div>
 

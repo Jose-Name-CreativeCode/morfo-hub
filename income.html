@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Ingresos</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
@@ -108,6 +109,45 @@
             </form>
           </section>
 
+          <section class="cards-grid section-spacing income-stats-grid">
+            <article class="card metric-card pending">
+              <div class="card-label">Total</div>
+              <div
+                class="card-value metric-card-value"
+                id="income-total-billed"
+              >
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card income">
+              <div class="card-label">Total pagado</div>
+              <div class="card-value metric-card-value" id="income-total-paid">
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card expense">
+              <div class="card-label">Pendiente por cobrar</div>
+              <div
+                class="card-value metric-card-value"
+                id="income-total-pending"
+              >
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card">
+              <div class="card-label">Ingresos del periodo</div>
+              <div
+                class="card-value metric-card-value"
+                id="income-period-count"
+              >
+                0
+              </div>
+            </article>
+          </section>
+
           <section class="card section-spacing">
             <h2 class="section-title section-title-sm">Filtros</h2>
 
@@ -135,6 +175,30 @@
                   <option value="10">Octubre</option>
                   <option value="11">Noviembre</option>
                   <option value="12">Diciembre</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-tight">
+                <label for="filter-income-client">Cliente</label>
+                <select id="filter-income-client">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-tight">
+                <label for="filter-income-status">Estatus de pago</label>
+                <select id="filter-income-status">
+                  <option value="">Todos</option>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Pago parcial">Pago parcial</option>
+                  <option value="Pagado">Pagado</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group-tight">
+                <label for="filter-income-method">Método de pago</label>
+                <select id="filter-income-method">
+                  <option value="">Todos</option>
                 </select>
               </div>
 
@@ -168,6 +232,7 @@
                   <th>Concepto</th>
                   <th>Monto total</th>
                   <th>Pagado</th>
+                  <th>Saldo</th>
                   <th>Estatus</th>
                   <th>Factura</th>
                   <th>Editar</th>
