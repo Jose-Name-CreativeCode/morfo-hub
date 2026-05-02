@@ -759,6 +759,28 @@ img {
   line-height: 1.5;
 }
 
+.home-page {
+  padding: 40px 20px;
+}
+
+.home-card {
+  text-align: center;
+}
+
+.home-kicker {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #64748b;
+}
+
+.home-login-link {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+}
+
 /* TABLE / MODULES */
 .table-wrapper {
   background: var(--panel);
