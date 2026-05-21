@@ -212,11 +212,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Number(settings.invoice?.tax || IVA_RATE * 100);
   }
 
-  function getDefaultInvoiceNote() {
-    const settings = getSettings();
-    return settings.invoice?.note || "";
-  }
-
   function getPaymentMethodsText() {
     const settings = getSettings();
     return (settings.commercial?.paymentMethods || []).join(", ");
@@ -239,11 +234,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       settings.commercial?.bankDetails ||
       ""
     );
-  }
-
-  function getLegalNote() {
-    const settings = getSettings();
-    return settings.commercial?.legalNote || "";
   }
 
   function getServiceTemplate(serviceType) {
@@ -1846,24 +1836,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const agencyPhone = getSettingsAgencyPhone();
     const agencyWebsite = getSettingsAgencyWebsite();
     const agencyAddress = getSettingsAgencyAddress();
-    const defaultTerms = getDefaultTerms();
-    const defaultInvoiceNote = getDefaultInvoiceNote();
     const paymentMethodsText = getPaymentMethodsText();
     const bankDetails = getBankDetailsByInvoice(quote.invoiceRequired);
-    const legalNote = getLegalNote();
     const serviceAmount = Number(quote.serviceAmount ?? quote.subtotal ?? 0);
     const adSpend = Number(quote.adSpend || 0);
+    const shouldShowAdSpend =
+      quote.adSpendRequired === "Sí" && Number(adSpend) > 0;
     const invoiceTotal =
       Number(quote.invoiceTotal) || serviceAmount + Number(quote.iva || 0);
-
-    const dynamicNotes = [
-      quote.notes || "",
-      defaultInvoiceNote || "",
-      legalNote || "",
-    ]
-      .map((item) => String(item || "").trim())
-      .filter(Boolean)
-      .join("\n\n");
+    const notesSectionText = String(quote.notes || "").trim();
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -1997,21 +1978,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function drawTotalsBox() {
-      ensureSpace(188);
+      const rowH = 26;
+      const adRowCount = shouldShowAdSpend ? 1 : 0;
+      const totalRows = 4 + adRowCount;
+      const boxHeight = 80 + rowH * totalRows;
+
+      ensureSpace(boxHeight + 22);
 
       const boxWidth = 240;
       const boxX = pageWidth - marginX - boxWidth;
-      const rowH = 26;
 
       doc.setFillColor(...colors.lightBg);
       doc.setDrawColor(...colors.border);
-      doc.roundedRect(boxX, y, boxWidth, 158, 10, 10, "FD");
+      doc.roundedRect(boxX, y, boxWidth, boxHeight, 10, 10, "FD");
 
       doc.setTextColor(...colors.text);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
 
-      doc.text("Servicio facturable", boxX + 16, y + 22);
+      doc.text("Servicio", boxX + 16, y + 22);
       doc.text(money(serviceAmount), boxX + boxWidth - 16, y + 22, {
         align: "right",
       });
@@ -2022,37 +2007,39 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       doc.setFont("helvetica", "bold");
-      doc.text("Total facturable", boxX + 16, y + 22 + rowH * 2);
+      doc.text("Total", boxX + 16, y + 22 + rowH * 2);
       doc.text(money(invoiceTotal), boxX + boxWidth - 16, y + 22 + rowH * 2, {
         align: "right",
       });
 
-      doc.setFont("helvetica", "normal");
-      doc.text("Pauta publicitaria", boxX + 16, y + 22 + rowH * 3);
-      doc.text(money(adSpend), boxX + boxWidth - 16, y + 22 + rowH * 3, {
-        align: "right",
-      });
+      let totalGeneralLabelY = y + 22 + rowH * 3 + 4;
+      if (shouldShowAdSpend) {
+        doc.setFont("helvetica", "normal");
+        doc.text("Pauta publicitaria", boxX + 16, y + 22 + rowH * 3);
+        doc.text(money(adSpend), boxX + boxWidth - 16, y + 22 + rowH * 3, {
+          align: "right",
+        });
 
-      doc.setDrawColor(...colors.border);
-      doc.line(
-        boxX + 12,
-        y + 22 + rowH * 3 + 10,
-        boxX + boxWidth - 12,
-        y + 22 + rowH * 3 + 10,
-      );
+        doc.setDrawColor(...colors.border);
+        doc.line(
+          boxX + 12,
+          y + 22 + rowH * 3 + 10,
+          boxX + boxWidth - 12,
+          y + 22 + rowH * 3 + 10,
+        );
+
+        totalGeneralLabelY = y + 22 + rowH * 4 + 4;
+      }
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...colors.highlight);
       doc.setFontSize(14);
-      doc.text("Total general", boxX + 16, y + 22 + rowH * 4 + 4);
-      doc.text(
-        money(quote.total),
-        boxX + boxWidth - 16,
-        y + 22 + rowH * 4 + 4,
-        { align: "right" },
-      );
+      doc.text("Total general", boxX + 16, totalGeneralLabelY);
+      doc.text(money(quote.total), boxX + boxWidth - 16, totalGeneralLabelY, {
+        align: "right",
+      });
 
-      y += 180;
+      y += boxHeight + 22;
     }
 
     async function loadImageAsDataURL(path) {
@@ -2101,12 +2088,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       doc.setTextColor(255, 255, 255);
       doc.text("COTIZACIÓN", pageWidth - 112, 47, { align: "center" });
 
-      y = 130;
+      y = 142;
 
       doc.setTextColor(...colors.dark);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
-      doc.text(agencyName, marginX, 112);
+      doc.text(agencyName, marginX, 120);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
@@ -2120,7 +2107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (contactParts.length > 0) {
         doc.setTextColor(...colors.muted);
-        doc.text(contactParts.join("  |  "), marginX, 128);
+        doc.text(contactParts.join("  |  "), marginX, 136);
       }
     }
 
@@ -2159,8 +2146,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
 
-    drawSectionTitle("Condiciones y observaciones");
-    drawParagraph(dynamicNotes || defaultTerms || "-", 10.5, colors.text, 10);
+    if (notesSectionText) {
+      drawSectionTitle("Condiciones y observaciones");
+      drawParagraph(notesSectionText, 10.5, colors.text, 10);
+    }
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
