@@ -10,7 +10,7 @@ cotizaciones, reportes y configuracion.
 - JavaScript modular en navegador
 - API REST con Express
 - Prisma ORM
-- SQLite para desarrollo local
+- PostgreSQL
 - Vite para desarrollo y build
 - ESLint para calidad de codigo
 - Prettier para formato
@@ -27,8 +27,8 @@ cotizaciones, reportes y configuracion.
 - `npm run api:dev`: levanta la API backend en modo watch
 - `npm run api:start`: levanta la API backend
 - `npm run dev:full`: levanta frontend + API local al mismo tiempo
-- `npm run db:setup`: crea la base SQLite local inicial
 - `npm run prisma:generate`: genera el cliente Prisma
+- `npm run prisma:push`: crea o actualiza el esquema en PostgreSQL
 - `npm run build`: genera el build de produccion en `dist/`
 - `npm run build:github-pages`: genera build usando `/morfo-hub/` como base
 - `npm run preview`: sirve el build generado
@@ -49,19 +49,19 @@ cotizaciones, reportes y configuracion.
 - `js/utils.js`: utilidades compartidas
 - `server/`: API Express
 - `prisma/`: esquema de datos
-- `scripts/`: utilidades locales de inicializacion
 - `assets/`: imagenes y recursos visuales
 - `docs/`: documentacion interna
 
 ## Flujo de desarrollo sugerido
 
 1. Instala dependencias con `npm install`
-2. Crea la base local con `npm run db:setup`
+2. Configura `DATABASE_URL` en `.env`
 3. Genera Prisma Client con `npm run prisma:generate`
-4. Corre el frontend con `npm run dev`
-5. Corre la API con `npm run api:dev`
-6. Trabaja sobre frontend en `js/modules` y backend en `server/`
-7. Revisa formato y lint antes de cerrar cambios
+4. Aplica el esquema con `npm run prisma:push`
+5. Corre el frontend con `npm run dev`
+6. Corre la API con `npm run api:dev`
+7. Trabaja sobre frontend en `js/modules` y backend en `server/`
+8. Revisa formato y lint antes de cerrar cambios
 
 ## Primera fase full stack
 
@@ -103,12 +103,19 @@ del nuevo servidor para estos módulos:
 - cotizaciones
 - configuración
 
+La vista de `maintenance.html` ahora también muestra de forma explícita:
+
+- si estás trabajando contra la API local o contra Firebase/localStorage
+- la URL activa de la API
+- el estado de la conexión entre el backend y PostgreSQL/Neon
+
 ### Cómo correr todo junto
 
 1. `npm install`
-2. `npm run db:setup`
+2. configura `DATABASE_URL` en `.env`
 3. `npm run prisma:generate`
-4. `npm run dev:full`
+4. `npm run prisma:push`
+5. `npm run dev:full`
 
 Frontend:
 - `http://localhost:5173`
@@ -129,6 +136,19 @@ localStorage.removeItem("morfo_data_mode");
 - `api`: obliga al frontend a usar el nuevo servidor
 - `firebase`: obliga al frontend a usar Firebase
 - sin valor: en `localhost` usa la API local automáticamente
+
+## PostgreSQL / Neon
+
+El backend ya está preparado para PostgreSQL. Si vas a usar Neon, pega su
+cadena de conexión en `DATABASE_URL`.
+
+Flujo recomendado:
+
+1. crea tu base en Neon
+2. copia la cadena de conexión Postgres
+3. pégala en `.env` como `DATABASE_URL`
+4. corre `npm run prisma:generate`
+5. corre `npm run prisma:push`
 
 ## Siguiente etapa recomendada
 

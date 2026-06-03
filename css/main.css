@@ -940,6 +940,55 @@ img {
   min-width: 220px;
 }
 
+.runtime-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.runtime-status-card {
+  padding: 18px;
+  border: 1px solid rgba(86, 180, 179, 0.14);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    rgba(15, 23, 42, 0.54);
+}
+
+.runtime-status-label {
+  margin-bottom: 10px;
+  color: #b8c7de;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.runtime-status-value {
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.runtime-status-note {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.runtime-status-value.is-success {
+  color: #b9ef8d;
+}
+
+.runtime-status-value.is-warning {
+  color: #ffe082;
+}
+
+.runtime-status-value.is-danger {
+  color: #ff9b9b;
+}
+
 .pdf-btn {
   background: var(--secondary);
 }

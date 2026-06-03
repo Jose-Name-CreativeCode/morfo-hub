@@ -1,4 +1,5 @@
 const DEFAULT_LOCAL_API_BASE = "http://localhost:3000/api";
+const DATA_MODE_KEY = "morfo_data_mode";
 
 function isLocalHost(hostname) {
   return (
@@ -11,14 +12,18 @@ function isLocalHost(hostname) {
 export function shouldUseLocalApi() {
   if (typeof window === "undefined") return false;
 
-  const forcedMode = String(
-    window.localStorage.getItem("morfo_data_mode") || "",
-  ).trim();
+  const forcedMode = getForcedDataMode();
 
   if (forcedMode === "api") return true;
   if (forcedMode === "firebase") return false;
 
   return isLocalHost(window.location.hostname);
+}
+
+export function getForcedDataMode() {
+  if (typeof window === "undefined") return "";
+
+  return String(window.localStorage.getItem(DATA_MODE_KEY) || "").trim();
 }
 
 export function getApiBaseUrl() {
