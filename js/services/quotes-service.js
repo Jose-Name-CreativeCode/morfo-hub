@@ -16,6 +16,10 @@ function getCachedQuotes() {
   return getData(STORAGE_KEYS.QUOTES, []);
 }
 
+function hasCachedQuote(quoteId) {
+  return getCachedQuotes().some((quote) => String(quote.id) === String(quoteId));
+}
+
 export async function getQuotesCollection() {
   const quotes = await apiRequest("/quotes");
   saveData(STORAGE_KEYS.QUOTES, quotes);
@@ -23,7 +27,9 @@ export async function getQuotesCollection() {
 }
 
 export async function saveQuoteRecord(quote) {
-  const savedQuote = quote.id
+  const shouldUpdate = quote.id && hasCachedQuote(quote.id);
+
+  const savedQuote = shouldUpdate
     ? await apiRequest(`/quotes/${quote.id}`, {
         method: "PUT",
         body: JSON.stringify(quote),

@@ -44,6 +44,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentIncomes = [];
   let currentClients = [];
 
+  function createRecordId() {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return `inc-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  }
+
   function syncPaidAmountWithStatus() {
     const totalAmountInput = document.getElementById("income-amount");
     const paymentStatusSelect = document.getElementById("income-payment-status");
@@ -843,7 +851,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       await saveIncomeRecord({
         ...existingIncome,
-        id: editingIncomeId,
+        id: editingIncomeId || existingIncome.id || createRecordId(),
         client,
         date,
         concept,

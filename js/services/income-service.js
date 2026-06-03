@@ -16,6 +16,12 @@ function getCachedIncomes() {
   return getData(STORAGE_KEYS.INCOME, []);
 }
 
+function hasCachedIncome(incomeId) {
+  return getCachedIncomes().some(
+    (income) => String(income.id) === String(incomeId),
+  );
+}
+
 export async function getIncomeCollection() {
   const incomes = await apiRequest("/income");
   saveData(STORAGE_KEYS.INCOME, incomes);
@@ -23,7 +29,9 @@ export async function getIncomeCollection() {
 }
 
 export async function saveIncomeRecord(income) {
-  const savedIncome = income.id
+  const shouldUpdate = income.id && hasCachedIncome(income.id);
+
+  const savedIncome = shouldUpdate
     ? await apiRequest(`/income/${income.id}`, {
         method: "PUT",
         body: JSON.stringify(income),
