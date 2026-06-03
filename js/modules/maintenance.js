@@ -88,14 +88,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function refreshRuntimeStatus() {
+    if (!runtimeModeValue && !runtimeApiValue && !runtimeDbValue) {
+      return;
+    }
+
     const runtime = await getRuntimeStatus();
 
     setRuntimeField(runtimeModeValue, runtime.modeValue, runtime.modeTone);
-    runtimeModeNote.textContent = runtime.modeNote;
+    if (runtimeModeNote) runtimeModeNote.textContent = runtime.modeNote;
     setRuntimeField(runtimeApiValue, runtime.apiValue, runtime.apiTone);
-    runtimeApiNote.textContent = runtime.apiNote;
+    if (runtimeApiNote) runtimeApiNote.textContent = runtime.apiNote;
     setRuntimeField(runtimeDbValue, runtime.dbValue, runtime.dbTone);
-    runtimeDbNote.textContent = runtime.dbNote;
+    if (runtimeDbNote) runtimeDbNote.textContent = runtime.dbNote;
   }
 
   function createEmptyStateRow(message) {
