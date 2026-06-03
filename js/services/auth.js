@@ -54,6 +54,26 @@ export async function getCurrentUser() {
   }
 }
 
+function getDisplayName(user) {
+  const explicitName = String(user?.name || "").trim();
+  if (explicitName) return explicitName;
+
+  const email = String(user?.email || "").trim().toLowerCase();
+
+  if (email.startsWith("manolo") || email.startsWith("manolonat17")) {
+    return "Jose";
+  }
+
+  if (email.startsWith("verogr")) {
+    return "Verogr";
+  }
+
+  if (!email) return "";
+
+  const localPart = email.split("@")[0] || "";
+  return localPart || email;
+}
+
 export function setHeaderUser(user) {
   const headerUser = document.querySelector(".header-user");
   if (!headerUser) return;
@@ -77,7 +97,7 @@ export function setHeaderUser(user) {
     return;
   }
 
-  headerUser.textContent = `${user.email} / Administrador`;
+  headerUser.textContent = `${getDisplayName(user)} / Administrador`;
 
   const logoutButton = document.createElement("button");
   logoutButton.type = "button";
