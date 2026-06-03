@@ -109,6 +109,10 @@ La vista de `maintenance.html` ahora también muestra de forma explícita:
 - la URL activa de la API
 - el estado de la conexión entre el backend y PostgreSQL/Neon
 
+En esta etapa, Firebase se conserva solo para login y control de acceso. La
+operación diaria de clientes, ingresos, gastos, cotizaciones, mantenimiento,
+dashboard y reportes ya puede apoyarse en la API local con PostgreSQL/Neon.
+
 ### Cómo correr todo junto
 
 1. `npm install`
@@ -149,6 +153,23 @@ Flujo recomendado:
 3. pégala en `.env` como `DATABASE_URL`
 4. corre `npm run prisma:generate`
 5. corre `npm run prisma:push`
+
+## Preparación para deploy del backend
+
+Para dejar lista la API en un host como Render, Railway o similar, yo uso esta
+base:
+
+- comando de arranque: `npm run api:start`
+- health check: `/api/health`
+- variable obligatoria: `DATABASE_URL`
+- variable recomendada: `PORT`
+
+Antes de publicar, yo valido este flujo:
+
+1. `npm run prisma:generate`
+2. `npm run prisma:push`
+3. `npm run api:start`
+4. revisar `http://localhost:3000/api/health`
 
 ## Siguiente etapa recomendada
 

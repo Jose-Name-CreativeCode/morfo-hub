@@ -62,6 +62,97 @@
             </article>
           </section>
 
+          <section class="card panel-soft form-shell section-spacing">
+            <div class="hero-row">
+              <div>
+                <h2 class="section-title section-title-sm">Estado operativo</h2>
+                <p class="section-subtitle">
+                  Yo confirmo desde aquí si el dashboard está leyendo desde la
+                  API nueva y si Neon está disponible.
+                </p>
+              </div>
+            </div>
+
+            <div class="runtime-status-grid">
+              <article class="runtime-status-card">
+                <div class="runtime-status-label">Origen activo</div>
+                <div class="runtime-status-value" id="dashboardRuntimeModeValue">
+                  Detectando...
+                </div>
+                <p class="runtime-status-note" id="dashboardRuntimeModeNote">
+                  Revisando el modo actual de trabajo.
+                </p>
+              </article>
+
+              <article class="runtime-status-card">
+                <div class="runtime-status-label">Servidor / API</div>
+                <div class="runtime-status-value" id="dashboardRuntimeApiValue">
+                  Pendiente
+                </div>
+                <p class="runtime-status-note" id="dashboardRuntimeApiNote">
+                  Yo mostraré la URL y el estado de la API cuando aplique.
+                </p>
+              </article>
+
+              <article class="runtime-status-card">
+                <div class="runtime-status-label">Base de datos</div>
+                <div class="runtime-status-value" id="dashboardRuntimeDbValue">
+                  Pendiente
+                </div>
+                <p class="runtime-status-note" id="dashboardRuntimeDbNote">
+                  Yo valido la conexión a PostgreSQL / Neon desde el backend.
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section class="section-spacing">
+            <div class="dashboard-split-grid dashboard-split-grid-tight">
+              <article class="card dashboard-panel">
+                <h2 class="section-title section-title-sm">
+                  Prioridades de hoy
+                </h2>
+                <div class="stats-mini-grid stats-mini-grid-single">
+                  <div class="card card-compact">
+                    <div class="card-label">Cotizaciones por seguir</div>
+                    <div class="card-value" id="quotesFollowUpCount">0</div>
+                  </div>
+                  <div class="card card-compact">
+                    <div class="card-label">Ingresos pendientes</div>
+                    <div class="card-value" id="pendingIncomeCount">0</div>
+                  </div>
+                  <div class="card card-compact">
+                    <div class="card-label">Prospectos activos</div>
+                    <div class="card-value" id="prospectClientsCount">0</div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="card dashboard-panel">
+                <h2 class="section-title section-title-sm">
+                  Clientes con más facturación
+                </h2>
+                <div class="table-wrapper table-wrapper-compact">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="topClientsBody">
+                      <tr>
+                        <td colspan="2" class="table-empty-cell">
+                          No hay información suficiente.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
           <section class="card dashboard-panel section-spacing">
             <h2 class="section-title section-title-sm">Captura rápida</h2>
             <p class="section-subtitle section-subtitle-compact">

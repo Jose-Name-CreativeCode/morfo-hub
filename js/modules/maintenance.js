@@ -1,11 +1,5 @@
 import { protectPage } from "../services/auth.js";
 import {
-  apiRequest,
-  getApiBaseUrl,
-  getForcedDataMode,
-  shouldUseLocalApi,
-} from "../services/api-client.js";
-import {
   deleteClientRecord,
   getClientsCollection,
   saveClientRecord,
@@ -29,7 +23,7 @@ import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
-import { isFirebaseConfigured } from "../services/firebase-config.js";
+import { getRuntimeStatus } from "../services/runtime-status.js";
 import {
   askConfirm,
   setButtonLoading,
@@ -94,71 +88,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function refreshRuntimeStatus() {
-    const usingLocalApi = shouldUseLocalApi();
-    const forcedMode = getForcedDataMode();
+    const runtime = await getRuntimeStatus();
 
-    if (usingLocalApi) {
-      setRuntimeField(runtimeModeValue, "API local activa", "is-success");
-      runtimeModeNote.textContent =
-        forcedMode === "api"
-          ? "Se forzó manualmente el uso del nuevo servidor desde localStorage."
-          : "La app detectó localhost y usa automáticamente el nuevo servidor.";
-      setRuntimeField(runtimeApiValue, "Verificando API...", "is-warning");
-      runtimeApiNote.textContent = getApiBaseUrl();
-      setRuntimeField(runtimeDbValue, "Verificando base...", "is-warning");
-      runtimeDbNote.textContent = "Consultando salud del backend y PostgreSQL.";
-
-      try {
-        const health = await apiRequest("/health");
-        const database = health?.database || {};
-
-        setRuntimeField(runtimeApiValue, "API disponible", "is-success");
-        runtimeApiNote.textContent = `${getApiBaseUrl()} · ${health.timestamp || "sin marca de tiempo"}`;
-        setRuntimeField(
-          runtimeDbValue,
-          database.status === "connected"
-            ? "PostgreSQL / Neon conectado"
-            : "Base de datos con alerta",
-          database.status === "connected" ? "is-success" : "is-danger",
-        );
-        runtimeDbNote.textContent = `${database.host || "host desconocido"} · ${database.database || "base desconocida"}`;
-      } catch (error) {
-        setRuntimeField(runtimeApiValue, "API no disponible", "is-danger");
-        runtimeApiNote.textContent =
-          error?.message ||
-          "No fue posible validar la API en este momento.";
-        setRuntimeField(runtimeDbValue, "Sin verificación", "is-danger");
-        runtimeDbNote.textContent =
-          "No se pudo comprobar la conexión con PostgreSQL/Neon.";
-      }
-
-      return;
-    }
-
-    if (isFirebaseConfigured) {
-      setRuntimeField(runtimeModeValue, "Firebase / Firestore", "is-warning");
-      runtimeModeNote.textContent =
-        forcedMode === "firebase"
-          ? "Se forzó manualmente el uso de Firebase desde localStorage."
-          : "La app está fuera de localhost y mantiene el flujo con Firebase.";
-      setRuntimeField(runtimeApiValue, "API local inactiva");
-      runtimeApiNote.textContent =
-        "La API nueva solo se activa automáticamente cuando trabajas en localhost.";
-      setRuntimeField(runtimeDbValue, "Neon sin uso");
-      runtimeDbNote.textContent =
-        "La base PostgreSQL no participa en este modo de datos.";
-      return;
-    }
-
-    setRuntimeField(runtimeModeValue, "localStorage", "is-warning");
-    runtimeModeNote.textContent =
-      "No hay Firebase configurado y la API local no está activa.";
-    setRuntimeField(runtimeApiValue, "API local inactiva");
-    runtimeApiNote.textContent =
-      "Para usar el nuevo servidor, levanta `npm run dev:full` en localhost.";
-    setRuntimeField(runtimeDbValue, "Neon sin uso");
-    runtimeDbNote.textContent =
-      "La base PostgreSQL solo se usa cuando el frontend apunta a la API.";
+    setRuntimeField(runtimeModeValue, runtime.modeValue, runtime.modeTone);
+    runtimeModeNote.textContent = runtime.modeNote;
+    setRuntimeField(runtimeApiValue, runtime.apiValue, runtime.apiTone);
+    runtimeApiNote.textContent = runtime.apiNote;
+    setRuntimeField(runtimeDbValue, runtime.dbValue, runtime.dbTone);
+    runtimeDbNote.textContent = runtime.dbNote;
   }
 
   function createEmptyStateRow(message) {

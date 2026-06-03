@@ -3,6 +3,7 @@ import { getClientsCollection } from "../services/clients-service.js";
 import { getExpensesCollection } from "../services/expenses-service.js";
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
+import { getRuntimeStatus } from "../services/runtime-status.js";
 import {
   formatCurrency,
   formatDate,
@@ -30,6 +31,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const pendingCard = cards[3];
   const quotesCard = cards[4];
   const tableBody = document.querySelector(".table tbody");
+  const runtimeModeValue = document.getElementById("reportsRuntimeModeValue");
+  const runtimeModeNote = document.getElementById("reportsRuntimeModeNote");
+  const runtimeApiValue = document.getElementById("reportsRuntimeApiValue");
+  const runtimeApiNote = document.getElementById("reportsRuntimeApiNote");
+  const runtimeDbValue = document.getElementById("reportsRuntimeDbValue");
+  const runtimeDbNote = document.getElementById("reportsRuntimeDbNote");
+  const reportApprovedQuotesCount = document.getElementById(
+    "reportApprovedQuotesCount",
+  );
+  const reportPendingItemsCount = document.getElementById(
+    "reportPendingItemsCount",
+  );
+  const reportTopClientName = document.getElementById("reportTopClientName");
+  const reportTopClientsBody = document.getElementById("reportTopClientsBody");
 
   let currentReportState = {
     month: "",
@@ -444,6 +459,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     return cell;
   }
 
+  function setRuntimeField(element, value, tone = "") {
+    if (!element) return;
+
+    element.textContent = value;
+    element.classList.remove("is-success", "is-warning", "is-danger");
+
+    if (tone) {
+      element.classList.add(tone);
+    }
+  }
+
   function createEmptyStateRow(message, columns) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
@@ -452,6 +478,82 @@ document.addEventListener("DOMContentLoaded", async () => {
     cell.textContent = message;
     row.appendChild(cell);
     return row;
+  }
+
+  function renderRuntimeStatus(runtime) {
+    setRuntimeField(runtimeModeValue, runtime.modeValue, runtime.modeTone);
+    if (runtimeModeNote) runtimeModeNote.textContent = runtime.modeNote;
+    setRuntimeField(runtimeApiValue, runtime.apiValue, runtime.apiTone);
+    if (runtimeApiNote) runtimeApiNote.textContent = runtime.apiNote;
+    setRuntimeField(runtimeDbValue, runtime.dbValue, runtime.dbTone);
+    if (runtimeDbNote) runtimeDbNote.textContent = runtime.dbNote;
+  }
+
+  function getTopClientsByIncome(incomes) {
+    const totals = new Map();
+
+    incomes
+      .filter((income) => getIncomeAmount(income) > 0)
+      .forEach((income) => {
+        const client = String(
+          income.client || income.clientName || "Sin cliente",
+        ).trim();
+
+        totals.set(
+          client,
+          Number(totals.get(client) || 0) + getIncomeAmount(income),
+        );
+      });
+
+    return [...totals.entries()]
+      .map(([client, total]) => ({ client, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }
+
+  function renderReportInsights({ reportQuotes, reportIncomes }) {
+    const approvedQuotes = reportQuotes.filter((quote) => {
+      const status = normalizeText(quote.status);
+      return status === "aprobada" || status === "approved";
+    }).length;
+
+    const pendingItems =
+      reportIncomes.filter((item) => shouldCountIncomeAsReceivable(item))
+        .length +
+      reportQuotes.filter((item) => shouldCountQuoteAsReceivable(item)).length;
+
+    const topClients = getTopClientsByIncome(reportIncomes);
+    const topClient = topClients[0]?.client || "-";
+
+    if (reportApprovedQuotesCount) {
+      reportApprovedQuotesCount.textContent = String(approvedQuotes);
+    }
+
+    if (reportPendingItemsCount) {
+      reportPendingItemsCount.textContent = String(pendingItems);
+    }
+
+    if (reportTopClientName) {
+      reportTopClientName.textContent = topClient;
+    }
+
+    if (!reportTopClientsBody) return;
+
+    reportTopClientsBody.replaceChildren();
+
+    if (!topClients.length) {
+      reportTopClientsBody.appendChild(
+        createEmptyStateRow("No hay clientes con cobros en este filtro.", 2),
+      );
+      return;
+    }
+
+    topClients.forEach((item) => {
+      const row = document.createElement("tr");
+      row.appendChild(createCell(item.client));
+      row.appendChild(createCell(formatCurrency(item.total)));
+      reportTopClientsBody.appendChild(row);
+    });
   }
 
   function renderTableRows(data) {
@@ -615,12 +717,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   ) {
     const reportType = normalizeReportType(reportTypeRaw);
 
-    const [allIncomes, allExpenses, allQuotes, clients] = await Promise.all([
-      getIncomeCollection(),
-      getExpensesCollection(),
-      getQuotesCollection(),
-      getClientsCollection(),
-    ]);
+    const [runtime, allIncomes, allExpenses, allQuotes, clients] =
+      await Promise.all([
+        getRuntimeStatus(),
+        getIncomeCollection(),
+        getExpensesCollection(),
+        getQuotesCollection(),
+        getClientsCollection(),
+      ]);
 
     const incomes = getFilteredMonthYear(
       allIncomes,
@@ -702,6 +806,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     pendingCard.textContent = formatCurrency(pendingAmount);
     quotesCard.textContent = reportQuotes.length;
 
+    renderRuntimeStatus(runtime);
+    renderReportInsights({
+      reportQuotes,
+      reportIncomes,
+    });
     renderTableRows(selectedRows);
 
     currentReportState = {

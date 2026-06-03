@@ -3,6 +3,7 @@ import { getClientsCollection } from "../services/clients-service.js";
 import { getExpensesCollection } from "../services/expenses-service.js";
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
+import { getRuntimeStatus } from "../services/runtime-status.js";
 import {
   formatCurrency,
   formatDate,
@@ -34,6 +35,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const quoteApprovedCount = document.getElementById("quoteApprovedCount");
   const quoteRejectedCount = document.getElementById("quoteRejectedCount");
   const recentActivityBody = document.getElementById("recentActivityBody");
+  const runtimeModeValue = document.getElementById("dashboardRuntimeModeValue");
+  const runtimeModeNote = document.getElementById("dashboardRuntimeModeNote");
+  const runtimeApiValue = document.getElementById("dashboardRuntimeApiValue");
+  const runtimeApiNote = document.getElementById("dashboardRuntimeApiNote");
+  const runtimeDbValue = document.getElementById("dashboardRuntimeDbValue");
+  const runtimeDbNote = document.getElementById("dashboardRuntimeDbNote");
+  const quotesFollowUpCount = document.getElementById("quotesFollowUpCount");
+  const pendingIncomeCount = document.getElementById("pendingIncomeCount");
+  const prospectClientsCount = document.getElementById("prospectClientsCount");
+  const topClientsBody = document.getElementById("topClientsBody");
 
   let financePieChartInstance = null;
 
@@ -308,6 +319,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
+    const followUpQuotesCount = quotes.filter((quote) => {
+      const status = normalizeText(quote.status);
+      return status === "enviada" || status === "aprobada";
+    }).length;
+
+    const pendingIncomeCount = incomes.filter((income) =>
+      shouldCountIncomeAsReceivable(income),
+    ).length;
+
+    const prospectClientsCount = clients.filter((client) => {
+      const status = normalizeText(client.status);
+      return status === "prospecto" || status === "prospect";
+    }).length;
+
+    const revenueByClient = new Map();
+
+    incomes
+      .filter((income) => getIncomeAmount(income) > 0)
+      .forEach((income) => {
+        const clientName = String(
+          income.client || income.clientName || "Sin cliente",
+        ).trim();
+
+        revenueByClient.set(
+          clientName,
+          Number(revenueByClient.get(clientName) || 0) +
+            getIncomeAmount(income),
+        );
+      });
+
+    const topClients = [...revenueByClient.entries()]
+      .map(([client, total]) => ({ client, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
     return {
       incomes,
       expenses,
@@ -319,6 +365,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       activeClients,
       pendingAmount,
       quoteStats,
+      followUpQuotesCount,
+      pendingIncomeCount,
+      prospectClientsCount,
+      topClients,
     };
   }
 
@@ -387,6 +437,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     return cell;
   }
 
+  function setRuntimeField(element, value, tone = "") {
+    if (!element) return;
+
+    element.textContent = value;
+    element.classList.remove("is-success", "is-warning", "is-danger");
+
+    if (tone) {
+      element.classList.add(tone);
+    }
+  }
+
   function createEmptyStateRow(message, columns) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
@@ -395,6 +456,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     cell.textContent = message;
     row.appendChild(cell);
     return row;
+  }
+
+  function renderRuntimeStatus(runtime) {
+    setRuntimeField(runtimeModeValue, runtime.modeValue, runtime.modeTone);
+    if (runtimeModeNote) runtimeModeNote.textContent = runtime.modeNote;
+    setRuntimeField(runtimeApiValue, runtime.apiValue, runtime.apiTone);
+    if (runtimeApiNote) runtimeApiNote.textContent = runtime.apiNote;
+    setRuntimeField(runtimeDbValue, runtime.dbValue, runtime.dbTone);
+    if (runtimeDbNote) runtimeDbNote.textContent = runtime.dbNote;
+  }
+
+  function renderOperationalPriorities(data) {
+    if (quotesFollowUpCount) {
+      quotesFollowUpCount.textContent = String(data.followUpQuotesCount);
+    }
+
+    if (pendingIncomeCount) {
+      pendingIncomeCount.textContent = String(data.pendingIncomeCount);
+    }
+
+    if (prospectClientsCount) {
+      prospectClientsCount.textContent = String(data.prospectClientsCount);
+    }
+  }
+
+  function renderTopClients(data) {
+    if (!topClientsBody) return;
+
+    topClientsBody.replaceChildren();
+
+    if (!data.topClients.length) {
+      topClientsBody.appendChild(
+        createEmptyStateRow("No hay ingresos cobrados todavía.", 2),
+      );
+      return;
+    }
+
+    data.topClients.forEach((item) => {
+      const row = document.createElement("tr");
+      row.appendChild(createCell(item.client));
+      row.appendChild(createCell(formatCurrency(item.total)));
+      topClientsBody.appendChild(row);
+    });
   }
 
   function renderRecentActivity(rows) {
@@ -468,7 +572,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function refreshDashboardData() {
-    const [incomes, expenses, clients, quotes] = await Promise.all([
+    const [runtime, incomes, expenses, clients, quotes] = await Promise.all([
+      getRuntimeStatus(),
       getIncomeCollection(),
       getExpensesCollection(),
       getClientsCollection(),
@@ -482,6 +587,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       quotes,
     });
 
+    renderRuntimeStatus(runtime);
     incomeCard.textContent = formatCurrency(data.totalIncome);
     expenseCard.textContent = formatCurrency(data.totalExpenses);
     utilityCard.textContent = formatCurrency(data.estimatedUtility);
@@ -489,6 +595,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     pendingCard.textContent = formatCurrency(data.pendingAmount);
 
     renderQuoteStats(data.quoteStats);
+    renderOperationalPriorities(data);
+    renderTopClients(data);
     renderRecentActivity(buildRecentActivity(data));
     renderFinancePieChart(data);
   }
