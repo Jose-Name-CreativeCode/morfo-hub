@@ -65,6 +65,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-invoice").value = "no";
   }
 
+  async function refreshExpensesCollection() {
+    currentExpenses = await getExpensesCollection();
+  }
+
   function resetForm() {
     expenseForm.reset();
     editingExpenseId = null;
@@ -644,18 +648,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         notes,
       });
 
-      if (editingExpenseId) {
-        currentExpenses = currentExpenses.map((expense) =>
-          String(expense.id) === String(editingExpenseId)
-            ? savedExpense
-            : expense,
-        );
-      } else {
-        currentExpenses = [savedExpense, ...currentExpenses];
+      if (savedExpense) {
+        await refreshExpensesCollection();
       }
 
       resetForm();
       loadYearOptions();
+      loadDynamicFilterOptions();
       renderExpenses();
       showToast("Gasto guardado correctamente.", { type: "success" });
     } catch (error) {
@@ -704,7 +703,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   detailOverlay.addEventListener("click", closeExpenseDetail);
 
   window.addEventListener("focus", async () => {
-    currentExpenses = await getExpensesCollection();
+    await refreshExpensesCollection();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();
@@ -713,7 +712,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     resetForm();
     applyExpensePrefillFromUrl();
-    currentExpenses = await getExpensesCollection();
+    await refreshExpensesCollection();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();

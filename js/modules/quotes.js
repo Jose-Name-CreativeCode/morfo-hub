@@ -79,6 +79,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     includes: "",
   };
 
+  function createRecordId(prefix = "record") {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  }
+
   function isYesValue(value) {
     return ["yes", "si", "sí", "true"].includes(
       String(value || "")
@@ -380,6 +388,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function persistIncomes() {
     await replaceIncomeCollection(currentIncomes);
+  }
+
+  async function refreshOperationalCollections() {
+    currentQuotes = await getQuotesCollection();
+    currentIncomes = await getIncomeCollection();
   }
 
   async function loadClientOptions() {
@@ -1333,12 +1346,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     saveQuotes(quotes);
+    await persistQuotes();
 
     if (newStatus === "aprobada") {
       await ensurePendingIncomeForQuote(id, { silent: true });
     }
 
-    await persistQuotes();
+    await refreshOperationalCollections();
     renderQuotes();
     openManageModal(id);
   }
@@ -1434,9 +1448,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       paymentHistory: [],
     });
 
-    saveIncomes([...incomes, pendingIncome]);
-    syncQuotesWithIncomes();
-    await persistIncomes();
+      saveIncomes([...incomes, pendingIncome]);
+      syncQuotesWithIncomes();
+      await persistIncomes();
+      await refreshOperationalCollections();
 
     if (!silent) {
       showToast(
@@ -1606,6 +1621,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveQuotes(updatedQuotes);
       await persistIncomes();
       await persistQuotes();
+      await refreshOperationalCollections();
       renderQuotes();
 
       showToast(
@@ -1784,6 +1800,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveQuotes(updatedQuotes);
       await persistIncomes();
       await persistQuotes();
+      await refreshOperationalCollections();
       renderQuotes();
 
       showToast(
@@ -2469,7 +2486,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         const existingQuotes = getQuotes();
         const newQuote = {
-          id: Date.now(),
+          id: createRecordId("quote"),
           publicId: buildSequentialId("COT", existingQuotes, "publicId"),
           client,
           date,
@@ -2500,6 +2517,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (paymentSyncChanged) {
         await persistQuotes();
       }
+      await refreshOperationalCollections();
       renderQuotes();
       resetForm();
       loadFilterOptions();
