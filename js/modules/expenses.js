@@ -51,6 +51,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingExpenseId = null;
   let currentExpenses = [];
 
+  function createRecordId() {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return `exp-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  }
+
   function applyExpenseFormDefaults() {
     document.getElementById("expense-date").value = getTodayISO();
     document.getElementById("expense-payment-method").value = "Tarjeta";
@@ -626,7 +634,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const savedExpense = await saveExpenseRecord({
         ...existingExpense,
-        id: editingExpenseId,
+        id: editingExpenseId || existingExpense.id || createRecordId(),
         date,
         concept,
         category,

@@ -1,11 +1,12 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { parseJsonRecord } from "../lib/json-record.js";
 
 export const expensesRouter = Router();
 
 function mapExpensePayload(body = {}) {
-  const id = String(body.id || "").trim();
+  const id = String(body.id || crypto.randomUUID()).trim();
   const record = {
     ...body,
     id,
@@ -61,26 +62,15 @@ expensesRouter.post("/", async (request, response) => {
 });
 
 expensesRouter.put("/:id", async (request, response) => {
-  const existing = await prisma.expenseRecord.findUnique({
-    where: { id: request.params.id },
-  });
-
-  if (!existing) {
-    response.status(404).json({
-      error: "expense_not_found",
-      message: "No se encontró el gasto solicitado.",
-    });
-    return;
-  }
-
   const payload = mapExpensePayload({
     ...request.body,
     id: request.params.id,
   });
 
-  const updated = await prisma.expenseRecord.update({
+  const updated = await prisma.expenseRecord.upsert({
     where: { id: request.params.id },
-    data: payload,
+    update: payload,
+    create: payload,
   });
 
   response.json(mapExpenseRecord(updated));

@@ -1416,10 +1416,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       return true;
     }
 
-    const nextIncomeId = buildSequentialId("ING", incomes, "publicId");
     const pendingIncome = await saveIncomeRecord({
-      id: Date.now(),
-      publicId: nextIncomeId,
+      id: String(quote.id),
+      publicId: quote.publicId,
       quoteId: quote.id,
       quotePublicId: quote.publicId,
       client: quote.client,
@@ -1441,7 +1440,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!silent) {
       showToast(
-        `Ingreso pendiente ${nextIncomeId} creado para la cotización ${quote.publicId}.`,
+        `Ingreso pendiente ${quote.publicId} creado para la cotización ${quote.publicId}.`,
         { type: "success", duration: 3600 },
       );
     }
@@ -1536,8 +1535,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const amountToSave = Number(paidNow.toFixed(2));
       const remainingAmount = Number((quoteTotal - amountToSave).toFixed(2));
-      const nextIncomeId = buildSequentialId("ING", incomes, "publicId");
-
       const incomeNotes = buildPaymentNote({
         paymentDate,
         paymentType: "anticipo",
@@ -1549,8 +1546,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       const newIncome = {
-        id: Date.now(),
-        publicId: nextIncomeId,
+        id: String(quote.id),
+        publicId: quote.publicId,
         quoteId: quote.id,
         quotePublicId: quote.publicId,
         client: quote.client,
@@ -1589,7 +1586,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               advanceRegistered: true,
               totalPaid: amountToSave,
               remainingAmount,
-              linkedIncomeId: nextIncomeId,
+              linkedIncomeId: quote.publicId,
               paymentHistory: [
                 ...(item.paymentHistory || []),
                 {
@@ -1612,7 +1609,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderQuotes();
 
       showToast(
-        `Anticipo registrado correctamente.\nCotización: ${quote.publicId}\nIngreso generado: ${nextIncomeId}\nMonto: ${formatCurrency(amountToSave)}\nSaldo pendiente: ${formatCurrency(remainingAmount)}`,
+        `Anticipo registrado correctamente.\nCotización: ${quote.publicId}\nIngreso generado: ${quote.publicId}\nMonto: ${formatCurrency(amountToSave)}\nSaldo pendiente: ${formatCurrency(remainingAmount)}`,
         { type: "success", duration: 4200 },
       );
 
@@ -1719,7 +1716,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return true;
       }
 
-      const nextIncomeId = buildSequentialId("ING", incomes, "publicId");
       const mergedNotes = buildPaymentNote({
         paymentDate,
         paymentType: "total",
@@ -1731,8 +1727,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       const newIncome = {
-        id: Date.now(),
-        publicId: nextIncomeId,
+        id: String(quote.id),
+        publicId: quote.publicId,
         quoteId: quote.id,
         quotePublicId: quote.publicId,
         client: quote.client,
@@ -1769,7 +1765,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               paymentNotes: mergedNotes,
               totalPaid: quoteTotal,
               remainingAmount: 0,
-              linkedIncomeId: nextIncomeId,
+              linkedIncomeId: quote.publicId,
               paymentHistory: [
                 ...(item.paymentHistory || []),
                 {
@@ -1791,7 +1787,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderQuotes();
 
       showToast(
-        `Pago total registrado correctamente.\nCotización: ${quote.publicId}\nIngreso generado: ${nextIncomeId}`,
+        `Pago total registrado correctamente.\nCotización: ${quote.publicId}\nIngreso generado: ${quote.publicId}`,
         { type: "success", duration: 4200 },
       );
 

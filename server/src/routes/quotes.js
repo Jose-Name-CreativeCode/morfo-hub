@@ -1,11 +1,12 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { parseJsonRecord } from "../lib/json-record.js";
 
 export const quotesRouter = Router();
 
 function mapQuotePayload(body = {}) {
-  const id = String(body.id || "").trim();
+  const id = String(body.id || crypto.randomUUID()).trim();
   const record = {
     ...body,
     id,
@@ -71,26 +72,15 @@ quotesRouter.post("/", async (request, response) => {
 });
 
 quotesRouter.put("/:id", async (request, response) => {
-  const existing = await prisma.quoteRecord.findUnique({
-    where: { id: request.params.id },
-  });
-
-  if (!existing) {
-    response.status(404).json({
-      error: "quote_not_found",
-      message: "No se encontró la cotización solicitada.",
-    });
-    return;
-  }
-
   const payload = mapQuotePayload({
     ...request.body,
     id: request.params.id,
   });
 
-  const updated = await prisma.quoteRecord.update({
+  const updated = await prisma.quoteRecord.upsert({
     where: { id: request.params.id },
-    data: payload,
+    update: payload,
+    create: payload,
   });
 
   response.json(mapQuoteRecord(updated));

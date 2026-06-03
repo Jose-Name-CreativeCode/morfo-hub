@@ -16,6 +16,12 @@ function getCachedExpenses() {
   return getData(STORAGE_KEYS.EXPENSES, []);
 }
 
+function hasCachedExpense(expenseId) {
+  return getCachedExpenses().some(
+    (expense) => String(expense.id) === String(expenseId),
+  );
+}
+
 export async function getExpensesCollection() {
   const expenses = await apiRequest("/expenses");
   saveData(STORAGE_KEYS.EXPENSES, expenses);
@@ -23,7 +29,9 @@ export async function getExpensesCollection() {
 }
 
 export async function saveExpenseRecord(expense) {
-  const savedExpense = expense.id
+  const shouldUpdate = expense.id && hasCachedExpense(expense.id);
+
+  const savedExpense = shouldUpdate
     ? await apiRequest(`/expenses/${expense.id}`, {
         method: "PUT",
         body: JSON.stringify(expense),

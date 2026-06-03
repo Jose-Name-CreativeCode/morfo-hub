@@ -1,11 +1,12 @@
 import { Router } from "express";
+import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { parseJsonRecord } from "../lib/json-record.js";
 
 export const incomeRouter = Router();
 
 function mapIncomePayload(body = {}) {
-  const id = String(body.id || "").trim();
+  const id = String(body.id || crypto.randomUUID()).trim();
   const record = {
     ...body,
     id,
@@ -75,26 +76,15 @@ incomeRouter.post("/", async (request, response) => {
 });
 
 incomeRouter.put("/:id", async (request, response) => {
-  const existing = await prisma.incomeRecord.findUnique({
-    where: { id: request.params.id },
-  });
-
-  if (!existing) {
-    response.status(404).json({
-      error: "income_not_found",
-      message: "No se encontró el ingreso solicitado.",
-    });
-    return;
-  }
-
   const payload = mapIncomePayload({
     ...request.body,
     id: request.params.id,
   });
 
-  const updated = await prisma.incomeRecord.update({
+  const updated = await prisma.incomeRecord.upsert({
     where: { id: request.params.id },
-    data: payload,
+    update: payload,
+    create: payload,
   });
 
   response.json(mapIncomeRecord(updated));
