@@ -39,3 +39,54 @@ model AppSettings {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
+
+model IncomeRecord {
+  id           String   @id
+  publicId     String?  @unique
+  quoteId      String?
+  quotePublicId String?
+  client       String?
+  date         String?
+  concept      String?
+  paymentStatus String?
+  paymentMethod String?
+  totalAmount  Float?
+  paidAmount   Float?
+  remainingAmount Float?
+  invoiceRequired String?
+  rawJson      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ExpenseRecord {
+  id            String   @id
+  date          String?
+  concept       String?
+  category      String?
+  paymentMethod String?
+  invoice       String?
+  amount        Float?
+  rawJson       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model QuoteRecord {
+  id             String   @id
+  publicId       String?  @unique
+  client         String?
+  date           String?
+  title          String?
+  serviceType    String?
+  status         String?
+  paymentStatus  String?
+  paymentMethod  String?
+  total          Float?
+  totalPaid      Float?
+  remainingAmount Float?
+  linkedIncomeId String?
+  rawJson        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

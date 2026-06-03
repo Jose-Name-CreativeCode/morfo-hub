@@ -6,6 +6,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import { apiRequest, shouldUseLocalApi } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
@@ -76,6 +77,12 @@ export function isQuotesRemoteEnabled() {
 }
 
 export async function getQuotesCollection() {
+  if (shouldUseLocalApi()) {
+    const quotes = await apiRequest("/quotes");
+    saveData(STORAGE_KEYS.QUOTES, quotes);
+    return sortQuotes(quotes);
+  }
+
   if (!isQuotesRemoteEnabled()) {
     return sortQuotes(getLegacyQuotes());
   }
@@ -90,6 +97,29 @@ export async function getQuotesCollection() {
 }
 
 export async function saveQuoteRecord(quote) {
+  if (shouldUseLocalApi()) {
+    const savedQuote = quote.id
+      ? await apiRequest(`/quotes/${quote.id}`, {
+          method: "PUT",
+          body: JSON.stringify(quote),
+        })
+      : await apiRequest("/quotes", {
+          method: "POST",
+          body: JSON.stringify(quote),
+        });
+
+    const quotes = getLegacyQuotes();
+    const nextQuotes = quotes.some(
+      (item) => String(item.id) === String(savedQuote.id),
+    )
+      ? quotes.map((item) =>
+          String(item.id) === String(savedQuote.id) ? savedQuote : item,
+        )
+      : [...quotes, savedQuote];
+    saveData(STORAGE_KEYS.QUOTES, sortQuotes(nextQuotes));
+    return savedQuote;
+  }
+
   if (!isQuotesRemoteEnabled()) {
     const quotes = getLegacyQuotes();
 
@@ -154,12 +184,35 @@ export async function saveQuoteRecord(quote) {
 }
 
 export async function replaceQuotesCollection(quotes) {
+  if (shouldUseLocalApi()) {
+    const savedQuotes = await Promise.all(
+      quotes.map((quote) =>
+        saveQuoteRecord({
+          ...quote,
+        }),
+      ),
+    );
+    saveData(STORAGE_KEYS.QUOTES, savedQuotes);
+    return savedQuotes;
+  }
+
   await Promise.all(quotes.map((quote) => saveQuoteRecord(quote)));
   saveData(STORAGE_KEYS.QUOTES, quotes);
   return quotes;
 }
 
 export async function deleteQuoteRecord(quoteId) {
+  if (shouldUseLocalApi()) {
+    await apiRequest(`/quotes/${quoteId}`, {
+      method: "DELETE",
+    });
+    const quotes = getLegacyQuotes().filter(
+      (quote) => String(quote.id) !== String(quoteId),
+    );
+    saveData(STORAGE_KEYS.QUOTES, quotes);
+    return;
+  }
+
   if (!isQuotesRemoteEnabled()) {
     const quotes = getLegacyQuotes().filter(
       (quote) => String(quote.id) !== String(quoteId),

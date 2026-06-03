@@ -54,6 +54,63 @@ db.exec(`
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS "IncomeRecord" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "publicId" TEXT,
+    "quoteId" TEXT,
+    "quotePublicId" TEXT,
+    "client" TEXT,
+    "date" TEXT,
+    "concept" TEXT,
+    "paymentStatus" TEXT,
+    "paymentMethod" TEXT,
+    "totalAmount" REAL,
+    "paidAmount" REAL,
+    "remainingAmount" REAL,
+    "invoiceRequired" TEXT,
+    "rawJson" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS "IncomeRecord_publicId_key"
+  ON "IncomeRecord" ("publicId");
+
+  CREATE TABLE IF NOT EXISTS "ExpenseRecord" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "date" TEXT,
+    "concept" TEXT,
+    "category" TEXT,
+    "paymentMethod" TEXT,
+    "invoice" TEXT,
+    "amount" REAL,
+    "rawJson" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS "QuoteRecord" (
+    "id" TEXT PRIMARY KEY NOT NULL,
+    "publicId" TEXT,
+    "client" TEXT,
+    "date" TEXT,
+    "title" TEXT,
+    "serviceType" TEXT,
+    "status" TEXT,
+    "paymentStatus" TEXT,
+    "paymentMethod" TEXT,
+    "total" REAL,
+    "totalPaid" REAL,
+    "remainingAmount" REAL,
+    "linkedIncomeId" TEXT,
+    "rawJson" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS "QuoteRecord_publicId_key"
+  ON "QuoteRecord" ("publicId");
 `);
 
 console.log(`SQLite ready at ${databasePath}`);

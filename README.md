@@ -26,6 +26,7 @@ cotizaciones, reportes y configuracion.
 - `npm run dev`: levanta el entorno local con Vite
 - `npm run api:dev`: levanta la API backend en modo watch
 - `npm run api:start`: levanta la API backend
+- `npm run dev:full`: levanta frontend + API local al mismo tiempo
 - `npm run db:setup`: crea la base SQLite local inicial
 - `npm run prisma:generate`: genera el cliente Prisma
 - `npm run build`: genera el build de produccion en `dist/`
@@ -72,12 +73,62 @@ Ya existe una base backend funcional para empezar la migracion:
 - `POST /api/clients`
 - `PUT /api/clients/:id`
 - `DELETE /api/clients/:id`
+- `GET /api/income`
+- `POST /api/income`
+- `PUT /api/income/:id`
+- `DELETE /api/income/:id`
+- `GET /api/expenses`
+- `POST /api/expenses`
+- `PUT /api/expenses/:id`
+- `DELETE /api/expenses/:id`
+- `GET /api/quotes`
+- `POST /api/quotes`
+- `PUT /api/quotes/:id`
+- `DELETE /api/quotes/:id`
 - `GET /api/settings`
 - `PUT /api/settings`
 
 Por ahora el frontend actual sigue conectado a Firebase y `localStorage`. La
 idea recomendada es migrar modulo por modulo hacia la API para no detener la
 operacion actual.
+
+## Nuevo servidor local
+
+Si abres la app en `localhost`, el frontend usa automáticamente la API local
+del nuevo servidor para estos módulos:
+
+- clientes
+- ingresos
+- gastos
+- cotizaciones
+- configuración
+
+### Cómo correr todo junto
+
+1. `npm install`
+2. `npm run db:setup`
+3. `npm run prisma:generate`
+4. `npm run dev:full`
+
+Frontend:
+- `http://localhost:5173`
+
+API:
+- `http://localhost:3000/api`
+
+### Selector manual del modo de datos
+
+En desarrollo puedes forzar el origen de datos desde consola:
+
+```js
+localStorage.setItem("morfo_data_mode", "api");
+localStorage.setItem("morfo_data_mode", "firebase");
+localStorage.removeItem("morfo_data_mode");
+```
+
+- `api`: obliga al frontend a usar el nuevo servidor
+- `firebase`: obliga al frontend a usar Firebase
+- sin valor: en `localhost` usa la API local automáticamente
 
 ## Siguiente etapa recomendada
 

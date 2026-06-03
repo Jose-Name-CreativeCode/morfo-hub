@@ -4,13 +4,21 @@ import { prisma } from "../lib/prisma.js";
 export const clientsRouter = Router();
 
 function mapClientPayload(body = {}) {
+  const normalizedInvoice = String(body.invoiceRequired || "")
+    .trim()
+    .toLowerCase();
+
   return {
     name: String(body.name || "").trim(),
     contact: body.contact ? String(body.contact).trim() : null,
     email: body.email ? String(body.email).trim() : null,
     phone: body.phone ? String(body.phone).trim() : null,
     status: body.status ? String(body.status).trim() : null,
-    invoiceRequired: Boolean(body.invoiceRequired),
+    invoiceRequired:
+      normalizedInvoice === "si" ||
+      normalizedInvoice === "sí" ||
+      normalizedInvoice === "yes" ||
+      normalizedInvoice === "true",
     notes: body.notes ? String(body.notes) : "",
   };
 }

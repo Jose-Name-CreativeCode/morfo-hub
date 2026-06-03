@@ -2,6 +2,9 @@ import cors from "cors";
 import express from "express";
 import { healthRouter } from "./routes/health.js";
 import { clientsRouter } from "./routes/clients.js";
+import { incomeRouter } from "./routes/income.js";
+import { expensesRouter } from "./routes/expenses.js";
+import { quotesRouter } from "./routes/quotes.js";
 import { settingsRouter } from "./routes/settings.js";
 
 export function createApp() {
@@ -25,6 +28,9 @@ export function createApp() {
 
   app.use("/api/health", healthRouter);
   app.use("/api/clients", clientsRouter);
+  app.use("/api/income", incomeRouter);
+  app.use("/api/expenses", expensesRouter);
+  app.use("/api/quotes", quotesRouter);
   app.use("/api/settings", settingsRouter);
 
   app.use((error, _request, response, next) => {

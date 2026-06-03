@@ -6,6 +6,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import { apiRequest, shouldUseLocalApi } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
@@ -76,6 +77,12 @@ export function isIncomeRemoteEnabled() {
 }
 
 export async function getIncomeCollection() {
+  if (shouldUseLocalApi()) {
+    const incomes = await apiRequest("/income");
+    saveData(STORAGE_KEYS.INCOME, incomes);
+    return sortIncomes(incomes);
+  }
+
   if (!isIncomeRemoteEnabled()) {
     return sortIncomes(getLegacyIncomes());
   }
@@ -90,6 +97,29 @@ export async function getIncomeCollection() {
 }
 
 export async function saveIncomeRecord(income) {
+  if (shouldUseLocalApi()) {
+    const savedIncome = income.id
+      ? await apiRequest(`/income/${income.id}`, {
+          method: "PUT",
+          body: JSON.stringify(income),
+        })
+      : await apiRequest("/income", {
+          method: "POST",
+          body: JSON.stringify(income),
+        });
+
+    const incomes = getLegacyIncomes();
+    const nextIncomes = incomes.some(
+      (item) => String(item.id) === String(savedIncome.id),
+    )
+      ? incomes.map((item) =>
+          String(item.id) === String(savedIncome.id) ? savedIncome : item,
+        )
+      : [...incomes, savedIncome];
+    saveData(STORAGE_KEYS.INCOME, sortIncomes(nextIncomes));
+    return savedIncome;
+  }
+
   if (!isIncomeRemoteEnabled()) {
     const incomes = getLegacyIncomes();
 
@@ -151,12 +181,35 @@ export async function saveIncomeRecord(income) {
 }
 
 export async function replaceIncomeCollection(incomes) {
+  if (shouldUseLocalApi()) {
+    const savedIncomes = await Promise.all(
+      incomes.map((income) =>
+        saveIncomeRecord({
+          ...income,
+        }),
+      ),
+    );
+    saveData(STORAGE_KEYS.INCOME, savedIncomes);
+    return savedIncomes;
+  }
+
   await Promise.all(incomes.map((income) => saveIncomeRecord(income)));
   saveData(STORAGE_KEYS.INCOME, incomes);
   return incomes;
 }
 
 export async function deleteIncomeRecord(incomeId) {
+  if (shouldUseLocalApi()) {
+    await apiRequest(`/income/${incomeId}`, {
+      method: "DELETE",
+    });
+    const incomes = getLegacyIncomes().filter(
+      (income) => String(income.id) !== String(incomeId),
+    );
+    saveData(STORAGE_KEYS.INCOME, incomes);
+    return;
+  }
+
   if (!isIncomeRemoteEnabled()) {
     const incomes = getLegacyIncomes().filter(
       (income) => String(income.id) !== String(incomeId),

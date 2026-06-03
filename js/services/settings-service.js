@@ -5,6 +5,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
+import { apiRequest, shouldUseLocalApi } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
@@ -141,6 +142,12 @@ export function isSettingsRemoteEnabled() {
 }
 
 export async function getSettingsRecord() {
+  if (shouldUseLocalApi()) {
+    const settings = mergeSettingsWithDefaults(await apiRequest("/settings"));
+    saveData(STORAGE_KEYS.SETTINGS, settings);
+    return settings;
+  }
+
   if (!isSettingsRemoteEnabled()) {
     return getLegacySettings();
   }
@@ -161,6 +168,39 @@ export async function getSettingsRecord() {
 }
 
 export async function saveSettingsRecord(partialSettings) {
+  if (shouldUseLocalApi()) {
+    const current = getLegacySettings();
+    const nextSettings = mergeSettingsWithDefaults({
+      ...current,
+      ...partialSettings,
+      agency: {
+        ...current.agency,
+        ...(partialSettings.agency || {}),
+      },
+      invoice: {
+        ...current.invoice,
+        ...(partialSettings.invoice || {}),
+      },
+      commercial: {
+        ...current.commercial,
+        ...(partialSettings.commercial || {}),
+      },
+      serviceTemplates:
+        partialSettings.serviceTemplates !== undefined
+          ? partialSettings.serviceTemplates
+          : current.serviceTemplates,
+    });
+
+    const savedSettings = mergeSettingsWithDefaults(
+      await apiRequest("/settings", {
+        method: "PUT",
+        body: JSON.stringify(nextSettings),
+      }),
+    );
+    saveData(STORAGE_KEYS.SETTINGS, savedSettings);
+    return savedSettings;
+  }
+
   if (!isSettingsRemoteEnabled()) {
     const current = getLegacySettings();
     const nextSettings = mergeSettingsWithDefaults({

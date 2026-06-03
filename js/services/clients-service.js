@@ -6,6 +6,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import { apiRequest, shouldUseLocalApi } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
@@ -37,6 +38,13 @@ function mapClientFromDoc(snapshot) {
 
 function getLegacyClients() {
   return getData(STORAGE_KEYS.CLIENTS, []);
+}
+
+function mapClientFromApi(client) {
+  return {
+    ...client,
+    invoiceRequired: client.invoiceRequired ? "Sí" : "No",
+  };
 }
 
 async function migrateLegacyClientsIfNeeded() {
@@ -72,6 +80,13 @@ export function isClientsRemoteEnabled() {
 }
 
 export async function getClientsCollection() {
+  if (shouldUseLocalApi()) {
+    const clients = await apiRequest("/clients");
+    const mappedClients = clients.map(mapClientFromApi);
+    saveData(STORAGE_KEYS.CLIENTS, mappedClients);
+    return sortClients(mappedClients);
+  }
+
   if (!isClientsRemoteEnabled()) {
     return sortClients(getLegacyClients());
   }
@@ -86,6 +101,32 @@ export async function getClientsCollection() {
 }
 
 export async function saveClientRecord(client) {
+  if (shouldUseLocalApi()) {
+    const payload = {
+      ...client,
+      invoiceRequired: client.invoiceRequired === "Sí",
+    };
+    const savedClient = client.id
+      ? await apiRequest(`/clients/${client.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        })
+      : await apiRequest("/clients", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+    const mappedClient = mapClientFromApi(savedClient);
+    const clients = getLegacyClients();
+    const nextClients = client.id
+      ? clients.map((item) =>
+          String(item.id) === String(mappedClient.id) ? mappedClient : item,
+        )
+      : [...clients, mappedClient];
+    saveData(STORAGE_KEYS.CLIENTS, sortClients(nextClients));
+    return mappedClient;
+  }
+
   if (!isClientsRemoteEnabled()) {
     const clients = getLegacyClients();
 
@@ -148,6 +189,17 @@ export async function saveClientRecord(client) {
 }
 
 export async function deleteClientRecord(clientId) {
+  if (shouldUseLocalApi()) {
+    await apiRequest(`/clients/${clientId}`, {
+      method: "DELETE",
+    });
+    const clients = getLegacyClients().filter(
+      (client) => String(client.id) !== String(clientId),
+    );
+    saveData(STORAGE_KEYS.CLIENTS, clients);
+    return;
+  }
+
   if (!isClientsRemoteEnabled()) {
     const clients = getLegacyClients().filter(
       (client) => String(client.id) !== String(clientId),

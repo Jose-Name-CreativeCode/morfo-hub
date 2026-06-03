@@ -8,7 +8,7 @@
     "dev": "vite",
     "api:dev": "node --watch server/index.js",
     "api:start": "node server/index.js",
-    "dev:full": "npm run api:dev",
+    "dev:full": "concurrently \"npm run api:dev\" \"npm run dev\"",
     "build": "vite build",
     "build:github-pages": "VITE_BASE_PATH=/morfo-hub/ vite build",
     "preview": "vite preview",
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
+    "concurrently": "^10.0.3",
     "eslint": "^9.35.0",
     "globals": "^16.3.0",
     "prettier": "^3.6.2",

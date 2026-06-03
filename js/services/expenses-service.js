@@ -6,6 +6,7 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import { apiRequest, shouldUseLocalApi } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
@@ -76,6 +77,12 @@ export function isExpensesRemoteEnabled() {
 }
 
 export async function getExpensesCollection() {
+  if (shouldUseLocalApi()) {
+    const expenses = await apiRequest("/expenses");
+    saveData(STORAGE_KEYS.EXPENSES, expenses);
+    return sortExpenses(expenses);
+  }
+
   if (!isExpensesRemoteEnabled()) {
     return sortExpenses(getLegacyExpenses());
   }
@@ -90,6 +97,29 @@ export async function getExpensesCollection() {
 }
 
 export async function saveExpenseRecord(expense) {
+  if (shouldUseLocalApi()) {
+    const savedExpense = expense.id
+      ? await apiRequest(`/expenses/${expense.id}`, {
+          method: "PUT",
+          body: JSON.stringify(expense),
+        })
+      : await apiRequest("/expenses", {
+          method: "POST",
+          body: JSON.stringify(expense),
+        });
+
+    const expenses = getLegacyExpenses();
+    const nextExpenses = expenses.some(
+      (item) => String(item.id) === String(savedExpense.id),
+    )
+      ? expenses.map((item) =>
+          String(item.id) === String(savedExpense.id) ? savedExpense : item,
+        )
+      : [...expenses, savedExpense];
+    saveData(STORAGE_KEYS.EXPENSES, sortExpenses(nextExpenses));
+    return savedExpense;
+  }
+
   if (!isExpensesRemoteEnabled()) {
     const expenses = getLegacyExpenses();
 
@@ -154,6 +184,17 @@ export async function saveExpenseRecord(expense) {
 }
 
 export async function deleteExpenseRecord(expenseId) {
+  if (shouldUseLocalApi()) {
+    await apiRequest(`/expenses/${expenseId}`, {
+      method: "DELETE",
+    });
+    const expenses = getLegacyExpenses().filter(
+      (expense) => String(expense.id) !== String(expenseId),
+    );
+    saveData(STORAGE_KEYS.EXPENSES, expenses);
+    return;
+  }
+
   if (!isExpensesRemoteEnabled()) {
     const expenses = getLegacyExpenses().filter(
       (expense) => String(expense.id) !== String(expenseId),
