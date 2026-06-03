@@ -1,25 +1,7 @@
-import {
-  browserLocalPersistence,
-  onAuthStateChanged,
-  setPersistence,
-  signInWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-import { auth, isFirebaseConfigured } from "./firebase-config.js";
+import { apiRequest } from "./api-client.js";
 
 const LOGIN_PATH = "/login.html";
 const DEFAULT_REDIRECT_PATH = "/dashboard.html";
-
-const allowedEmails = String(import.meta.env.VITE_ALLOWED_EMAILS || "")
-  .split(",")
-  .map((value) => value.trim().toLowerCase())
-  .filter(Boolean);
-
-let authReadyPromise = null;
-
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
-}
 
 function getLoginUrl() {
   return new URL(LOGIN_PATH, window.location.origin).toString();
@@ -30,67 +12,46 @@ function getDefaultRedirectUrl() {
 }
 
 export function isUserAllowed(user) {
-  if (!user?.email) return false;
-  if (allowedEmails.length === 0) return true;
-  return allowedEmails.includes(normalizeEmail(user.email));
+  return Boolean(user?.email);
 }
 
 export function isAuthEnabled() {
-  return Boolean(isFirebaseConfigured && auth);
+  return true;
 }
 
 export async function ensureAuthReady() {
-  if (!isAuthEnabled()) return null;
-
-  if (!authReadyPromise) {
-    authReadyPromise = new Promise((resolve) => {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        unsubscribe();
-        resolve(user);
-      });
-    });
-  }
-
-  return authReadyPromise;
+  return getCurrentUser();
 }
 
 export async function loginWithEmail(email, password) {
-  if (!isAuthEnabled()) {
-    throw new Error(
-      "Firebase Auth no esta configurado. Revisa las variables VITE_FIREBASE_*.",
-    );
-  }
+  const result = await apiRequest("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
 
-  await setPersistence(auth, browserLocalPersistence);
-
-  const credentials = await signInWithEmailAndPassword(auth, email, password);
-
-  if (!isUserAllowed(credentials.user)) {
-    await signOut(auth);
-    throw new Error(
-      "Este correo no esta autorizado para usar Morfo Hub. Agregalo en VITE_ALLOWED_EMAILS.",
-    );
-  }
-
-  return credentials.user;
+  return result?.user || null;
 }
 
 export async function logoutCurrentUser() {
-  if (!isAuthEnabled()) return;
-  await signOut(auth);
+  await apiRequest("/auth/logout", {
+    method: "POST",
+  });
 }
 
 export async function getCurrentUser() {
-  const user = await ensureAuthReady();
-
-  if (!user) return null;
-
-  if (!isUserAllowed(user)) {
-    await logoutCurrentUser();
+  try {
+    const result = await apiRequest("/auth/session");
+    const user = result?.user || null;
+    if (!isUserAllowed(user)) {
+      return null;
+    }
+    return user;
+  } catch {
     return null;
   }
-
-  return user;
 }
 
 export function setHeaderUser(user) {
@@ -112,9 +73,7 @@ export function setHeaderUser(user) {
   actions.replaceChildren();
 
   if (!user?.email) {
-    headerUser.textContent = isAuthEnabled()
-      ? "Sesión no iniciada"
-      : "Firebase no configurado";
+    headerUser.textContent = "Sesión no iniciada";
     return;
   }
 
@@ -136,17 +95,13 @@ export async function protectPage({
   loginPath = getLoginUrl(),
   allowLocalFallback = false,
 } = {}) {
-  if (!isAuthEnabled()) {
-    if (!allowLocalFallback) {
-      window.location.href = loginPath;
-    }
-    setHeaderUser(null);
-    return null;
-  }
-
   const user = await getCurrentUser();
 
   if (!user) {
+    if (allowLocalFallback) {
+      setHeaderUser(null);
+      return null;
+    }
     window.location.href = loginPath;
     return null;
   }
@@ -158,8 +113,6 @@ export async function protectPage({
 export async function redirectAuthenticatedUser({
   targetPath = getDefaultRedirectUrl(),
 } = {}) {
-  if (!isAuthEnabled()) return null;
-
   const user = await getCurrentUser();
   if (user) {
     window.location.href = targetPath;

@@ -1,8 +1,5 @@
-import {
-  isAuthEnabled,
-  loginWithEmail,
-  redirectAuthenticatedUser,
-} from "../services/auth.js";
+import { apiRequest } from "../services/api-client.js";
+import { loginWithEmail, redirectAuthenticatedUser } from "../services/auth.js";
 import { setButtonLoading } from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -18,9 +15,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   message.style.color = "#475569";
   loginForm.appendChild(message);
 
-  if (!isAuthEnabled()) {
+  try {
+    const status = await apiRequest("/auth/status");
+    if (!status?.authConfigured) {
+      message.textContent =
+        "Yo necesito AUTH_USERS_JSON o AUTH_SEED_EMAILS + AUTH_SEED_PASSWORD en el backend para habilitar el acceso.";
+      submitButton.disabled = true;
+      submitButton.style.opacity = "0.7";
+      submitButton.style.cursor = "not-allowed";
+      return;
+    }
+  } catch (error) {
     message.textContent =
-      "Configura Firebase en el archivo .env para habilitar el inicio de sesion compartido.";
+      error?.message ||
+      "Yo no pude conectar con la API de acceso. Revisa el backend.";
     submitButton.disabled = true;
     submitButton.style.opacity = "0.7";
     submitButton.style.cursor = "not-allowed";

@@ -12,8 +12,7 @@
     "build": "vite build",
     "build:github-pages": "VITE_BASE_PATH=/morfo-hub/ vite build",
     "preview": "vite preview",
-    "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:firebase": "npm run build && firebase deploy",
+    "deploy:vercel": "vercel --prod",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "lint": "eslint .",
@@ -38,7 +37,6 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "firebase": "^12.11.0",
     "pg": "^8.21.0",
     "prisma": "^7.8.0"
   }

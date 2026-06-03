@@ -1,7 +1,7 @@
 # Checklist de prueba completa
 
 Usa este flujo despues de cambios importantes para confirmar que Morfo Hub
-sigue conectado correctamente con Firebase y que los saldos se mantienen
+sigue conectado correctamente con la API y que los saldos se mantienen
 consistentes.
 
 ## 1. Acceso

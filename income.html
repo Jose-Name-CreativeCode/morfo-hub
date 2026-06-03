@@ -7,7 +7,7 @@
     <title>Morfo Hub | Ingresos</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
-  <body data-page-title="Ingresos" data-nav-key="income">
+  <body data-page-title="Cobros e ingresos" data-nav-key="income">
     <div class="app-layout">
       <aside class="sidebar" data-app-sidebar></aside>
 
@@ -15,20 +15,46 @@
         <header class="header" data-app-header></header>
 
         <main class="page-content">
-          <h1 class="section-title">Registro de ingresos</h1>
-          <p class="section-subtitle">
-            Administra los ingresos recibidos, pagos parciales y estatus de
-            cobro por cliente.
-          </p>
+          <section class="hero-panel hero-panel-income">
+            <div class="dashboard-kicker hero-kicker-income">
+              Operación financiera
+            </div>
+            <h1 class="section-title dashboard-title">Cobros e ingresos</h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Yo registro aquí los cobros reales, los pagos parciales y los
+              saldos pendientes para tener lectura financiera clara.
+            </p>
+          </section>
 
-          <section class="card section-spacing">
+          <section class="card dashboard-panel section-spacing">
+            <div class="quick-capture-grid">
+              <a href="operations.html" class="quick-capture-card">
+                <strong>Volver a nueva operación</strong>
+                <span>Yo regreso al flujo principal de captura.</span>
+              </a>
+              <a href="quotes.html" class="quick-capture-card">
+                <strong>Revisar cotizaciones</strong>
+                <span>Yo confirmo qué propuesta ya pasó a cobro.</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card section-spacing form-shell panel-soft">
             <h2 class="section-title section-title-sm">Nuevo ingreso</h2>
             <p class="form-helper-text">
               Modo rápido: fecha, estatus, método de pago y factura se llenan
               solos. Solo ajusta lo que cambie.
             </p>
 
-            <form>
+            <div class="entry-banner">
+              <strong>Entrada rápida</strong>
+              <span>
+                Yo uso esta vista para cobrar rápido: cliente, concepto, monto
+                y estatus. Si ya hubo anticipo, aquí queda reflejado.
+              </span>
+            </div>
+
+            <form class="entry-form-grid">
               <div class="form-group">
                 <label for="income-client">Cliente</label>
                 <select id="income-client">
@@ -100,7 +126,7 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group form-group-full">
                 <label for="income-notes">Observaciones</label>
                 <textarea
                   id="income-notes"
@@ -109,7 +135,11 @@
                 ></textarea>
               </div>
 
-              <button type="submit" class="btn-primary">Guardar ingreso</button>
+              <div class="form-group form-group-full form-group-tight">
+                <button type="submit" class="btn-primary">
+                  Guardar ingreso
+                </button>
+              </div>
             </form>
           </section>
 

@@ -1,19 +1,20 @@
 # Morfo Hub
 
-Sistema interno de gestion para Morfo: clientes, ingresos, gastos,
-cotizaciones, reportes y configuracion.
+Sistema interno de gestión para Morfo: clientes, cobros e ingresos, gastos,
+cotizaciones, reportes y configuración.
 
 ## Stack actual
 
-- HTML multipagina
+- HTML multipágina
 - CSS plano por vista
 - JavaScript modular en navegador
 - API REST con Express
+- Autenticación propia con sesiones por cookie
 - Prisma ORM
-- PostgreSQL
+- PostgreSQL en Neon
+- Vercel para frontend + funciones backend
 - Vite para desarrollo y build
-- ESLint para calidad de codigo
-- Prettier para formato
+- ESLint y Prettier
 
 ## Requisitos
 
@@ -23,17 +24,15 @@ cotizaciones, reportes y configuracion.
 ## Scripts
 
 - `npm install`: instala dependencias
-- `npm run dev`: levanta el entorno local con Vite
+- `npm run dev`: levanta el frontend con Vite
 - `npm run api:dev`: levanta la API backend en modo watch
 - `npm run api:start`: levanta la API backend
 - `npm run dev:full`: levanta frontend + API local al mismo tiempo
 - `npm run prisma:generate`: genera el cliente Prisma
 - `npm run prisma:push`: crea o actualiza el esquema en PostgreSQL
-- `npm run build`: genera el build de produccion en `dist/`
-- `npm run build:github-pages`: genera build usando `/morfo-hub/` como base
+- `npm run build`: genera el build de producción en `dist/`
 - `npm run preview`: sirve el build generado
-- `npm run deploy:hosting`: genera build y publica Firebase Hosting
-- `npm run deploy:firebase`: genera build y publica hosting/reglas Firebase
+- `npm run deploy:vercel`: despliega a Vercel en producción
 - `npm run lint`: revisa JavaScript con ESLint
 - `npm run lint:fix`: corrige problemas autoarreglables
 - `npm run format`: formatea el proyecto con Prettier
@@ -42,34 +41,82 @@ cotizaciones, reportes y configuracion.
 ## Estructura
 
 - `index.html`: entrada principal del proyecto
-- `*.html`: vistas multipagina
-- `css/`: estilos globales y por modulo
-- `js/modules/`: logica de cada pagina
-- `js/services/`: acceso a almacenamiento y servicios externos
-- `js/utils.js`: utilidades compartidas
+- `*.html`: vistas multipágina
+- `css/`: estilos globales y por módulo
+- `js/modules/`: lógica de cada página
+- `js/services/`: acceso a API, sesión y almacenamiento local
 - `server/`: API Express
+- `api/`: entrypoint para Vercel Functions
 - `prisma/`: esquema de datos
-- `assets/`: imagenes y recursos visuales
-- `docs/`: documentacion interna
+- `docs/`: documentación interna
+- `vercel.json`: configuración de despliegue en Vercel
 
-## Flujo de desarrollo sugerido
+## Variables de entorno
 
-1. Instala dependencias con `npm install`
-2. Configura `DATABASE_URL` en `.env`
-3. Genera Prisma Client con `npm run prisma:generate`
-4. Aplica el esquema con `npm run prisma:push`
-5. Corre el frontend con `npm run dev`
-6. Corre la API con `npm run api:dev`
-7. Trabaja sobre frontend en `js/modules` y backend en `server/`
-8. Revisa formato y lint antes de cerrar cambios
+Yo configuro esto como mínimo:
 
-## Primera fase full stack
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require&channel_binding=require"
+PORT=3000
+APP_ORIGIN="http://localhost:5173"
+VITE_API_BASE_URL="http://localhost:3000/api"
+AUTH_USERS_JSON='[{"email":"tu-correo@ejemplo.com","password":"cambia-esta-clave","name":"Jose"}]'
+```
 
-Ya existe una base backend funcional para empezar la migracion:
+También puedo usar esta opción simple para compartir una sola contraseña entre
+varios correos:
+
+```env
+AUTH_SEED_EMAILS="correo1@ejemplo.com,correo2@ejemplo.com"
+AUTH_SEED_PASSWORD="cambia-esta-clave"
+```
+
+## Cómo correrlo en local
+
+1. Yo corro `npm install`
+2. Yo configuro `DATABASE_URL` en `.env`
+3. Yo corro `npm run prisma:generate`
+4. Yo corro `npm run prisma:push`
+5. Yo corro `npm run dev:full`
+
+Frontend:
+
+- `http://localhost:5173`
+
+API:
+
+- `http://localhost:3000/api`
+
+## Arquitectura actual
+
+Morfo Hub ya no depende de Firebase.
+
+Ahora el flujo es este:
+
+- el frontend llama a la API propia
+- la API maneja login, sesión y autorización
+- Prisma escribe todo en PostgreSQL
+- Neon guarda la base de datos
+- Vercel sirve el frontend y ejecuta la API
+
+## Autenticación
+
+La autenticación ya vive en el backend con estas rutas:
+
+- `GET /api/auth/status`
+- `GET /api/auth/session`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+
+La sesión se guarda en una cookie `HttpOnly`, así que el navegador comparte el
+acceso entre frontend y backend sin exponer tokens al JavaScript de la app.
+
+## Módulos de datos
+
+La API ya cubre:
 
 - `GET /api/health`
 - `GET /api/clients`
-- `GET /api/clients/:id`
 - `POST /api/clients`
 - `PUT /api/clients/:id`
 - `DELETE /api/clients/:id`
@@ -88,123 +135,33 @@ Ya existe una base backend funcional para empezar la migracion:
 - `GET /api/settings`
 - `PUT /api/settings`
 
-Por ahora el frontend actual sigue conectado a Firebase y `localStorage`. La
-idea recomendada es migrar modulo por modulo hacia la API para no detener la
-operacion actual.
+## Runtime y diagnóstico
 
-## Nuevo servidor local
+Las vistas de `dashboard`, `reports` y `maintenance` muestran:
 
-Si abres la app en `localhost`, el frontend usa automáticamente la API local
-del nuevo servidor para estos módulos:
+- si la app está usando la API local o la API de producción
+- el estado del backend
+- el estado de conexión con PostgreSQL / Neon
 
-- clientes
-- ingresos
-- gastos
-- cotizaciones
-- configuración
+## Preparación para Vercel
 
-La vista de `maintenance.html` ahora también muestra de forma explícita:
+La configuración actual está pensada para Vercel usando:
 
-- si estás trabajando contra la API local o contra Firebase/localStorage
-- la URL activa de la API
-- el estado de la conexión entre el backend y PostgreSQL/Neon
+- `vercel.json` con `buildCommand` y `outputDirectory`
+- `api/index.js` como función Node/Express
+- `dist/` como salida del frontend de Vite
 
-En esta etapa, Firebase se conserva solo para login y control de acceso. La
-operación diaria de clientes, ingresos, gastos, cotizaciones, mantenimiento,
-dashboard y reportes ya puede apoyarse en la API local con PostgreSQL/Neon.
+## Flujo recomendado de despliegue
 
-### Cómo correr todo junto
+1. Yo conecto el repositorio a Vercel
+2. Yo agrego `DATABASE_URL`, `APP_ORIGIN` y variables de auth en Vercel
+3. Yo dejo `Build Command` como `npm run build`
+4. Yo dejo `Output Directory` como `dist`
+5. Yo valido `https://tu-dominio/api/health`
+6. Yo pruebo login y módulos principales
 
-1. `npm install`
-2. configura `DATABASE_URL` en `.env`
-3. `npm run prisma:generate`
-4. `npm run prisma:push`
-5. `npm run dev:full`
+## Documentación relacionada
 
-Frontend:
-- `http://localhost:5173`
-
-API:
-- `http://localhost:3000/api`
-
-### Selector manual del modo de datos
-
-En desarrollo puedes forzar el origen de datos desde consola:
-
-```js
-localStorage.setItem("morfo_data_mode", "api");
-localStorage.setItem("morfo_data_mode", "firebase");
-localStorage.removeItem("morfo_data_mode");
-```
-
-- `api`: obliga al frontend a usar el nuevo servidor
-- `firebase`: obliga al frontend a usar Firebase
-- sin valor: en `localhost` usa la API local automáticamente
-
-## PostgreSQL / Neon
-
-El backend ya está preparado para PostgreSQL. Si vas a usar Neon, pega su
-cadena de conexión en `DATABASE_URL`.
-
-Flujo recomendado:
-
-1. crea tu base en Neon
-2. copia la cadena de conexión Postgres
-3. pégala en `.env` como `DATABASE_URL`
-4. corre `npm run prisma:generate`
-5. corre `npm run prisma:push`
-
-## Preparación para deploy del backend
-
-Para dejar lista la API en un host como Render, Railway o similar, yo uso esta
-base:
-
-- comando de arranque: `npm run api:start`
-- health check: `/api/health`
-- variable obligatoria: `DATABASE_URL`
-- variable recomendada: `PORT`
-
-Antes de publicar, yo valido este flujo:
-
-1. `npm run prisma:generate`
-2. `npm run prisma:push`
-3. `npm run api:start`
-4. revisar `http://localhost:3000/api/health`
-
-## Siguiente etapa recomendada
-
-- publicar reglas definitivas de Firestore desde `firestore.rules`
-- fortalecer el panel de mantenimiento con exportacion y recalculos
-- pulir el PDF de cotizaciones con identidad visual final
-- preparar deploy estable en GitHub Pages
-
-## Firebase
-
-Morfo Hub ya queda preparado para trabajar con Firebase usando variables de
-entorno de Vite.
-
-### Variables necesarias
-
-- `VITE_FIREBASE_API_KEY`
-- `VITE_FIREBASE_AUTH_DOMAIN`
-- `VITE_FIREBASE_PROJECT_ID`
-- `VITE_FIREBASE_STORAGE_BUCKET`
-- `VITE_FIREBASE_MESSAGING_SENDER_ID`
-- `VITE_FIREBASE_APP_ID`
-- `VITE_ALLOWED_EMAILS`
-
-### Flujo actual integrado
-
-- `login.html` usa Firebase Auth con email y contrasena
-- `clients.html`, `income.html`, `expenses.html`, `quotes.html` y
-  `settings.html` leen y escriben en Firestore
-- si existen datos en `localStorage` y la coleccion remota aun esta vacia, se
-  migran automaticamente la primera vez
-
-### Documentacion relacionada
-
-- [Firebase Setup](docs/firebase-setup.md)
-- [Firebase Hosting](docs/firebase-hosting.md)
-- [GitHub Pages](docs/github-pages.md)
 - [Checklist de prueba completa](docs/qa-checklist.md)
-- [Mapa de modulos](docs/modules.md)
+- [Mapa de módulos](docs/modules.md)
+- [Rebuild ordenado](docs/rebuild-plan.md)

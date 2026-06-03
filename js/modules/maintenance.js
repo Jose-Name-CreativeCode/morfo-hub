@@ -446,7 +446,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderIssues();
       showToast(
         error?.message ||
-          "No se pudo cargar el diagnóstico. Revisa la conexión con la API o Firebase.",
+          "No se pudo cargar el diagnóstico. Revisa la conexión con la API.",
         { type: "error", duration: 5000 },
       );
     } finally {

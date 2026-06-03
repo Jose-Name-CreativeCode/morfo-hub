@@ -150,7 +150,7 @@ Yo sí mantendría:
 - `Express`
 - `Prisma`
 - `PostgreSQL / Neon`
-- `Firebase` solo para login por ahora
+- autenticación propia en backend
 
 Yo sí reorganizaría:
 

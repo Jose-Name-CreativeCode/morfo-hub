@@ -1,16 +1,5 @@
-import {
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
-import { apiRequest, shouldUseLocalApi } from "./api-client.js";
+import { apiRequest } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
-import { db, isFirebaseConfigured } from "./firebase-config.js";
-
-const SETTINGS_COLLECTION = "app";
-const SETTINGS_DOC_ID = "settings";
 
 const DEFAULT_SERVICE_TEMPLATES = {
   "Redes sociales": {
@@ -83,10 +72,6 @@ const DEFAULT_SETTINGS = {
   serviceTemplates: DEFAULT_SERVICE_TEMPLATES,
 };
 
-function getSettingsDocRef() {
-  return doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
-}
-
 function mergeSettingsWithDefaults(settings = {}) {
   const hasServiceTemplates = Object.prototype.hasOwnProperty.call(
     settings,
@@ -114,121 +99,18 @@ function mergeSettingsWithDefaults(settings = {}) {
   };
 }
 
-function getLegacySettings() {
+function getCachedSettings() {
   return mergeSettingsWithDefaults(getData(STORAGE_KEYS.SETTINGS, {}));
 }
 
-async function migrateLegacySettingsIfNeeded() {
-  const legacySettings = getData(STORAGE_KEYS.SETTINGS, {});
-
-  if (!legacySettings || Object.keys(legacySettings).length === 0) return;
-
-  const settingsRef = getSettingsDocRef();
-  const snapshot = await getDoc(settingsRef);
-
-  if (snapshot.exists()) return;
-
-  const merged = mergeSettingsWithDefaults(legacySettings);
-
-  await setDoc(settingsRef, {
-    ...merged,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-}
-
-export function isSettingsRemoteEnabled() {
-  return Boolean(isFirebaseConfigured && db);
-}
-
 export async function getSettingsRecord() {
-  if (shouldUseLocalApi()) {
-    const settings = mergeSettingsWithDefaults(await apiRequest("/settings"));
-    saveData(STORAGE_KEYS.SETTINGS, settings);
-    return settings;
-  }
-
-  if (!isSettingsRemoteEnabled()) {
-    return getLegacySettings();
-  }
-
-  await migrateLegacySettingsIfNeeded();
-
-  const snapshot = await getDoc(getSettingsDocRef());
-
-  if (!snapshot.exists()) {
-    const defaults = mergeSettingsWithDefaults();
-    saveData(STORAGE_KEYS.SETTINGS, defaults);
-    return defaults;
-  }
-
-  const settings = mergeSettingsWithDefaults(snapshot.data());
+  const settings = mergeSettingsWithDefaults(await apiRequest("/settings"));
   saveData(STORAGE_KEYS.SETTINGS, settings);
   return settings;
 }
 
 export async function saveSettingsRecord(partialSettings) {
-  if (shouldUseLocalApi()) {
-    const current = getLegacySettings();
-    const nextSettings = mergeSettingsWithDefaults({
-      ...current,
-      ...partialSettings,
-      agency: {
-        ...current.agency,
-        ...(partialSettings.agency || {}),
-      },
-      invoice: {
-        ...current.invoice,
-        ...(partialSettings.invoice || {}),
-      },
-      commercial: {
-        ...current.commercial,
-        ...(partialSettings.commercial || {}),
-      },
-      serviceTemplates:
-        partialSettings.serviceTemplates !== undefined
-          ? partialSettings.serviceTemplates
-          : current.serviceTemplates,
-    });
-
-    const savedSettings = mergeSettingsWithDefaults(
-      await apiRequest("/settings", {
-        method: "PUT",
-        body: JSON.stringify(nextSettings),
-      }),
-    );
-    saveData(STORAGE_KEYS.SETTINGS, savedSettings);
-    return savedSettings;
-  }
-
-  if (!isSettingsRemoteEnabled()) {
-    const current = getLegacySettings();
-    const nextSettings = mergeSettingsWithDefaults({
-      ...current,
-      ...partialSettings,
-      agency: {
-        ...current.agency,
-        ...(partialSettings.agency || {}),
-      },
-      invoice: {
-        ...current.invoice,
-        ...(partialSettings.invoice || {}),
-      },
-      commercial: {
-        ...current.commercial,
-        ...(partialSettings.commercial || {}),
-      },
-      serviceTemplates:
-        partialSettings.serviceTemplates !== undefined
-          ? partialSettings.serviceTemplates
-          : current.serviceTemplates,
-    });
-
-    saveData(STORAGE_KEYS.SETTINGS, nextSettings);
-    return nextSettings;
-  }
-
-  const current = await getSettingsRecord();
+  const current = getCachedSettings();
   const nextSettings = mergeSettingsWithDefaults({
     ...current,
     ...partialSettings,
@@ -250,27 +132,12 @@ export async function saveSettingsRecord(partialSettings) {
         : current.serviceTemplates,
   });
 
-  const settingsRef = getSettingsDocRef();
-  const snapshot = await getDoc(settingsRef);
-
-  const payload = {
-    agency: nextSettings.agency,
-    terms: nextSettings.terms,
-    invoice: nextSettings.invoice,
-    commercial: nextSettings.commercial,
-    serviceTemplates: nextSettings.serviceTemplates,
-    updatedAt: serverTimestamp(),
-  };
-
-  if (snapshot.exists()) {
-    await updateDoc(settingsRef, payload);
-  } else {
-    await setDoc(settingsRef, {
-      ...payload,
-      createdAt: serverTimestamp(),
-    });
-  }
-
-  saveData(STORAGE_KEYS.SETTINGS, nextSettings);
-  return nextSettings;
+  const savedSettings = mergeSettingsWithDefaults(
+    await apiRequest("/settings", {
+      method: "PUT",
+      body: JSON.stringify(nextSettings),
+    }),
+  );
+  saveData(STORAGE_KEYS.SETTINGS, savedSettings);
+  return savedSettings;
 }

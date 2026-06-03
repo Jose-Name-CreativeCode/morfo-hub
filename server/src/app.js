@@ -1,5 +1,7 @@
 import cors from "cors";
 import express from "express";
+import { requireSession } from "./lib/auth.js";
+import { authRouter } from "./routes/auth.js";
 import { healthRouter } from "./routes/health.js";
 import { clientsRouter } from "./routes/clients.js";
 import { incomeRouter } from "./routes/income.js";
@@ -12,7 +14,20 @@ export function createApp() {
 
   app.use(
     cors({
-      origin: true,
+      origin: (origin, callback) => {
+        const allowedOrigins = [
+          process.env.APP_ORIGIN,
+          "http://localhost:5173",
+          "http://127.0.0.1:5173",
+        ].filter(Boolean);
+
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(null, false);
+      },
       credentials: true,
     }),
   );
@@ -26,12 +41,13 @@ export function createApp() {
     });
   });
 
+  app.use("/api/auth", authRouter);
   app.use("/api/health", healthRouter);
-  app.use("/api/clients", clientsRouter);
-  app.use("/api/income", incomeRouter);
-  app.use("/api/expenses", expensesRouter);
-  app.use("/api/quotes", quotesRouter);
-  app.use("/api/settings", settingsRouter);
+  app.use("/api/clients", requireSession, clientsRouter);
+  app.use("/api/income", requireSession, incomeRouter);
+  app.use("/api/expenses", requireSession, expensesRouter);
+  app.use("/api/quotes", requireSession, quotesRouter);
+  app.use("/api/settings", requireSession, settingsRouter);
 
   app.use((error, _request, response, next) => {
     void next;

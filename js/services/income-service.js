@@ -1,17 +1,5 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
-import { apiRequest, shouldUseLocalApi } from "./api-client.js";
+import { apiRequest } from "./api-client.js";
 import { STORAGE_KEYS, getData, saveData } from "./storage.js";
-import { db, isFirebaseConfigured } from "./firebase-config.js";
-
-const COLLECTION_NAME = "income";
-const MIGRATED_KEY = `${STORAGE_KEYS.INCOME}_firestore_migrated`;
 
 function sortIncomes(incomes) {
   return [...incomes].sort((a, b) => {
@@ -24,205 +12,59 @@ function sortIncomes(incomes) {
   });
 }
 
-function mapIncomeFromDoc(snapshot) {
-  const data = snapshot.data();
-
-  return {
-    ...data,
-    id: snapshot.id,
-    legacyId: data.legacyId || data.id || "",
-    createdAtMs: data.createdAt?.toMillis?.() || 0,
-    updatedAtMs: data.updatedAt?.toMillis?.() || 0,
-  };
-}
-
-function getLegacyIncomes() {
+function getCachedIncomes() {
   return getData(STORAGE_KEYS.INCOME, []);
 }
 
-async function migrateLegacyIncomesIfNeeded() {
-  if (localStorage.getItem(MIGRATED_KEY) === "true") return;
-
-  const legacyIncomes = getLegacyIncomes();
-
-  if (!legacyIncomes.length) {
-    localStorage.setItem(MIGRATED_KEY, "true");
-    return;
-  }
-
-  const collectionRef = collection(db, COLLECTION_NAME);
-  const snapshot = await getDocs(collectionRef);
-
-  if (!snapshot.empty) {
-    localStorage.setItem(MIGRATED_KEY, "true");
-    return;
-  }
-
-  await Promise.all(
-    legacyIncomes.map((income) =>
-      setDoc(doc(db, COLLECTION_NAME, String(income.id)), {
-        ...income,
-        legacyId: income.id,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }),
-    ),
-  );
-
-  localStorage.setItem(MIGRATED_KEY, "true");
-}
-
-export function isIncomeRemoteEnabled() {
-  return Boolean(isFirebaseConfigured && db);
-}
-
 export async function getIncomeCollection() {
-  if (shouldUseLocalApi()) {
-    const incomes = await apiRequest("/income");
-    saveData(STORAGE_KEYS.INCOME, incomes);
-    return sortIncomes(incomes);
-  }
-
-  if (!isIncomeRemoteEnabled()) {
-    return sortIncomes(getLegacyIncomes());
-  }
-
-  await migrateLegacyIncomesIfNeeded();
-
-  const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-  const incomes = snapshot.docs.map(mapIncomeFromDoc);
-
+  const incomes = await apiRequest("/income");
   saveData(STORAGE_KEYS.INCOME, incomes);
   return sortIncomes(incomes);
 }
 
 export async function saveIncomeRecord(income) {
-  if (shouldUseLocalApi()) {
-    const savedIncome = income.id
-      ? await apiRequest(`/income/${income.id}`, {
-          method: "PUT",
-          body: JSON.stringify(income),
-        })
-      : await apiRequest("/income", {
-          method: "POST",
-          body: JSON.stringify(income),
-        });
+  const savedIncome = income.id
+    ? await apiRequest(`/income/${income.id}`, {
+        method: "PUT",
+        body: JSON.stringify(income),
+      })
+    : await apiRequest("/income", {
+        method: "POST",
+        body: JSON.stringify(income),
+      });
 
-    const incomes = getLegacyIncomes();
-    const nextIncomes = incomes.some(
-      (item) => String(item.id) === String(savedIncome.id),
-    )
-      ? incomes.map((item) =>
-          String(item.id) === String(savedIncome.id) ? savedIncome : item,
-        )
-      : [...incomes, savedIncome];
-    saveData(STORAGE_KEYS.INCOME, sortIncomes(nextIncomes));
-    return savedIncome;
-  }
+  const incomes = getCachedIncomes();
+  const nextIncomes = incomes.some(
+    (item) => String(item.id) === String(savedIncome.id),
+  )
+    ? incomes.map((item) =>
+        String(item.id) === String(savedIncome.id) ? savedIncome : item,
+      )
+    : [...incomes, savedIncome];
 
-  if (!isIncomeRemoteEnabled()) {
-    const incomes = getLegacyIncomes();
-
-    if (income.id) {
-      const exists = incomes.some(
-        (item) => String(item.id) === String(income.id),
-      );
-      const updated = exists
-        ? incomes.map((item) =>
-            String(item.id) === String(income.id) ? income : item,
-          )
-        : [...incomes, income];
-      saveData(STORAGE_KEYS.INCOME, sortIncomes(updated));
-      return income;
-    }
-
-    const newIncome = { ...income, id: Date.now() };
-    incomes.push(newIncome);
-    saveData(STORAGE_KEYS.INCOME, sortIncomes(incomes));
-    return newIncome;
-  }
-
-  const payload = {
-    ...income,
-    updatedAt: serverTimestamp(),
-  };
-
-  if (income.id) {
-    const rest = { ...payload };
-    delete rest.id;
-    await setDoc(doc(db, COLLECTION_NAME, String(income.id)), rest, {
-      merge: true,
-    });
-    const updatedIncome = { ...income };
-    const cachedIncomes = getLegacyIncomes();
-    const nextIncomes = cachedIncomes.some(
-      (item) => String(item.id) === String(income.id),
-    )
-      ? cachedIncomes.map((item) =>
-          String(item.id) === String(income.id) ? updatedIncome : item,
-        )
-      : [...cachedIncomes, updatedIncome];
-    saveData(STORAGE_KEYS.INCOME, sortIncomes(nextIncomes));
-    return updatedIncome;
-  }
-
-  const docRef = doc(collection(db, COLLECTION_NAME));
-  const rest = { ...payload };
-  delete rest.id;
-
-  await setDoc(docRef, {
-    ...rest,
-    createdAt: serverTimestamp(),
-  });
-
-  const newIncome = { ...income, id: docRef.id };
-  saveData(STORAGE_KEYS.INCOME, sortIncomes([...getLegacyIncomes(), newIncome]));
-  return newIncome;
+  saveData(STORAGE_KEYS.INCOME, sortIncomes(nextIncomes));
+  return savedIncome;
 }
 
 export async function replaceIncomeCollection(incomes) {
-  if (shouldUseLocalApi()) {
-    const savedIncomes = await Promise.all(
-      incomes.map((income) =>
-        saveIncomeRecord({
-          ...income,
-        }),
-      ),
-    );
-    saveData(STORAGE_KEYS.INCOME, savedIncomes);
-    return savedIncomes;
-  }
-
-  await Promise.all(incomes.map((income) => saveIncomeRecord(income)));
-  saveData(STORAGE_KEYS.INCOME, incomes);
-  return incomes;
+  const savedIncomes = await Promise.all(
+    incomes.map((income) =>
+      saveIncomeRecord({
+        ...income,
+      }),
+    ),
+  );
+  saveData(STORAGE_KEYS.INCOME, sortIncomes(savedIncomes));
+  return savedIncomes;
 }
 
 export async function deleteIncomeRecord(incomeId) {
-  if (shouldUseLocalApi()) {
-    await apiRequest(`/income/${incomeId}`, {
-      method: "DELETE",
-    });
-    const incomes = getLegacyIncomes().filter(
-      (income) => String(income.id) !== String(incomeId),
-    );
-    saveData(STORAGE_KEYS.INCOME, incomes);
-    return;
-  }
+  await apiRequest(`/income/${incomeId}`, {
+    method: "DELETE",
+  });
 
-  if (!isIncomeRemoteEnabled()) {
-    const incomes = getLegacyIncomes().filter(
-      (income) => String(income.id) !== String(incomeId),
-    );
-    saveData(STORAGE_KEYS.INCOME, incomes);
-    return;
-  }
-
-  await deleteDoc(doc(db, COLLECTION_NAME, String(incomeId)));
-
-  const cachedIncomes = getLegacyIncomes().filter(
+  const incomes = getCachedIncomes().filter(
     (income) => String(income.id) !== String(incomeId),
   );
-  saveData(STORAGE_KEYS.INCOME, sortIncomes(cachedIncomes));
-  localStorage.setItem(MIGRATED_KEY, "true");
+  saveData(STORAGE_KEYS.INCOME, incomes);
 }

@@ -195,8 +195,8 @@ T6 --> C2
 ## Ajuste con el estado actual del repositorio
 
 Hoy este repositorio contiene principalmente la capa de presentacion en
-`HTML + CSS + JavaScript`, con integraciones puntuales en Firebase para login y
-clientes. Por eso este diagrama debe leerse como una arquitectura objetivo de
+`HTML + CSS + JavaScript`, con una API propia en Express y persistencia en
+PostgreSQL. Por eso este diagrama debe leerse como una arquitectura objetivo de
 mediano plazo, no como una representacion exacta del codigo existente.
 
 ## Orden de implementacion sugerido

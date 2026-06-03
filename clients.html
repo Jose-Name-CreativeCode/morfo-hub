@@ -15,20 +15,46 @@
         <header class="header" data-app-header></header>
 
         <main class="page-content">
-          <h1 class="section-title">Gestión de clientes</h1>
-          <p class="section-subtitle">
-            Administra los clientes de Morfo, su información general y su
-            estatus.
-          </p>
+          <section class="hero-panel hero-panel-clients">
+            <div class="dashboard-kicker hero-kicker-clients">
+              Flujo comercial
+            </div>
+            <h1 class="section-title dashboard-title">Clientes</h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Yo empiezo aquí cuando necesito dar de alta a alguien nuevo y
+              dejar listo el siguiente paso comercial.
+            </p>
+          </section>
 
-          <section class="card section-spacing">
+          <section class="card dashboard-panel section-spacing">
+            <div class="quick-capture-grid">
+              <a href="operations.html" class="quick-capture-card">
+                <strong>Volver a nueva operación</strong>
+                <span>Yo regreso al centro de captura rápida.</span>
+              </a>
+              <a href="quotes.html?quick=1" class="quick-capture-card">
+                <strong>Ir a cotizaciones</strong>
+                <span>Yo continúo el flujo comercial desde aquí.</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card section-spacing form-shell panel-soft">
             <h2 class="section-title section-title-sm">Nuevo cliente</h2>
             <p class="form-helper-text">
               Modo rápido: con el nombre basta para guardarlo. El estatus y la
               factura se precargan para acelerar la captura.
             </p>
 
-            <form>
+            <div class="entry-banner">
+              <strong>Entrada rápida</strong>
+              <span>
+                Yo primero guardo nombre, estatus y factura. El resto lo puedo
+                completar cuando el cliente ya avance en el proceso.
+              </span>
+            </div>
+
+            <form class="entry-form-grid">
               <div class="form-group">
                 <label for="client-name">Nombre del cliente</label>
                 <input
@@ -84,7 +110,7 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group form-group-full">
                 <label for="client-notes">Observaciones</label>
                 <textarea
                   id="client-notes"
@@ -93,7 +119,11 @@
                 ></textarea>
               </div>
 
-              <button type="submit" class="btn-primary">Guardar cliente</button>
+              <div class="form-group form-group-full form-group-tight">
+                <button type="submit" class="btn-primary">
+                  Guardar cliente
+                </button>
+              </div>
             </form>
           </section>
 

@@ -15,20 +15,46 @@
         <header class="header" data-app-header></header>
 
         <main class="page-content">
-          <h1 class="section-title">Registro de gastos</h1>
-          <p class="section-subtitle">
-            Administra los gastos operativos de Morfo, su categoría, método de
-            pago y observaciones.
-          </p>
+          <section class="hero-panel hero-panel-expenses">
+            <div class="dashboard-kicker hero-kicker-expenses">
+              Control operativo
+            </div>
+            <h1 class="section-title dashboard-title">Gastos</h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Yo registro aquí lo que sale del negocio para que reportes,
+              utilidad y cierres mensuales tengan sentido real.
+            </p>
+          </section>
 
-          <section class="card section-spacing">
+          <section class="card dashboard-panel section-spacing">
+            <div class="quick-capture-grid">
+              <a href="operations.html" class="quick-capture-card">
+                <strong>Volver a nueva operación</strong>
+                <span>Yo regreso al acceso principal de captura.</span>
+              </a>
+              <a href="reports.html" class="quick-capture-card">
+                <strong>Ir a reportes</strong>
+                <span>Yo reviso cómo pega este gasto en el periodo.</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card section-spacing form-shell panel-soft">
             <h2 class="section-title section-title-sm">Nuevo gasto</h2>
             <p class="form-helper-text">
               Modo rápido: la fecha y algunos valores frecuentes se precargan
               para capturar gastos operativos en menos pasos.
             </p>
 
-            <form>
+            <div class="entry-banner">
+              <strong>Entrada rápida</strong>
+              <span>
+                Yo capturo el gasto con concepto, categoría, monto y método de
+                pago. Los detalles secundarios quedan después.
+              </span>
+            </div>
+
+            <form class="entry-form-grid">
               <div class="form-group">
                 <label for="expense-date">Fecha</label>
                 <input type="date" id="expense-date" />
@@ -91,7 +117,7 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group form-group-full">
                 <label for="expense-notes">Observaciones</label>
                 <textarea
                   id="expense-notes"
@@ -100,7 +126,9 @@
                 ></textarea>
               </div>
 
-              <button type="submit" class="btn-primary">Guardar gasto</button>
+              <div class="form-group form-group-full form-group-tight">
+                <button type="submit" class="btn-primary">Guardar gasto</button>
+              </div>
             </form>
           </section>
 
