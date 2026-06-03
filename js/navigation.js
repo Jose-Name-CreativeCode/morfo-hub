@@ -1,7 +1,12 @@
 const NAV_ITEMS = [
-  { key: "dashboard", label: "Dashboard", href: "dashboard.html" },
+  { key: "dashboard", label: "Inicio", href: "dashboard.html" },
+  {
+    key: "operations",
+    label: "Nueva operación",
+    href: "operations.html",
+  },
   { key: "clients", label: "Clientes", href: "clients.html" },
-  { key: "income", label: "Ingresos", href: "income.html" },
+  { key: "income", label: "Cobros e ingresos", href: "income.html" },
   { key: "expenses", label: "Gastos", href: "expenses.html" },
   { key: "quotes", label: "Cotizaciones", href: "quotes.html" },
   { key: "reports", label: "Reportes", href: "reports.html" },

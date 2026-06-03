@@ -412,6 +412,13 @@ img {
     linear-gradient(135deg, rgba(28, 29, 55, 0.96), rgba(11, 17, 32, 0.98));
 }
 
+.hero-panel-operations {
+  background:
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.18), transparent 26%),
+    radial-gradient(circle at top right, rgba(86, 180, 179, 0.18), transparent 26%),
+    linear-gradient(135deg, rgba(43, 28, 19, 0.96), rgba(11, 17, 32, 0.98));
+}
+
 .hero-panel-subtitle {
   max-width: 700px;
   margin-bottom: 0;
@@ -426,6 +433,11 @@ img {
 .hero-kicker-quotes::before {
   background: #8b5cf6;
   box-shadow: 0 0 18px rgba(139, 92, 246, 0.75);
+}
+
+.hero-kicker-operations::before {
+  background: #f97316;
+  box-shadow: 0 0 18px rgba(249, 115, 22, 0.72);
 }
 
 .btn-link {
@@ -450,6 +462,63 @@ img {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
+}
+
+.operations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.operation-card {
+  border-color: rgba(249, 115, 22, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(22, 18, 15, 0.98));
+}
+
+.operation-card-step {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 14px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.14);
+  color: #ffd3b5;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.operation-card-text {
+  color: #c7d4e7;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+.operation-card-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 14px;
+}
+
+.workflow-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(86, 180, 179, 0.14);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.workflow-item span {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .quick-capture-card {
