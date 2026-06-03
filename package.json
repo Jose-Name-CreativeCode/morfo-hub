@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Sistema interno de gestion para Morfo Hub.",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "vite",
     "api:dev": "node --watch server/index.js",
     "api:start": "node server/index.js",
