@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const reportForm = document.querySelector("form");
   const exportPdfBtn = document.getElementById("exportReportPdfBtn");
+  const exportExcelBtn = document.getElementById("exportReportExcelBtn");
   const reportClientSelect = document.getElementById("report-client");
   const reportServiceSelect = document.getElementById("report-service");
   const reportPaymentStatusSelect = document.getElementById(
@@ -589,6 +590,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     return labels[reportType] || "General";
   }
 
+  function getExcelAccentColor(reportType) {
+    const colors = {
+      general: "FF1F3B73",
+      income: "FF166534",
+      expenses: "FFB91C1C",
+      clients: "FF4F46E5",
+      quotes: "FF9A3412",
+    };
+
+    return colors[reportType] || colors.general;
+  }
+
   function getMonthLabel(month) {
     const months = {
       "01": "Enero",
@@ -1037,6 +1050,225 @@ document.addEventListener("DOMContentLoaded", async () => {
     doc.save(`morfo-reporte-${fileType}-${fileMonth}-${fileYear}.pdf`);
   }
 
+  async function exportCurrentReportToExcel() {
+    if (typeof ExcelJS === "undefined" || typeof saveAs === "undefined") {
+      showToast("Yo no encontré las librerías para exportar Excel.", {
+        type: "error",
+      });
+      return;
+    }
+
+    const {
+      month,
+      year,
+      reportType,
+      client,
+      serviceType,
+      paymentStatus,
+      totalIncome,
+      totalExpenses,
+      estimatedUtility,
+      pendingAmount,
+      quotes,
+      selectedRows,
+    } = currentReportState;
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Morfo Hub";
+    workbook.lastModifiedBy = "Morfo Hub";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const worksheet = workbook.addWorksheet("Reporte", {
+      views: [{ state: "frozen", ySplit: 6 }],
+      properties: { defaultRowHeight: 22 },
+    });
+
+    const accentColor = getExcelAccentColor(reportType);
+    const softAccent =
+      reportType === "expenses"
+        ? "FFFEE2E2"
+        : reportType === "income"
+          ? "FFDCFCE7"
+          : reportType === "quotes"
+            ? "FFFFEDD5"
+            : reportType === "clients"
+              ? "FFEEF2FF"
+              : "FFE0E7FF";
+
+    worksheet.mergeCells("A1:E1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = "Morfo Hub | Reporte ejecutivo";
+    titleCell.font = { size: 20, bold: true, color: { argb: "FFFFFFFF" } };
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    titleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: accentColor },
+    };
+    worksheet.getRow(1).height = 30;
+
+    worksheet.mergeCells("A2:E2");
+    const subtitleCell = worksheet.getCell("A2");
+    subtitleCell.value = `Tipo: ${getReportLabel(reportType)} | Generado: ${new Date().toLocaleString("es-MX")}`;
+    subtitleCell.font = { italic: true, color: { argb: "FF334155" } };
+    subtitleCell.alignment = { horizontal: "center", vertical: "middle" };
+    subtitleCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFF8FAFC" },
+    };
+
+    const filters = [
+      ["Mes", month ? getMonthLabel(month) : "Todos"],
+      ["Año", year || "Todos"],
+      ["Cliente", client || "Todos"],
+      ["Servicio", serviceType || "Todos"],
+      ["Pago", paymentStatus || "Todos"],
+    ];
+
+    worksheet.getCell("A4").value = "Filtros aplicados";
+    worksheet.getCell("A4").font = { bold: true, color: { argb: accentColor } };
+
+    filters.forEach(([label, value], index) => {
+      const row = 5 + index;
+      worksheet.getCell(`A${row}`).value = label;
+      worksheet.getCell(`A${row}`).font = { bold: true };
+      worksheet.getCell(`B${row}`).value = value;
+    });
+
+    const summaryColumns = [
+      { cell: "D4", label: "Ingresos", value: totalIncome },
+      { cell: "E4", label: "Gastos", value: totalExpenses },
+      { cell: "D6", label: "Utilidad", value: estimatedUtility },
+      { cell: "E6", label: "Pendiente", value: pendingAmount },
+      { cell: "D8", label: "Cotizaciones", value: quotes.length, isCount: true },
+    ];
+
+    summaryColumns.forEach(({ cell, label, value, isCount }) => {
+      const valueCell = worksheet.getCell(cell);
+      const labelCell = worksheet.getCell(
+        `${cell.charAt(0)}${Number(cell.slice(1)) - 1}`,
+      );
+
+      labelCell.value = label;
+      labelCell.font = { bold: true, color: { argb: accentColor } };
+      labelCell.alignment = { horizontal: "center" };
+
+      valueCell.value = isCount ? Number(value || 0) : Number(value || 0);
+      valueCell.font = { bold: true, size: 13 };
+      valueCell.alignment = { horizontal: "center" };
+      valueCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: softAccent },
+      };
+      valueCell.border = {
+        top: { style: "thin", color: { argb: "FFCBD5E1" } },
+        left: { style: "thin", color: { argb: "FFCBD5E1" } },
+        bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
+        right: { style: "thin", color: { argb: "FFCBD5E1" } },
+      };
+
+      if (!isCount) {
+        valueCell.numFmt = '"$"#,##0.00';
+      }
+    });
+
+    const tableStartRow = 12;
+    const headers = ["Concepto", "Categoría", "Fecha", "Monto", "Tipo"];
+    const headerRow = worksheet.getRow(tableStartRow);
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1);
+      cell.value = header;
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: accentColor },
+      };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFCBD5E1" } },
+        left: { style: "thin", color: { argb: "FFCBD5E1" } },
+        bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
+        right: { style: "thin", color: { argb: "FFCBD5E1" } },
+      };
+    });
+    headerRow.height = 22;
+
+    if (!selectedRows.length) {
+      const emptyRow = worksheet.getRow(tableStartRow + 1);
+      emptyRow.getCell(1).value = "No hay datos para este filtro.";
+      worksheet.mergeCells(`A${tableStartRow + 1}:E${tableStartRow + 1}`);
+      emptyRow.getCell(1).alignment = { horizontal: "center" };
+    } else {
+      selectedRows.forEach((row, index) => {
+        const excelRow = worksheet.getRow(tableStartRow + 1 + index);
+        excelRow.values = [row.concept, row.category, row.date, row.amount, row.type];
+
+        excelRow.eachCell((cell, colNumber) => {
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: colNumber === 4 ? "right" : "left",
+            wrapText: true,
+          };
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFE2E8F0" } },
+            left: { style: "thin", color: { argb: "FFE2E8F0" } },
+            bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+            right: { style: "thin", color: { argb: "FFE2E8F0" } },
+          };
+        });
+
+        if (index % 2 === 0) {
+          excelRow.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFF8FAFC" },
+            };
+          });
+        }
+      });
+    }
+
+    worksheet.columns = [
+      { width: 34 },
+      { width: 24 },
+      { width: 16 },
+      { width: 18 },
+      { width: 18 },
+    ];
+
+    worksheet.autoFilter = {
+      from: `A${tableStartRow}`,
+      to: `E${tableStartRow}`,
+    };
+
+    const notesRow = tableStartRow + Math.max(selectedRows.length, 1) + 3;
+    worksheet.mergeCells(`A${notesRow}:E${notesRow}`);
+    worksheet.getCell(`A${notesRow}`).value =
+      "Notas: Las cotizaciones aprobadas no cuentan como ingreso cobrado hasta registrar pago real. El pendiente combina ingresos parciales y cotizaciones por cobrar.";
+    worksheet.getCell(`A${notesRow}`).font = {
+      italic: true,
+      color: { argb: "FF475569" },
+    };
+    worksheet.getCell(`A${notesRow}`).alignment = { wrapText: true };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const fileMonth = month || "todos";
+    const fileYear = year || "todos";
+    const fileType = reportType || "general";
+
+    saveAs(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `morfo-reporte-${fileType}-${fileMonth}-${fileYear}.xlsx`,
+    );
+  }
+
   if (reportForm) {
     reportForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1058,6 +1290,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (exportPdfBtn) {
     exportPdfBtn.addEventListener("click", exportCurrentReportToPDF);
+  }
+
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener("click", exportCurrentReportToExcel);
   }
 
   try {
