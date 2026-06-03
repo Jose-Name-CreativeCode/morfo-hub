@@ -65,7 +65,7 @@ function getDisplayName(user) {
   }
 
   if (email.startsWith("verogr")) {
-    return "Verogr";
+    return "Vero";
   }
 
   if (!email) return "";
