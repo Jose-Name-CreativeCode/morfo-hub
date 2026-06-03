@@ -1321,16 +1321,132 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function updateStatus(id, newStatus) {
-    const quotes = getQuotes().map((quote) =>
-      String(quote.id) === String(id)
-        ? { ...quote, status: newStatus }
-        : quote,
-    );
+    const quotes = getQuotes().map((quote) => {
+      if (String(quote.id) !== String(id)) {
+        return quote;
+      }
+
+      return {
+        ...quote,
+        status: newStatus,
+      };
+    });
 
     saveQuotes(quotes);
+
+    if (newStatus === "aprobada") {
+      await ensurePendingIncomeForQuote(id, { silent: true });
+    }
+
     await persistQuotes();
     renderQuotes();
     openManageModal(id);
+  }
+
+  async function ensurePendingIncomeForQuote(
+    quoteId,
+    { silent = false } = {},
+  ) {
+    const quote = getQuoteById(quoteId);
+    if (!quote) {
+      if (!silent) {
+        showToast("No se encontró la cotización.", { type: "error" });
+      }
+      return false;
+    }
+
+    ensureIncomeIds();
+    let incomes = getIncomes();
+    const existingIncome = incomes.find(
+      (income) => String(income.quoteId) === String(quoteId),
+    );
+    const quoteTotal = Number(quote.total || 0);
+
+    if (existingIncome) {
+      const paidAmount = Number(existingIncome.paidAmount || 0);
+      const remainingAmount = Number(
+        existingIncome.remainingAmount !== undefined &&
+          existingIncome.remainingAmount !== null
+          ? existingIncome.remainingAmount
+          : Math.max(quoteTotal - paidAmount, 0),
+      );
+      const normalizedStatus = normalizeIncomePaymentStatus(
+        existingIncome.paymentStatus,
+      );
+
+      const nextStatus =
+        paidAmount <= 0 && remainingAmount > 0
+          ? "Pendiente"
+          : existingIncome.paymentStatus;
+      const nextMethod = existingIncome.paymentMethod || "Transferencia";
+      const nextNotes =
+        existingIncome.notes ||
+        `Ingreso generado desde la cotización ${quote.publicId}.`;
+
+      const syncedIncome = await saveIncomeRecord({
+        ...existingIncome,
+        client: quote.client,
+        date: existingIncome.date || quote.date || getTodayISO(),
+        concept: `${quote.title} (${quote.publicId})`,
+        totalAmount: quoteTotal,
+        paidAmount,
+        remainingAmount:
+          normalizedStatus === "pagado" ? 0 : Math.max(remainingAmount, 0),
+        paymentStatus: nextStatus,
+        paymentMethod: nextMethod,
+        invoiceRequired: quote.invoiceRequired,
+        notes: nextNotes,
+        quotePublicId: quote.publicId,
+      });
+
+      incomes = incomes.map((income) =>
+        String(income.id) === String(syncedIncome.id) ? syncedIncome : income,
+      );
+      saveIncomes(incomes);
+      syncQuotesWithIncomes();
+      await persistIncomes();
+
+      if (!silent) {
+        showToast(
+          `Ingreso ${syncedIncome.publicId || syncedIncome.id} sincronizado con la cotización ${quote.publicId}.`,
+          { type: "success", duration: 3600 },
+        );
+      }
+
+      return true;
+    }
+
+    const nextIncomeId = buildSequentialId("ING", incomes, "publicId");
+    const pendingIncome = await saveIncomeRecord({
+      id: Date.now(),
+      publicId: nextIncomeId,
+      quoteId: quote.id,
+      quotePublicId: quote.publicId,
+      client: quote.client,
+      date: quote.date || getTodayISO(),
+      concept: `${quote.title} (${quote.publicId})`,
+      totalAmount: quoteTotal,
+      paidAmount: 0,
+      remainingAmount: quoteTotal,
+      paymentStatus: "Pendiente",
+      paymentMethod: quote.paymentMethod || "Transferencia",
+      invoiceRequired: quote.invoiceRequired,
+      notes: `Ingreso pendiente generado desde la cotización ${quote.publicId}.`,
+      paymentHistory: [],
+    });
+
+    saveIncomes([...incomes, pendingIncome]);
+    syncQuotesWithIncomes();
+    await persistIncomes();
+
+    if (!silent) {
+      showToast(
+        `Ingreso pendiente ${nextIncomeId} creado para la cotización ${quote.publicId}.`,
+        { type: "success", duration: 3600 },
+      );
+    }
+
+    return true;
   }
 
   function buildPaymentNote({
@@ -1826,6 +1942,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (action === "status") {
           void updateStatus(activeManageQuoteId, value);
+          return;
+        }
+
+        if (action === "sync-income") {
+          void (async () => {
+            await ensurePendingIncomeForQuote(activeManageQuoteId);
+            renderQuotes();
+            openManageModal(activeManageQuoteId);
+          })();
           return;
         }
 
