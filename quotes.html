@@ -55,6 +55,16 @@
               </span>
             </div>
 
+            <div class="smart-actions-panel">
+              <div class="smart-actions-copy">
+                <strong>Guardado inteligente</strong>
+                <span>
+                  Yo decido desde aquí si la cotización se queda como borrador,
+                  si pasa a seguimiento o si ya debe reflejarse como ingreso.
+                </span>
+              </div>
+            </div>
+
             <form class="quote-form-grid">
               <div class="form-group">
                 <label for="quote-client">Cliente</label>
@@ -186,6 +196,20 @@
                   rows="14"
                   placeholder="Agrega condiciones u observaciones solo si aplica..."
                 ></textarea>
+              </div>
+
+              <div class="form-group form-group-full">
+                <label for="quote-save-intent">Al guardar</label>
+                <select id="quote-save-intent">
+                  <option value="draft">Solo guardar como borrador</option>
+                  <option value="sent">Guardar y dejar como enviada</option>
+                  <option value="approved">
+                    Guardar y crear ingreso pendiente
+                  </option>
+                  <option value="paid">
+                    Guardar y registrar como pagada
+                  </option>
+                </select>
               </div>
 
               <div class="form-group form-group-full form-group-tight">

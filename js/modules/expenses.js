@@ -65,6 +65,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-invoice").value = "no";
   }
 
+  function applyExpensePreset(preset) {
+    const methodSelect = document.getElementById("expense-payment-method");
+    const invoiceSelect = document.getElementById("expense-invoice");
+
+    if (preset === "card-basic") {
+      methodSelect.value = "Tarjeta";
+      invoiceSelect.value = "no";
+      return;
+    }
+
+    if (preset === "bank-invoice") {
+      methodSelect.value = "Transferencia";
+      invoiceSelect.value = "yes";
+      return;
+    }
+
+    if (preset === "cash-basic") {
+      methodSelect.value = "Efectivo";
+      invoiceSelect.value = "no";
+    }
+  }
+
   async function refreshExpensesCollection() {
     currentExpenses = await getExpensesCollection();
   }
@@ -698,6 +720,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (exportExcelBtn) {
     exportExcelBtn.addEventListener("click", exportFilteredExpensesToExcel);
   }
+
+  document.querySelectorAll("[data-expense-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      applyExpensePreset(button.dataset.expensePreset);
+      showToast("Yo apliqué un atajo de captura para este gasto.", {
+        type: "info",
+        duration: 2200,
+      });
+    });
+  });
 
   detailCloseButton.addEventListener("click", closeExpenseDetail);
   detailOverlay.addEventListener("click", closeExpenseDetail);

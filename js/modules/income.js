@@ -78,6 +78,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("income-paid-amount").value = "0";
   }
 
+  function applyIncomePreset(preset) {
+    const paymentStatusSelect = document.getElementById("income-payment-status");
+    const paymentMethodSelect = document.getElementById("income-payment-method");
+    const invoiceSelect = document.getElementById("income-invoice");
+    const totalAmountInput = document.getElementById("income-amount");
+    const paidAmountInput = document.getElementById("income-paid-amount");
+    const totalAmount = Number(totalAmountInput.value || 0);
+
+    if (preset === "pending") {
+      paymentStatusSelect.value = "Pendiente";
+      paymentMethodSelect.value = "Transferencia";
+      invoiceSelect.value = "no";
+      paidAmountInput.value = "0";
+      return;
+    }
+
+    if (preset === "partial") {
+      paymentStatusSelect.value = "Pago parcial";
+      paymentMethodSelect.value = "Transferencia";
+      invoiceSelect.value = "no";
+      paidAmountInput.value =
+        totalAmount > 0 ? Number(totalAmount / 2).toFixed(2) : "";
+      return;
+    }
+
+    if (preset === "paid") {
+      paymentStatusSelect.value = "Pagado";
+      paymentMethodSelect.value = "Transferencia";
+      invoiceSelect.value = "no";
+      paidAmountInput.value = totalAmount > 0 ? totalAmount.toFixed(2) : "";
+    }
+  }
+
   function normalizeDuplicateValue(value) {
     return String(value ?? "").trim().toLowerCase();
   }
@@ -916,6 +949,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (exportExcelBtn) {
     exportExcelBtn.addEventListener("click", exportFilteredIncomesToExcel);
   }
+
+  document.querySelectorAll("[data-income-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      applyIncomePreset(button.dataset.incomePreset);
+      showToast("Yo apliqué un atajo de captura para este ingreso.", {
+        type: "info",
+        duration: 2200,
+      });
+    });
+  });
 
   window.addEventListener("focus", async () => {
     currentClients = await getClientsCollection();

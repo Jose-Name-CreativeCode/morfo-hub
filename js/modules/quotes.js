@@ -510,6 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("quote-iva").value = "";
     document.getElementById("quote-invoice-total").value = "";
     document.getElementById("quote-total").value = "";
+    document.getElementById("quote-save-intent").value = "draft";
     syncAdSpendField();
 
     document.getElementById("quote-notes").value = "";
@@ -535,6 +536,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (normalized === "rechazada") return "rechazada";
     if (normalized === "archivada") return "archivada";
     return "borrador";
+  }
+
+  function getSaveIntentMessage(intent) {
+    if (intent === "sent") {
+      return "Cotización guardada y marcada como enviada.";
+    }
+
+    if (intent === "approved") {
+      return "Cotización guardada y convertida en ingreso pendiente.";
+    }
+
+    if (intent === "paid") {
+      return "Cotización guardada y registrada como pagada.";
+    }
+
+    return "Cotización guardada correctamente.";
   }
 
   function getQuoteFunnelStage(quote) {
@@ -1245,6 +1262,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         Number(quote.iva || 0);
     document.getElementById("quote-total").value = quote.total;
     document.getElementById("quote-notes").value = quote.notes || "";
+    document.getElementById("quote-save-intent").value =
+      normalizeStatus(quote.paymentStatus, "") === "pagada total"
+        ? "paid"
+        : normalizeStatus(quote.status, "borrador") === "aprobada"
+          ? "approved"
+          : normalizeStatus(quote.status, "borrador") === "enviada"
+            ? "sent"
+            : "draft";
 
     editingQuoteId = quote.id;
     submitButton.textContent = "Actualizar cotización";
@@ -2426,6 +2451,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       Number(document.getElementById("quote-invoice-total").value) || 0;
     const total = Number(document.getElementById("quote-total").value) || 0;
     const notes = document.getElementById("quote-notes").value.trim();
+    const saveIntent = document.getElementById("quote-save-intent").value;
 
     if (
       !client ||
@@ -2475,6 +2501,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           total,
           notes,
           publicId: currentQuote?.publicId,
+          status:
+            saveIntent === "paid" || saveIntent === "approved"
+              ? "aprobada"
+              : saveIntent === "sent"
+                ? "enviada"
+                : currentQuote?.status || "borrador",
           paymentHistory: currentQuote?.paymentHistory || [],
         };
 
@@ -2483,6 +2515,23 @@ document.addEventListener("DOMContentLoaded", async () => {
           String(quote.id) === String(editingQuoteId) ? savedQuote : quote,
         );
         saveQuotes(quotes);
+
+        if (saveIntent === "approved") {
+          await ensurePendingIncomeForQuote(savedQuote.id, { silent: true });
+        }
+
+        if (saveIntent === "paid") {
+          await registerPayment({
+            quoteId: savedQuote.id,
+            paymentType: "total",
+            paymentDate: savedQuote.date || getTodayISO(),
+            amountPaid: Number(savedQuote.total || 0),
+            paymentMethod: savedQuote.paymentMethod || "Transferencia",
+            dueDate: "",
+            paymentNotes:
+              "Pago registrado automáticamente al actualizar la cotización.",
+          });
+        }
       } else {
         const existingQuotes = getQuotes();
         const newQuote = {
@@ -2503,7 +2552,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           invoiceTotal,
           total,
           notes,
-          status: "borrador",
+          status:
+            saveIntent === "paid" || saveIntent === "approved"
+              ? "aprobada"
+              : saveIntent === "sent"
+                ? "enviada"
+                : "borrador",
           paymentStatus: "no pagada",
           totalPaid: 0,
           remainingAmount: total,
@@ -2511,6 +2565,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
         const savedQuote = await saveQuoteRecord(newQuote);
         saveQuotes([...existingQuotes, savedQuote]);
+
+        if (saveIntent === "approved") {
+          await ensurePendingIncomeForQuote(savedQuote.id, { silent: true });
+        }
+
+        if (saveIntent === "paid") {
+          await registerPayment({
+            quoteId: savedQuote.id,
+            paymentType: "total",
+            paymentDate: savedQuote.date || getTodayISO(),
+            amountPaid: Number(savedQuote.total || 0),
+            paymentMethod: "Transferencia",
+            dueDate: "",
+            paymentNotes:
+              "Pago registrado automáticamente al crear la cotización.",
+          });
+        }
       }
 
       const paymentSyncChanged = syncQuotesWithIncomes();
@@ -2521,7 +2592,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderQuotes();
       resetForm();
       loadFilterOptions();
-      showToast("Cotización guardada correctamente.", { type: "success" });
+      showToast(getSaveIntentMessage(saveIntent), { type: "success" });
     } finally {
       setButtonLoading(submitButton, false);
     }
