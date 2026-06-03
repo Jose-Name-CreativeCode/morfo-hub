@@ -28,6 +28,11 @@
 
           <section class="card panel-soft form-shell section-spacing">
             <h2 class="section-title section-title-sm">Nueva cotización</h2>
+            <p class="form-helper-text">
+              Modo rápido: la fecha y opciones comerciales frecuentes se
+              precargan. Si llegas desde un cliente, también se selecciona
+              automáticamente.
+            </p>
 
             <form class="quote-form-grid">
               <div class="form-group">
@@ -132,7 +137,7 @@
               </div>
 
               <div class="form-group">
-                <label for="quote-invoice-total">Total facturable</label>
+                <label for="quote-invoice-total">Total</label>
                 <input
                   type="number"
                   id="quote-invoice-total"
@@ -155,32 +160,11 @@
 
               <div class="form-group form-group-full">
                 <label for="quote-notes">Condiciones / observaciones</label>
-                <textarea id="quote-notes" rows="14">
-Nota:
-La inversión en pauta publicitaria se destina directamente a la plataforma Meta
-(Facebook e Instagram). Este monto no forma parte del servicio de gestión.
-
-Siguiente paso:
-Una vez aprobada la propuesta, se inicia la configuración de campañas y lanzamiento
-de anuncios en un plazo aproximado de 3 a 5 días hábiles.
-
-Información adicional:
-Se requiere un anticipo del 50% para comenzar con el proyecto, y el saldo restante se
-finiquitará contra la entrega total.
-
-En caso de que se necesiten correcciones, se agendarán las juntas necesarias con el
-cliente para asegurar que se logre el resultado final deseado.
-
-Los trabajos adicionales fuera del alcance de esta cotización se negociarán por
-separado.
-
-Si se requiere factura, el IVA se calcula únicamente sobre el servicio de gestión.
-La pauta publicitaria se entrega a la plataforma correspondiente y no forma parte
-del servicio de Morfo Studio.
-
-¡Muchas gracias!
-“Morfo Studio”</textarea
-                >
+                <textarea
+                  id="quote-notes"
+                  rows="14"
+                  placeholder="Agrega condiciones u observaciones solo si aplica..."
+                ></textarea>
               </div>
 
               <div class="form-group form-group-full form-group-tight">

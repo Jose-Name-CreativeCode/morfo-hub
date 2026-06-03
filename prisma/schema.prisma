@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  name            String
+  contact         String?
+  email           String?
+  phone           String?
+  status          String?
+  invoiceRequired Boolean  @default(false)
+  notes           String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AppSettings {
+  id                    String   @id
+  agencyName            String   @default("Morfo Studio")
+  agencyEmail           String   @default("")
+  agencyPhone           String   @default("")
+  agencyAddress         String   @default("")
+  agencyWebsite         String   @default("")
+  terms                 String   @default("")
+  invoiceTax            Float    @default(16)
+  invoiceNote           String   @default("")
+  advancePercent        Int      @default(50)
+  paymentMethodsJson    String   @default("[\"Transferencia\",\"Efectivo\",\"Tarjeta\",\"Otro\"]")
+  bankDetails           String   @default("")
+  bankDetailsInvoice    String   @default("Banco: BBVA\nTitular: Morfo Studio S.A. de C.V.\nCLABE: 012345678901234567\nRFC: MOR000000XXX\nConcepto: Nombre del cliente + servicio")
+  bankDetailsNoInvoice  String   @default("Banco: Nu\nTitular: Nombre Apellido\nCLABE: 987654321098765432\nConcepto: Nombre del cliente + servicio")
+  legalNote             String   @default("")
+  serviceTemplatesJson  String   @default("{}")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}

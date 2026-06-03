@@ -6,11 +6,16 @@
   "description": "Sistema interno de gestion para Morfo Hub.",
   "scripts": {
     "dev": "vite",
+    "api:dev": "node --watch server/index.js",
+    "api:start": "node server/index.js",
+    "dev:full": "npm run api:dev",
     "build": "vite build",
     "build:github-pages": "VITE_BASE_PATH=/morfo-hub/ vite build",
     "preview": "vite preview",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
     "deploy:firebase": "npm run build && firebase deploy",
+    "db:setup": "node scripts/setup-sqlite-db.mjs",
+    "prisma:generate": "prisma generate",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
@@ -27,6 +32,13 @@
     "vite": "^7.1.4"
   },
   "dependencies": {
-    "firebase": "^12.11.0"
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "firebase": "^12.11.0",
+    "prisma": "^7.8.0"
   }
 }

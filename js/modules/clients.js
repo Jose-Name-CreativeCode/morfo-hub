@@ -55,10 +55,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   let searchTerm = "";
   let statusFilter = "";
 
+  function applyClientFormDefaults() {
+    document.getElementById("client-status").value = "Prospecto";
+    document.getElementById("client-invoice").value = "no";
+  }
+
   function resetForm() {
     clientForm.reset();
     editingClientId = null;
     submitButton.textContent = "Guardar cliente";
+    applyClientFormDefaults();
+  }
+
+  function applyClientFormFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("name");
+    const contact = params.get("contact");
+    const email = params.get("email");
+    const phone = params.get("phone");
+    const status = params.get("status");
+    const invoice = params.get("invoice");
+    const isQuickMode = params.get("quick") === "1";
+
+    if (name) document.getElementById("client-name").value = name;
+    if (contact) document.getElementById("client-contact").value = contact;
+    if (email) document.getElementById("client-email").value = email;
+    if (phone) document.getElementById("client-phone").value = phone;
+    if (status) document.getElementById("client-status").value = status;
+    if (invoice === "yes" || invoice === "no") {
+      document.getElementById("client-invoice").value = invoice;
+    }
+
+    if (isQuickMode) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.getElementById("client-name").focus();
+    }
   }
 
   function createCell(text) {
@@ -438,8 +469,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const invoiceRequired = document.getElementById("client-invoice").value;
     const notes = document.getElementById("client-notes").value.trim();
 
-    if (!name || !contact || !email || !phone || !status || !invoiceRequired) {
-      showToast("Por favor, completa todos los campos obligatorios.", {
+    if (!name) {
+      showToast("Agrega al menos el nombre del cliente.", {
         type: "error",
       });
       return;
@@ -508,6 +539,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
+    resetForm();
+    applyClientFormFromUrl();
     await renderClients();
   } finally {
     setPageLoading(false);

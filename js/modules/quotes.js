@@ -202,11 +202,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return settings.agency?.address || "";
   }
 
-  function getDefaultTerms() {
-    const settings = getSettings();
-    return settings.terms || "";
-  }
-
   function getDefaultInvoiceTax() {
     const settings = getSettings();
     return Number(settings.invoice?.tax || IVA_RATE * 100);
@@ -270,17 +265,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     serviceTypeSelect.value = selectedValue || "";
-  }
-
-  function applyDefaultTermsToQuoteForm(force = false) {
-    const notesField = document.getElementById("quote-notes");
-    if (!notesField) return;
-
-    const defaultTerms = getDefaultTerms();
-
-    if (force || !notesField.value.trim()) {
-      notesField.value = defaultTerms;
-    }
   }
 
   function applyServiceTemplateToQuoteForm() {
@@ -429,23 +413,51 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applyClientFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const clientName = params.get("client");
-    if (!clientName) return;
+    const serviceType = params.get("serviceType");
+    const title = params.get("title");
+    const amount = params.get("amount");
+    const invoice = params.get("invoice");
+    const adRequired = params.get("adRequired");
+    const isQuickMode = params.get("quick") === "1";
 
-    const hasClientOption = [...clientSelect.options].some(
-      (option) => option.value === clientName,
-    );
-    if (!hasClientOption) return;
+    if (clientName) {
+      const hasClientOption = [...clientSelect.options].some(
+        (option) => option.value === clientName,
+      );
 
-    clientSelect.value = clientName;
-    showToast(`Cliente preseleccionado: ${clientName}`, {
-      type: "success",
-      duration: 2600,
-    });
-    window.history.replaceState(
-      {},
-      document.title,
-      window.location.pathname,
-    );
+      if (hasClientOption) {
+        clientSelect.value = clientName;
+        showToast(`Cliente preseleccionado: ${clientName}`, {
+          type: "success",
+          duration: 2600,
+        });
+      }
+    }
+
+    if (serviceType) {
+      document.getElementById("quote-service-type").value = serviceType;
+      applyServiceTemplateToQuoteForm();
+    }
+    if (title) {
+      document.getElementById("quote-title").value = title;
+    }
+    if (amount) {
+      document.getElementById("quote-service-amount").value = amount;
+    }
+    if (invoice === "yes" || invoice === "no") {
+      document.getElementById("quote-invoice").value = invoice;
+    }
+    if (adRequired === "yes" || adRequired === "no") {
+      document.getElementById("quote-ad-required").value = adRequired;
+    }
+
+    syncAdSpendField();
+    calculateTotals();
+
+    if (isQuickMode) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.getElementById("quote-title").focus();
+    }
   }
 
   function calculateTotals() {
@@ -479,12 +491,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       includes: "",
     };
     submitButton.textContent = "Guardar cotización";
+    document.getElementById("quote-date").value = getTodayISO();
+    document.getElementById("quote-ad-required").value = "no";
+    document.getElementById("quote-invoice").value = "no";
     document.getElementById("quote-iva").value = "";
     document.getElementById("quote-invoice-total").value = "";
     document.getElementById("quote-total").value = "";
     syncAdSpendField();
 
-    applyDefaultTermsToQuoteForm(true);
+    document.getElementById("quote-notes").value = "";
   }
 
   function resetPaymentForm() {
@@ -1216,8 +1231,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       Number(quote.serviceAmount ?? quote.subtotal ?? 0) +
         Number(quote.iva || 0);
     document.getElementById("quote-total").value = quote.total;
-    document.getElementById("quote-notes").value =
-      quote.notes || getDefaultTerms();
+    document.getElementById("quote-notes").value = quote.notes || "";
 
     editingQuoteId = quote.id;
     submitButton.textContent = "Actualizar cotización";
@@ -2273,8 +2287,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const invoiceTotal =
       Number(document.getElementById("quote-invoice-total").value) || 0;
     const total = Number(document.getElementById("quote-total").value) || 0;
-    const rawNotes = document.getElementById("quote-notes").value.trim();
-    const notes = rawNotes || getDefaultTerms();
+    const notes = document.getElementById("quote-notes").value.trim();
 
     if (
       !client ||
@@ -2431,7 +2444,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderQuotes();
 
     if (!editingQuoteId) {
-      applyDefaultTermsToQuoteForm(true);
       calculateTotals();
     }
   });
@@ -2445,7 +2457,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (event.key === SETTINGS_KEY && !editingQuoteId) {
-      applyDefaultTermsToQuoteForm(true);
       calculateTotals();
     }
   });

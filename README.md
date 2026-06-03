@@ -8,6 +8,9 @@ cotizaciones, reportes y configuracion.
 - HTML multipagina
 - CSS plano por vista
 - JavaScript modular en navegador
+- API REST con Express
+- Prisma ORM
+- SQLite para desarrollo local
 - Vite para desarrollo y build
 - ESLint para calidad de codigo
 - Prettier para formato
@@ -21,6 +24,10 @@ cotizaciones, reportes y configuracion.
 
 - `npm install`: instala dependencias
 - `npm run dev`: levanta el entorno local con Vite
+- `npm run api:dev`: levanta la API backend en modo watch
+- `npm run api:start`: levanta la API backend
+- `npm run db:setup`: crea la base SQLite local inicial
+- `npm run prisma:generate`: genera el cliente Prisma
 - `npm run build`: genera el build de produccion en `dist/`
 - `npm run build:github-pages`: genera build usando `/morfo-hub/` como base
 - `npm run preview`: sirve el build generado
@@ -39,15 +46,38 @@ cotizaciones, reportes y configuracion.
 - `js/modules/`: logica de cada pagina
 - `js/services/`: acceso a almacenamiento y servicios externos
 - `js/utils.js`: utilidades compartidas
+- `server/`: API Express
+- `prisma/`: esquema de datos
+- `scripts/`: utilidades locales de inicializacion
 - `assets/`: imagenes y recursos visuales
 - `docs/`: documentacion interna
 
 ## Flujo de desarrollo sugerido
 
 1. Instala dependencias con `npm install`
-2. Corre `npm run dev`
-3. Trabaja sobre los modulos en `js/modules`
-4. Revisa formato y lint antes de cerrar cambios
+2. Crea la base local con `npm run db:setup`
+3. Genera Prisma Client con `npm run prisma:generate`
+4. Corre el frontend con `npm run dev`
+5. Corre la API con `npm run api:dev`
+6. Trabaja sobre frontend en `js/modules` y backend en `server/`
+7. Revisa formato y lint antes de cerrar cambios
+
+## Primera fase full stack
+
+Ya existe una base backend funcional para empezar la migracion:
+
+- `GET /api/health`
+- `GET /api/clients`
+- `GET /api/clients/:id`
+- `POST /api/clients`
+- `PUT /api/clients/:id`
+- `DELETE /api/clients/:id`
+- `GET /api/settings`
+- `PUT /api/settings`
+
+Por ahora el frontend actual sigue conectado a Firebase y `localStorage`. La
+idea recomendada es migrar modulo por modulo hacia la API para no detener la
+operacion actual.
 
 ## Siguiente etapa recomendada
 

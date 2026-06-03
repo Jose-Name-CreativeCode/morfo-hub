@@ -22,4 +22,12 @@ export default [
       "no-console": "off",
     },
   },
+  {
+    files: ["server/**/*.js", "scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 ];

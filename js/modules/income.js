@@ -8,6 +8,7 @@ import {
 import {
   askConfirm,
   formatCurrency,
+  getTodayISO,
   normalizeText,
   setButtonLoading,
   setPageLoading,
@@ -42,6 +43,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingIncomeId = null;
   let currentIncomes = [];
   let currentClients = [];
+
+  function syncPaidAmountWithStatus() {
+    const totalAmountInput = document.getElementById("income-amount");
+    const paymentStatusSelect = document.getElementById("income-payment-status");
+    const paidAmountInput = document.getElementById("income-paid-amount");
+
+    const totalAmount = Number(totalAmountInput.value || 0);
+    const paymentStatus = normalizeText(paymentStatusSelect.value);
+
+    if (paymentStatus === "pagado") {
+      paidAmountInput.value = totalAmount > 0 ? totalAmount.toFixed(2) : "";
+      return;
+    }
+
+    if (paymentStatus === "pendiente") {
+      paidAmountInput.value = "0";
+    }
+  }
+
+  function applyIncomeFormDefaults() {
+    document.getElementById("income-date").value = getTodayISO();
+    document.getElementById("income-payment-status").value = "Pendiente";
+    document.getElementById("income-payment-method").value = "Transferencia";
+    document.getElementById("income-invoice").value = "no";
+    document.getElementById("income-paid-amount").value = "0";
+  }
 
   function normalizeDuplicateValue(value) {
     return String(value ?? "").trim().toLowerCase();
@@ -258,6 +285,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     incomeForm.reset();
     editingIncomeId = null;
     submitButton.textContent = "Guardar ingreso";
+    applyIncomeFormDefaults();
+  }
+
+  function applyIncomePrefillFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const client = params.get("client");
+    const concept = params.get("concept");
+    const amount = params.get("amount");
+    const status = params.get("status");
+    const paid = params.get("paid");
+    const method = params.get("method");
+    const invoice = params.get("invoice");
+    const isQuickMode = params.get("quick") === "1";
+
+    if (client) {
+      const hasClientOption = [...clientSelect.options].some(
+        (option) => option.value === client,
+      );
+      if (hasClientOption) {
+        clientSelect.value = client;
+      }
+    }
+
+    if (concept) document.getElementById("income-concept").value = concept;
+    if (amount) document.getElementById("income-amount").value = amount;
+    if (status) document.getElementById("income-payment-status").value = status;
+    if (method) {
+      document.getElementById("income-payment-method").value = method;
+    }
+    if (invoice === "yes" || invoice === "no") {
+      document.getElementById("income-invoice").value = invoice;
+    }
+    if (paid) {
+      document.getElementById("income-paid-amount").value = paid;
+    } else {
+      syncPaidAmountWithStatus();
+    }
+
+    if (client) {
+      showToast(`Cliente preseleccionado: ${client}`, {
+        type: "success",
+        duration: 2200,
+      });
+    }
+
+    if (isQuickMode) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.getElementById("income-concept").focus();
+    }
   }
 
   function getFilteredIncomes() {
@@ -811,6 +887,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterMethodSelect.addEventListener("change", renderIncomes);
   }
 
+  document
+    .getElementById("income-payment-status")
+    .addEventListener("change", syncPaidAmountWithStatus);
+  document
+    .getElementById("income-amount")
+    .addEventListener("input", syncPaidAmountWithStatus);
+
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener("click", () => {
       if (filterYearSelect) filterYearSelect.value = "";
@@ -837,7 +920,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     currentIncomes = await getIncomeCollection();
+    resetForm();
     await loadClientOptions();
+    applyIncomePrefillFromUrl();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderIncomes();

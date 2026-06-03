@@ -8,6 +8,7 @@ import {
   askConfirm,
   formatCurrency,
   formatDate,
+  getTodayISO,
   normalizeText,
   setButtonLoading,
   setPageLoading,
@@ -50,10 +51,42 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingExpenseId = null;
   let currentExpenses = [];
 
+  function applyExpenseFormDefaults() {
+    document.getElementById("expense-date").value = getTodayISO();
+    document.getElementById("expense-payment-method").value = "Tarjeta";
+    document.getElementById("expense-invoice").value = "no";
+  }
+
   function resetForm() {
     expenseForm.reset();
     editingExpenseId = null;
     submitButton.textContent = "Guardar gasto";
+    applyExpenseFormDefaults();
+  }
+
+  function applyExpensePrefillFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const concept = params.get("concept");
+    const category = params.get("category");
+    const amount = params.get("amount");
+    const method = params.get("method");
+    const invoice = params.get("invoice");
+    const isQuickMode = params.get("quick") === "1";
+
+    if (concept) document.getElementById("expense-concept").value = concept;
+    if (category) document.getElementById("expense-category").value = category;
+    if (amount) document.getElementById("expense-amount").value = amount;
+    if (method) {
+      document.getElementById("expense-payment-method").value = method;
+    }
+    if (invoice === "yes" || invoice === "no") {
+      document.getElementById("expense-invoice").value = invoice;
+    }
+
+    if (isQuickMode) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.getElementById("expense-concept").focus();
+    }
   }
 
   function createCell(text) {
@@ -670,6 +703,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
+    resetForm();
+    applyExpensePrefillFromUrl();
     currentExpenses = await getExpensesCollection();
     loadYearOptions();
     loadDynamicFilterOptions();
