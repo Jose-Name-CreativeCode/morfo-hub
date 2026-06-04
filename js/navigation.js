@@ -25,17 +25,7 @@ function renderSidebar(sidebar, activeKey) {
 
   const brand = document.createElement("div");
   brand.className = "sidebar-brand";
-
-  const brandTitle = document.createElement("div");
-  brandTitle.className = "sidebar-brand-title";
-  brandTitle.textContent = "Morfo Hub";
-
-  const brandSubtitle = document.createElement("div");
-  brandSubtitle.className = "sidebar-brand-subtitle";
-  brandSubtitle.textContent = "CRM Suite";
-
-  brand.appendChild(brandTitle);
-  brand.appendChild(brandSubtitle);
+  brand.textContent = "Morfo Hub";
   sidebar.appendChild(brand);
 
   const nav = document.createElement("nav");
@@ -64,25 +54,15 @@ function renderSidebar(sidebar, activeKey) {
 function renderHeader(header, pageTitle) {
   header.replaceChildren();
 
-  const titleWrap = document.createElement("div");
-  titleWrap.className = "header-title-wrap";
-
-  const kicker = document.createElement("div");
-  kicker.className = "header-kicker";
-  kicker.textContent = "Workspace";
-
   const title = document.createElement("div");
   title.className = "header-title";
   title.textContent = pageTitle;
-
-  titleWrap.appendChild(kicker);
-  titleWrap.appendChild(title);
 
   const user = document.createElement("div");
   user.className = "header-user";
   user.textContent = "Verificando sesión...";
 
-  header.appendChild(titleWrap);
+  header.appendChild(title);
   header.appendChild(user);
 }
 
