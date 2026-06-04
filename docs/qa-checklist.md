@@ -1,74 +1,144 @@
-# Checklist de prueba completa
+# QA funcional real
 
-Usa este flujo despues de cambios importantes para confirmar que Morfo Hub
-sigue conectado correctamente con la API y que los saldos se mantienen
-consistentes.
+Yo uso esta guía cuando quiero validar que Morfo Hub sigue estable en operación
+real, especialmente después de cambios importantes en Vercel, Neon o en los
+módulos de clientes, cotizaciones, ingresos, gastos y reportes.
 
-## 1. Acceso
+## Objetivo
 
-1. Abre `login.html`.
-2. Inicia sesion con una cuenta autorizada.
-3. Confirma que llegas a `dashboard.html`.
-4. Verifica que el correo aparece en el encabezado.
+Yo confirmo estas 5 cosas:
 
-## 2. Cliente
+- yo puedo entrar y moverme por el sistema sin errores
+- yo puedo guardar datos y siguen existiendo después de recargar
+- yo no veo duplicados raros entre cotizaciones e ingresos
+- yo veo los mismos números en tablas, dashboard y reportes
+- yo puedo sacar respaldos y exportaciones sin perder información
 
-1. Crea un cliente de prueba.
-2. Confirma que aparece en la tabla de clientes.
-3. Abre el detalle del cliente.
-4. Edita un dato menor y guarda.
+## Preparación
 
-## 3. Cotizacion
+Antes de empezar, yo preparo esto:
 
-1. Crea una cotizacion para el cliente de prueba.
-2. Selecciona un tipo de servicio configurado.
-3. Confirma que descripcion e incluye se llenan automaticamente.
-4. Guarda la cotizacion.
-5. Exporta el PDF y revisa que incluya datos de pago y condiciones.
+1. Yo entro a la app en producción.
+2. Yo inicio sesión con una cuenta real.
+3. Yo tengo a la mano un cliente de prueba o creo uno nuevo.
+4. Yo abro [docs/qa-log-template.md](/Users/jose/Downloads/morfo-hub/docs/qa-log-template.md) para ir apuntando cualquier falla.
 
-## 4. Anticipo e ingreso
+## Prueba 1: acceso y navegación
 
-1. En Cotizaciones, abre `Gestionar`.
-2. Registra anticipo del 50%.
-3. Confirma que se crea un ingreso relacionado.
-4. En `income.html`, revisa que aparezcan monto total, pagado y saldo.
-5. En `dashboard.html`, confirma que el pendiente por cobrar sea el saldo real.
-6. En `reports.html`, confirma que el pendiente del periodo coincida.
+1. Yo abro `login.html`.
+2. Yo inicio sesión con una cuenta autorizada.
+3. Yo confirmo que llego a `dashboard.html`.
+4. Yo reviso que el nombre del usuario salga correctamente en el encabezado.
+5. Yo entro a estas pantallas y confirmo que cargan bien:
+- `Inicio`
+- `Nueva operación`
+- `Clientes`
+- `Cobros e ingresos`
+- `Gastos`
+- `Cotizaciones`
+- `Reportes`
+- `Mantenimiento`
+- `Configuración`
 
-## 5. Pago final o correccion
+## Prueba 2: cliente
 
-1. Si el cliente paga completo, registra pago final desde la cotizacion.
-2. Si hubo error, usa `Corregir pago`.
-3. Confirma que Cotizaciones, Ingresos, Dashboard y Reportes muestren el mismo
-   saldo.
-4. Revisa que el historial de pagos no duplique movimientos obsoletos.
+1. Yo creo un cliente nuevo de prueba.
+2. Yo confirmo que aparece en la tabla.
+3. Yo recargo la página.
+4. Yo confirmo que el cliente sigue ahí.
+5. Yo abro el detalle del cliente.
+6. Yo edito un dato pequeño y guardo.
+7. Yo recargo otra vez para confirmar que sí persistió.
 
-## 6. Gasto
+## Prueba 3: cotización
 
-1. Registra un gasto.
-2. Usa filtros por mes/categoria/metodo de pago.
-3. Confirma que la metrica por categoria se actualice.
-4. Exporta Excel si aplica.
+1. Yo creo una cotización nueva para el cliente de prueba.
+2. Yo lleno concepto, monto, fecha y los campos mínimos del flujo.
+3. Yo guardo como borrador.
+4. Yo recargo la página.
+5. Yo confirmo que la cotización sigue ahí.
+6. Yo la cambio a enviada o aprobada, según el caso que quiera probar.
+7. Yo confirmo que no se duplica y que el estado cambia correctamente.
 
-## 7. Mantenimiento
+## Prueba 4: ingreso ligado a cotización
 
-1. Abre `maintenance.html`.
-2. Haz clic en `Actualizar diagnostico`.
-3. Revisa que no haya duplicados o relaciones faltantes.
-4. Descarga `Respaldo JSON`.
-5. Confirma que el archivo incluya `clients`, `income`, `expenses`, `quotes` y
-   `settings`.
-6. Selecciona el respaldo descargado en `Restaurar desde respaldo`.
-7. Confirma que la vista previa muestre las cantidades esperadas.
-8. Cancela la restauracion si solo estas probando la vista previa.
-9. Si necesitas restaurar, confirma la accion y revisa que los datos se
-   mantengan consistentes despues de recargar.
+1. Yo tomo una cotización y la marco con el flujo que debe generar ingreso.
+2. Yo confirmo que aparece un ingreso relacionado.
+3. Yo entro a `Cobros e ingresos`.
+4. Yo reviso que el ingreso tenga relación correcta con la cotización.
+5. Yo confirmo que monto, saldo y estado coinciden.
+6. Yo recargo la página.
+7. Yo confirmo que el ingreso sigue ahí y no se duplicó.
 
-## Resultado esperado
+## Prueba 5: ingreso manual
 
-- No hay errores visibles en consola.
-- Las tablas se actualizan despues de guardar.
-- Los datos sobreviven al recargar la pagina.
-- El dashboard y reportes calculan los mismos saldos.
-- El respaldo se descarga correctamente.
-- La vista previa de restauracion reconoce el respaldo JSON.
+1. Yo creo un ingreso manual nuevo.
+2. Yo guardo.
+3. Yo confirmo que aparece en la tabla.
+4. Yo recargo la página.
+5. Yo confirmo que sigue ahí.
+6. Yo pruebo editarlo y guardar de nuevo.
+
+## Prueba 6: gasto
+
+1. Yo creo un gasto nuevo.
+2. Yo guardo.
+3. Yo confirmo que aparece en la tabla.
+4. Yo recargo la página.
+5. Yo confirmo que sigue ahí.
+6. Yo pruebo los filtros por fecha, categoría o método de pago.
+7. Yo confirmo que los totales cambian de forma coherente.
+
+## Prueba 7: dashboard y reportes
+
+1. Yo entro a `Inicio`.
+2. Yo reviso que refleje los cambios hechos en clientes, ingresos y gastos.
+3. Yo entro a `Reportes`.
+4. Yo confirmo que los números del periodo tengan sentido.
+5. Yo exporto PDF.
+6. Yo exporto Excel.
+7. Yo reviso que los archivos se descarguen bien y tengan información real.
+
+## Prueba 8: mantenimiento y respaldo
+
+1. Yo entro a `Mantenimiento`.
+2. Yo descargo un respaldo JSON.
+3. Yo confirmo que el archivo incluya datos de:
+- `clients`
+- `income`
+- `expenses`
+- `quotes`
+- `settings`
+4. Yo pruebo la vista previa de restauración con ese respaldo.
+5. Yo confirmo que la vista previa reconozca cantidades correctas.
+6. Yo cancelo la restauración si solo estoy haciendo prueba.
+
+## Señales de alerta
+
+Yo marco una incidencia si veo cualquiera de estas cosas:
+
+- yo guardo y el registro desaparece al recargar
+- yo veo duplicados después de guardar o cambiar estado
+- yo veo totales distintos entre tabla, dashboard y reportes
+- yo tengo que escribir un `id` manualmente
+- yo exporto y el archivo sale vacío o incompleto
+- yo veo mensajes de error al guardar, editar o eliminar
+
+## Criterio de aprobación
+
+Yo doy por aprobada la ronda cuando:
+
+- yo puedo crear, editar y volver a ver clientes, cotizaciones, ingresos y gastos
+- yo no tengo errores visibles en el flujo principal
+- yo la relación `cotización -> ingreso` se mantiene estable
+- yo dashboard y reportes muestran cifras coherentes
+- yo respaldo y exportaciones funcionan bien
+
+## Cómo usarla en operación real
+
+Yo recomiendo hacer esta ronda así:
+
+1. Yo hago una prueba completa hoy.
+2. Yo uso la app normalmente durante 5 a 7 días.
+3. Yo apunto cada fricción en [docs/qa-log-template.md](/Users/jose/Downloads/morfo-hub/docs/qa-log-template.md).
+4. Yo después corrijo primero lo que más se repita.

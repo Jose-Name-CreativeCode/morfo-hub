@@ -163,5 +163,6 @@ La configuración actual está pensada para Vercel usando:
 ## Documentación relacionada
 
 - [Checklist de prueba completa](docs/qa-checklist.md)
+- [Plantilla de incidencias QA](docs/qa-log-template.md)
 - [Mapa de módulos](docs/modules.md)
 - [Rebuild ordenado](docs/rebuild-plan.md)
