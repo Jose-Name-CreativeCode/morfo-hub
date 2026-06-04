@@ -482,6 +482,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderRuntimeStatus(runtime) {
+    if (!runtimeModeValue && !runtimeApiValue && !runtimeDbValue) {
+      return;
+    }
+
     setRuntimeField(runtimeModeValue, runtime.modeValue, runtime.modeTone);
     if (runtimeModeNote) runtimeModeNote.textContent = runtime.modeNote;
     setRuntimeField(runtimeApiValue, runtime.apiValue, runtime.apiTone);
