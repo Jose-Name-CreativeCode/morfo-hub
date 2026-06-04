@@ -942,6 +942,16 @@ img {
   padding: 16px;
 }
 
+.dashboard-priorities-grid .card-compact {
+  min-width: 0;
+}
+
+.dashboard-priorities-grid .card-label,
+.dashboard-priorities-grid .card-value {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .table-empty-cell {
   text-align: center;
 }
@@ -2083,6 +2093,30 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-priorities-panel {
+    padding: 18px;
+  }
+
+  .dashboard-priorities-grid {
+    gap: 10px;
+  }
+
+  .dashboard-priorities-grid .card-compact {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .dashboard-priorities-grid .card-label {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+
+  .dashboard-priorities-grid .card-value {
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+
   .login-card {
     padding: 24px;
   }
@@ -2116,6 +2150,22 @@ img {
   .metric-card-value,
   .card-value {
     font-size: 1.45rem;
+  }
+
+  .dashboard-priorities-panel {
+    padding: 16px;
+  }
+
+  .dashboard-priorities-grid .card-compact {
+    padding: 13px;
+  }
+
+  .dashboard-priorities-grid .card-label {
+    font-size: 0.86rem;
+  }
+
+  .dashboard-priorities-grid .card-value {
+    font-size: 1.6rem;
   }
 
   .confirm-actions {
