@@ -23,6 +23,32 @@ Antes de empezar, yo preparo esto:
 3. Yo tengo a la mano un cliente de prueba o creo uno nuevo.
 4. Yo abro [docs/qa-log-template.md](/Users/jose/Downloads/morfo-hub/docs/qa-log-template.md) para ir apuntando cualquier falla.
 
+## Prioridad inicial por módulo
+
+Yo empezaría en este orden, porque aquí está el flujo más sensible del sistema:
+
+1. `Cotizaciones`
+   Yo reviso guardado, edición, cambio de estado y la relación con ingresos.
+2. `Cobros e ingresos`
+   Yo reviso ingresos manuales, ingresos nacidos desde cotización y que no haya duplicados.
+3. `Gastos`
+   Yo reviso altas nuevas, persistencia después de recargar, filtros y exportación.
+4. `Reportes`
+   Yo confirmo que los números coincidan con ingresos, gastos y cotizaciones reales.
+5. `Clientes`
+   Yo reviso alta, edición, búsqueda y detalle.
+
+## Puntos críticos que yo revisaría con más atención
+
+- En `Cotizaciones`, yo reviso los 4 modos de guardado:
+  `borrador`, `enviada`, `aprobada` y `pagada`.
+- En `Cotizaciones`, yo confirmo que una cotización `aprobada` sí genere o sincronice un ingreso pendiente.
+- En `Cotizaciones`, yo confirmo que una cotización `pagada` sí cree o actualice el ingreso ligado.
+- En `Cobros e ingresos`, yo reviso que editar un ingreso no cree otro.
+- En `Cobros e ingresos`, yo reviso que un ingreso ligado a cotización conserve bien la relación.
+- En `Gastos`, yo confirmo que nunca se pida capturar un `id`.
+- En `Reportes`, yo comparo cifras contra tablas reales, porque ahí se combinan ingresos, gastos y cotizaciones.
+
 ## Prueba 1: acceso y navegación
 
 1. Yo abro `login.html`.
