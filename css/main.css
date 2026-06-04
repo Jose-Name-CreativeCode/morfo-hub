@@ -99,6 +99,10 @@ img {
 
 .sidebar {
   width: var(--sidebar-width);
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
   background:
     radial-gradient(circle at top left, rgba(79, 124, 196, 0.16), transparent 28%),
     linear-gradient(180deg, rgba(30, 30, 30, 0.98), rgba(15, 15, 20, 0.98));
@@ -107,6 +111,7 @@ img {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  overflow-y: auto;
 }
 
 .sidebar-brand {
@@ -152,6 +157,9 @@ img {
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 70;
   height: var(--header-height);
   background:
     linear-gradient(90deg, rgba(30, 30, 30, 0.98), rgba(17, 23, 37, 0.98));
@@ -1960,12 +1968,6 @@ img {
 
   .main-content {
     min-width: 0;
-  }
-
-  .header {
-    position: sticky;
-    top: 0;
-    z-index: 70;
   }
 
   .cards-grid {
