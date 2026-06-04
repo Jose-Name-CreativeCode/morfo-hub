@@ -154,6 +154,7 @@ img {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
 }
 
 .header {
@@ -988,6 +989,7 @@ img {
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .metric-card {
@@ -1066,6 +1068,7 @@ img {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent),
     var(--panel);
+  min-width: 0;
 }
 
 .panel-soft {
@@ -1951,6 +1954,8 @@ img {
   .app-layout {
     display: block;
     min-height: 100vh;
+    width: 100%;
+    overflow-x: clip;
   }
 
   .sidebar {
@@ -1977,6 +1982,16 @@ img {
   }
 
   .main-content {
+    min-width: 0;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dashboard-split-grid > *,
+  .dashboard-split-grid-tight > *,
+  .cards-grid > *,
+  .visual-story-grid > *,
+  .quick-capture-grid > * {
     min-width: 0;
   }
 
@@ -2016,6 +2031,7 @@ img {
 
   .page-content {
     padding: 16px;
+    overflow-x: hidden;
   }
 
   .header-main {
@@ -2123,6 +2139,10 @@ img {
 
   .table {
     min-width: 700px;
+  }
+
+  .table-wrapper {
+    max-width: 100%;
   }
 
   .manage-payment-summary {
