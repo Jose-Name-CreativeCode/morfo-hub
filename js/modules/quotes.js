@@ -98,14 +98,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   function syncAdSpendField() {
     const adRequiredSelect = document.getElementById("quote-ad-required");
     const adSpendInput = document.getElementById("quote-ad-spend");
-    if (!adRequiredSelect || !adSpendInput) return false;
+    const adBudgetInput = document.getElementById("quote-ad-budget");
+    if (!adRequiredSelect || !adSpendInput || !adBudgetInput) return false;
 
     const requiresAdSpend = isYesValue(adRequiredSelect.value);
     adSpendInput.disabled = !requiresAdSpend;
     adSpendInput.readOnly = !requiresAdSpend;
+    adBudgetInput.disabled = !requiresAdSpend;
+    adBudgetInput.readOnly = !requiresAdSpend;
 
     if (!requiresAdSpend) {
       adSpendInput.value = "";
+      adBudgetInput.value = "";
     }
 
     return requiresAdSpend;
@@ -476,6 +480,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function calculateTotals() {
     const serviceAmountInput = document.getElementById("quote-service-amount");
     const adSpendInput = document.getElementById("quote-ad-spend");
+    const adBudgetInput = document.getElementById("quote-ad-budget");
     const invoiceSelect = document.getElementById("quote-invoice");
     const ivaInput = document.getElementById("quote-iva");
     const invoiceTotalInput = document.getElementById("quote-invoice-total");
@@ -484,12 +489,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const serviceAmount = Number(serviceAmountInput.value) || 0;
     const requiresAdSpend = syncAdSpendField();
     const adSpend = requiresAdSpend ? Number(adSpendInput.value) || 0 : 0;
+    const adBudget = requiresAdSpend ? Number(adBudgetInput.value) || 0 : 0;
     const requiresInvoice = invoiceSelect.value === "yes";
     const taxRate = getDefaultInvoiceTax() / 100;
+    const invoiceBase = serviceAmount + adSpend;
 
-    const iva = requiresInvoice ? serviceAmount * taxRate : 0;
-    const invoiceTotal = serviceAmount + iva;
-    const total = invoiceTotal + adSpend;
+    const iva = requiresInvoice ? invoiceBase * taxRate : 0;
+    const invoiceTotal = invoiceBase + iva;
+    const total = invoiceTotal + adBudget;
 
     ivaInput.value = iva.toFixed(2);
     invoiceTotalInput.value = invoiceTotal.toFixed(2);
@@ -528,6 +535,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("quote-date").value = getTodayISO();
     document.getElementById("quote-ad-required").value = "no";
     document.getElementById("quote-invoice").value = "no";
+    document.getElementById("quote-ad-budget").value = "";
     document.getElementById("quote-iva").value = "";
     document.getElementById("quote-invoice-total").value = "";
     document.getElementById("quote-total").value = "";
@@ -1268,7 +1276,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("quote-service-amount").value =
       quote.serviceAmount ?? quote.subtotal;
     const hasAdSpend =
-      quote.adSpendRequired === "Sí" || Number(quote.adSpend) > 0;
+      quote.adSpendRequired === "Sí" ||
+      Number(quote.adSpend) > 0 ||
+      Number(quote.adBudget) > 0;
     document.getElementById("quote-ad-required").value = hasAdSpend
       ? "yes"
       : "no";
@@ -1276,12 +1286,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("quote-ad-spend").value = hasAdSpend
       ? quote.adSpend || 0
       : "";
+    document.getElementById("quote-ad-budget").value = hasAdSpend
+      ? quote.adBudget || 0
+      : "";
     document.getElementById("quote-invoice").value =
       quote.invoiceRequired === "Sí" ? "yes" : "no";
     document.getElementById("quote-iva").value = quote.iva;
     document.getElementById("quote-invoice-total").value =
       quote.invoiceTotal ??
       Number(quote.serviceAmount ?? quote.subtotal ?? 0) +
+        Number(quote.adSpend || 0) +
         Number(quote.iva || 0);
     document.getElementById("quote-total").value = quote.total;
     document.getElementById("quote-notes").value = quote.notes || "";
@@ -2044,10 +2058,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const bankDetails = getBankDetailsByInvoice(quote.invoiceRequired);
     const serviceAmount = Number(quote.serviceAmount ?? quote.subtotal ?? 0);
     const adSpend = Number(quote.adSpend || 0);
-    const shouldShowAdSpend =
+    const adBudget = Number(quote.adBudget || 0);
+    const shouldShowAdManagement =
       quote.adSpendRequired === "Sí" && Number(adSpend) > 0;
+    const shouldShowAdBudget =
+      quote.adSpendRequired === "Sí" && Number(adBudget) > 0;
     const invoiceTotal =
-      Number(quote.invoiceTotal) || serviceAmount + Number(quote.iva || 0);
+      Number(quote.invoiceTotal) ||
+      serviceAmount +
+        Number(quote.adSpend || 0) +
+        Number(quote.iva || 0);
     const notesSectionText = String(quote.notes || "").trim();
     const customTableTitle = String(quote.customTableTitle || "").trim();
     const customTableRows = parseCustomTableRows(quote.customTableRowsText);
@@ -2318,7 +2338,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function drawTotalsBox() {
       const rowH = 26;
-      const adRowCount = shouldShowAdSpend ? 1 : 0;
+      const adRowCount =
+        (shouldShowAdManagement ? 1 : 0) + (shouldShowAdBudget ? 1 : 0);
       const totalRows = 4 + adRowCount;
       const boxHeight = 80 + rowH * totalRows;
 
@@ -2334,49 +2355,89 @@ document.addEventListener("DOMContentLoaded", async () => {
       doc.setTextColor(...colors.text);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
+      let currentRow = 0;
 
-      doc.text("Servicio", boxX + 16, y + 22);
-      doc.text(money(serviceAmount), boxX + boxWidth - 16, y + 22, {
-        align: "right",
-      });
+      doc.text("Servicio", boxX + 16, y + 22 + rowH * currentRow);
+      doc.text(
+        money(serviceAmount),
+        boxX + boxWidth - 16,
+        y + 22 + rowH * currentRow,
+        {
+          align: "right",
+        },
+      );
+      currentRow += 1;
 
-      doc.text("IVA servicio", boxX + 16, y + 22 + rowH);
-      doc.text(money(quote.iva), boxX + boxWidth - 16, y + 22 + rowH, {
-        align: "right",
-      });
+      if (shouldShowAdManagement) {
+        doc.text("Costo por pauta", boxX + 16, y + 22 + rowH * currentRow);
+        doc.text(
+          money(adSpend),
+          boxX + boxWidth - 16,
+          y + 22 + rowH * currentRow,
+          {
+            align: "right",
+          },
+        );
+        currentRow += 1;
+      }
+
+      doc.text("IVA Morfo", boxX + 16, y + 22 + rowH * currentRow);
+      doc.text(
+        money(quote.iva),
+        boxX + boxWidth - 16,
+        y + 22 + rowH * currentRow,
+        {
+          align: "right",
+        },
+      );
+      currentRow += 1;
 
       doc.setFont("helvetica", "bold");
-      doc.text("Total", boxX + 16, y + 22 + rowH * 2);
-      doc.text(money(invoiceTotal), boxX + boxWidth - 16, y + 22 + rowH * 2, {
-        align: "right",
-      });
-
-      let totalGeneralLabelY = y + 22 + rowH * 3 + 4;
-      if (shouldShowAdSpend) {
-        doc.setFont("helvetica", "normal");
-        doc.text("Pauta publicitaria", boxX + 16, y + 22 + rowH * 3);
-        doc.text(money(adSpend), boxX + boxWidth - 16, y + 22 + rowH * 3, {
+      doc.text("Total Morfo", boxX + 16, y + 22 + rowH * currentRow);
+      doc.text(
+        money(invoiceTotal),
+        boxX + boxWidth - 16,
+        y + 22 + rowH * currentRow,
+        {
           align: "right",
-        });
+        },
+      );
+      currentRow += 1;
+
+      if (shouldShowAdBudget) {
+        doc.setFont("helvetica", "normal");
+        doc.text("Presupuesto Meta", boxX + 16, y + 22 + rowH * currentRow);
+        doc.text(
+          money(adBudget),
+          boxX + boxWidth - 16,
+          y + 22 + rowH * currentRow,
+          {
+            align: "right",
+          },
+        );
 
         doc.setDrawColor(...colors.border);
         doc.line(
           boxX + 12,
-          y + 22 + rowH * 3 + 10,
+          y + 22 + rowH * currentRow + 10,
           boxX + boxWidth - 12,
-          y + 22 + rowH * 3 + 10,
+          y + 22 + rowH * currentRow + 10,
         );
-
-        totalGeneralLabelY = y + 22 + rowH * 4 + 4;
+        currentRow += 1;
       }
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...colors.highlight);
       doc.setFontSize(14);
-      doc.text("Total general", boxX + 16, totalGeneralLabelY);
-      doc.text(money(quote.total), boxX + boxWidth - 16, totalGeneralLabelY, {
-        align: "right",
-      });
+      doc.text("Total general", boxX + 16, y + 22 + rowH * currentRow + 4);
+      doc.text(
+        money(quote.total),
+        boxX + boxWidth - 16,
+        y + 22 + rowH * currentRow + 4,
+        {
+          align: "right",
+        },
+      );
 
       y += boxHeight + 22;
     }
@@ -2518,6 +2579,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     .getElementById("quote-ad-spend")
     .addEventListener("input", calculateTotals);
   document
+    .getElementById("quote-ad-budget")
+    .addEventListener("input", calculateTotals);
+  document
     .getElementById("quote-invoice")
     .addEventListener("change", calculateTotals);
 
@@ -2609,6 +2673,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       adRequiredValue === "yes"
         ? Number(document.getElementById("quote-ad-spend").value) || 0
         : 0;
+    const adBudget =
+      adRequiredValue === "yes"
+        ? Number(document.getElementById("quote-ad-budget").value) || 0
+        : 0;
     const subtotal = serviceAmount;
     const invoiceValue = document.getElementById("quote-invoice").value;
     const iva = Number(document.getElementById("quote-iva").value) || 0;
@@ -2638,6 +2706,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    if (adRequiredValue === "yes" && adBudget <= 0) {
+      showToast("Agrega el presupuesto de pauta para Meta.", {
+        type: "error",
+      });
+      return;
+    }
+
     let quotes = getQuotes();
     setButtonLoading(
       submitButton,
@@ -2661,6 +2736,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           serviceAmount,
           adSpendRequired: adRequiredValue === "yes" ? "Sí" : "No",
           adSpend,
+          adBudget,
           subtotal,
           invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
           iva,
@@ -2715,6 +2791,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           serviceAmount,
           adSpendRequired: adRequiredValue === "yes" ? "Sí" : "No",
           adSpend,
+          adBudget,
           subtotal,
           invoiceRequired: invoiceValue === "yes" ? "Sí" : "No",
           iva,
