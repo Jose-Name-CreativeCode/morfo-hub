@@ -195,6 +195,33 @@
               </div>
 
               <div class="form-group form-group-full">
+                <label for="quote-custom-table-title">
+                  Título de tabla especial para PDF
+                </label>
+                <input
+                  type="text"
+                  id="quote-custom-table-title"
+                  placeholder="Ej. Distribución de inversión publicitaria"
+                />
+              </div>
+
+              <div class="form-group form-group-full">
+                <label for="quote-custom-table-rows">
+                  Filas de tabla especial para PDF
+                </label>
+                <textarea
+                  id="quote-custom-table-rows"
+                  rows="7"
+                  placeholder="Escribe una fila por línea usando este formato:&#10;Reconocimiento y seguidores | 40% | $4,000&#10;Visitas al lugar | 30% | $3,000&#10;Campañas de partidos y eventos | 20% | $2,000"
+                ></textarea>
+                <p class="form-helper-text">
+                  Yo uso este bloque solo cuando una cotización necesita una
+                  tabla especial. Formato por fila:
+                  <strong>Columna 1 | Columna 2 | Columna 3</strong>.
+                </p>
+              </div>
+
+              <div class="form-group form-group-full">
                 <label for="quote-save-intent">Al guardar</label>
                 <select id="quote-save-intent">
                   <option value="draft">Solo guardar como borrador</option>

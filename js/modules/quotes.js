@@ -496,6 +496,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     totalInput.value = total.toFixed(2);
   }
 
+  function getCustomTableTitleValue() {
+    return document.getElementById("quote-custom-table-title").value.trim();
+  }
+
+  function getCustomTableRowsTextValue() {
+    return document.getElementById("quote-custom-table-rows").value.trim();
+  }
+
+  function parseCustomTableRows(text) {
+    return String(text || "")
+      .split("\n")
+      .map((line) =>
+        line
+          .split("|")
+          .map((cell) => cell.trim())
+          .filter(Boolean),
+      )
+      .filter((row) => row.length > 0)
+      .map((row) => [row[0] || "", row[1] || "", row[2] || ""]);
+  }
+
   function resetForm() {
     quoteForm.reset();
     editingQuoteId = null;
@@ -514,6 +535,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncAdSpendField();
 
     document.getElementById("quote-notes").value = "";
+    document.getElementById("quote-custom-table-title").value = "";
+    document.getElementById("quote-custom-table-rows").value = "";
   }
 
   function resetPaymentForm() {
@@ -1262,6 +1285,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         Number(quote.iva || 0);
     document.getElementById("quote-total").value = quote.total;
     document.getElementById("quote-notes").value = quote.notes || "";
+    document.getElementById("quote-custom-table-title").value =
+      quote.customTableTitle || "";
+    document.getElementById("quote-custom-table-rows").value =
+      quote.customTableRowsText || "";
     document.getElementById("quote-save-intent").value =
       normalizeStatus(quote.paymentStatus, "") === "pagada total"
         ? "paid"
@@ -2022,6 +2049,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const invoiceTotal =
       Number(quote.invoiceTotal) || serviceAmount + Number(quote.iva || 0);
     const notesSectionText = String(quote.notes || "").trim();
+    const customTableTitle = String(quote.customTableTitle || "").trim();
+    const customTableRows = parseCustomTableRows(quote.customTableRowsText);
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -2152,6 +2181,82 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       y += 6;
+    }
+
+    function drawCustomTableSection(title, rows) {
+      if (!rows.length) return;
+
+      const headers = ["Objetivo", "% inversión", "Monto"];
+      const colWidths = [
+        contentWidth * 0.54,
+        contentWidth * 0.16,
+        contentWidth * 0.3,
+      ];
+      const cellPaddingX = 10;
+      const cellPaddingY = 9;
+
+      function drawTableHeader() {
+        ensureSpace(36);
+        let x = marginX;
+
+        headers.forEach((header, index) => {
+          const width = colWidths[index];
+          doc.setFillColor(...colors.primary);
+          doc.setDrawColor(...colors.primary);
+          doc.rect(x, y, width, 30, "FD");
+          doc.setTextColor(255, 255, 255);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.text(header, x + cellPaddingX, y + 19);
+          x += width;
+        });
+
+        y += 30;
+      }
+
+      drawSectionTitle(title || "Tabla especial");
+      drawTableHeader();
+
+      rows.forEach((row, rowIndex) => {
+        const wrappedRow = row.map((cell, index) =>
+          doc.splitTextToSize(String(cell || "-"), colWidths[index] - cellPaddingX * 2),
+        );
+        const tallestCell = Math.max(
+          ...wrappedRow.map((lines) => lines.length),
+          1,
+        );
+        const rowHeight = Math.max(34, tallestCell * 14 + cellPaddingY * 2);
+
+        if (y + rowHeight > pageHeight - 50) {
+          doc.addPage();
+          y = 50;
+          drawTableHeader();
+        }
+
+        let x = marginX;
+        row.forEach((cell, index) => {
+          const width = colWidths[index];
+          const fillColor =
+            rowIndex % 2 === 0 ? colors.lightBg : [255, 255, 255];
+
+          doc.setFillColor(...fillColor);
+          doc.setDrawColor(...colors.border);
+          doc.rect(x, y, width, rowHeight, "FD");
+          doc.setTextColor(...colors.text);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10.5);
+          doc.text(
+            wrappedRow[index],
+            x + cellPaddingX,
+            y + cellPaddingY + 10,
+          );
+          x += width;
+        });
+
+        y += rowHeight;
+      });
+
+      y += 18;
     }
 
     function drawTotalsBox() {
@@ -2303,6 +2408,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     drawSectionTitle("Incluye");
     drawBulletList(quote.includes);
 
+    if (customTableRows.length > 0) {
+      drawCustomTableSection(customTableTitle, customTableRows);
+    }
+
     drawSectionTitle("Resumen económico");
     drawTotalsBox();
 
@@ -2451,6 +2560,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       Number(document.getElementById("quote-invoice-total").value) || 0;
     const total = Number(document.getElementById("quote-total").value) || 0;
     const notes = document.getElementById("quote-notes").value.trim();
+    const customTableTitle = getCustomTableTitleValue();
+    const customTableRowsText = getCustomTableRowsTextValue();
     const saveIntent = document.getElementById("quote-save-intent").value;
 
     if (
@@ -2500,6 +2611,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           invoiceTotal,
           total,
           notes,
+          customTableTitle,
+          customTableRowsText,
           publicId: currentQuote?.publicId,
           status:
             saveIntent === "paid" || saveIntent === "approved"
@@ -2552,6 +2665,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           invoiceTotal,
           total,
           notes,
+          customTableTitle,
+          customTableRowsText,
           status:
             saveIntent === "paid" || saveIntent === "approved"
               ? "aprobada"
