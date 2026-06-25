@@ -122,16 +122,20 @@ function mapSettingsPayload(body = {}) {
   const agency = body.agency || {};
   const invoice = body.invoice || {};
   const commercial = body.commercial || {};
+  const hasOwn = (object, key) =>
+    Object.prototype.hasOwnProperty.call(object || {}, key);
 
   return {
-    agencyName: String(agency.name || DEFAULT_SETTINGS.agency.name),
-    agencyEmail: String(agency.email || ""),
-    agencyPhone: String(agency.phone || ""),
-    agencyAddress: String(agency.address || ""),
-    agencyWebsite: String(agency.website || ""),
-    terms: String(body.terms || ""),
+    agencyName: String(
+      hasOwn(agency, "name") ? agency.name : DEFAULT_SETTINGS.agency.name,
+    ),
+    agencyEmail: String(hasOwn(agency, "email") ? agency.email : ""),
+    agencyPhone: String(hasOwn(agency, "phone") ? agency.phone : ""),
+    agencyAddress: String(hasOwn(agency, "address") ? agency.address : ""),
+    agencyWebsite: String(hasOwn(agency, "website") ? agency.website : ""),
+    terms: String(hasOwn(body, "terms") ? body.terms : ""),
     invoiceTax: Number(invoice.tax ?? DEFAULT_SETTINGS.invoice.tax),
-    invoiceNote: String(invoice.note || ""),
+    invoiceNote: String(hasOwn(invoice, "note") ? invoice.note : ""),
     advancePercent: Number(
       commercial.advancePercent ?? DEFAULT_SETTINGS.commercial.advancePercent,
     ),
@@ -140,16 +144,20 @@ function mapSettingsPayload(body = {}) {
         ? commercial.paymentMethods
         : DEFAULT_SETTINGS.commercial.paymentMethods,
     ),
-    bankDetails: String(commercial.bankDetails || ""),
+    bankDetails: String(
+      hasOwn(commercial, "bankDetails") ? commercial.bankDetails : "",
+    ),
     bankDetailsInvoice: String(
-      commercial.bankDetailsInvoice ||
-        DEFAULT_SETTINGS.commercial.bankDetailsInvoice,
+      hasOwn(commercial, "bankDetailsInvoice")
+        ? commercial.bankDetailsInvoice
+        : DEFAULT_SETTINGS.commercial.bankDetailsInvoice,
     ),
     bankDetailsNoInvoice: String(
-      commercial.bankDetailsNoInvoice ||
-        DEFAULT_SETTINGS.commercial.bankDetailsNoInvoice,
+      hasOwn(commercial, "bankDetailsNoInvoice")
+        ? commercial.bankDetailsNoInvoice
+        : DEFAULT_SETTINGS.commercial.bankDetailsNoInvoice,
     ),
-    legalNote: String(commercial.legalNote || ""),
+    legalNote: String(hasOwn(commercial, "legalNote") ? commercial.legalNote : ""),
     serviceTemplatesJson: JSON.stringify(
       body.serviceTemplates || DEFAULT_SETTINGS.serviceTemplates,
     ),
