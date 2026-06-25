@@ -2111,8 +2111,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    function drawSectionTitle(title) {
-      ensureSpace(40);
+    function drawSectionTitle(title, spaceNeeded = 40) {
+      ensureSpace(spaceNeeded);
       doc.setTextColor(...colors.primary);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
@@ -2123,6 +2123,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       doc.setLineWidth(1.2);
       doc.line(marginX, y, pageWidth - marginX, y);
       y += 20;
+    }
+
+    function getFirstRichTextBlockHeight(text, size = 11) {
+      const rawLines = String(text || "").split("\n");
+      const firstVisibleLine = rawLines.find((line) => line.trim().length > 0);
+
+      if (!firstVisibleLine) {
+        const fallbackLines = split("-", size);
+        return fallbackLines.length * 16 + 10;
+      }
+
+      const line = firstVisibleLine.trim();
+
+      if (line.startsWith("##")) {
+        const headingText = line.replace(/^##+\s*/, "").trim() || "-";
+        const headingLines = doc.splitTextToSize(headingText, contentWidth);
+        return headingLines.length * 18 + 8;
+      }
+
+      if (line.startsWith("*")) {
+        const bulletText = `• ${line.replace(/^\*\s*/, "").trim() || "-"}`;
+        const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 10);
+        return bulletLines.length * 15 + 4;
+      }
+
+      const paragraphLines = doc.splitTextToSize(line, contentWidth);
+      return paragraphLines.length * 15 + 4;
     }
 
     function drawInfoCard() {
@@ -2461,7 +2488,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (notesSectionText) {
-      drawSectionTitle("Condiciones y observaciones");
+      const notesHeadingSpace = 40 + getFirstRichTextBlockHeight(notesSectionText, 10.5);
+      drawSectionTitle("Condiciones y observaciones", notesHeadingSpace);
       drawRichTextBlock(notesSectionText, { size: 10.5 });
     }
 
