@@ -2157,27 +2157,57 @@ document.addEventListener("DOMContentLoaded", async () => {
       y += lines.length * 16 + extra;
     }
 
-    function drawBulletList(text) {
-      const items = String(text || "")
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean);
+    function drawRichTextBlock(text, { emptyFallback = "-", size = 11 } = {}) {
+      const rawLines = String(text || "").split("\n");
+      const hasVisibleContent = rawLines.some((line) => line.trim().length > 0);
 
-      if (items.length === 0) {
-        drawParagraph("-", 11);
+      if (!hasVisibleContent) {
+        drawParagraph(emptyFallback, size);
         return;
       }
 
-      items.forEach((item) => {
-        const bulletText = `• ${item}`;
-        const lines = doc.splitTextToSize(bulletText, contentWidth - 10);
-        ensureSpace(lines.length * 15 + 4);
+      rawLines.forEach((rawLine) => {
+        const line = rawLine.trim();
+
+        if (!line) {
+          y += 8;
+          return;
+        }
+
+        if (line.startsWith("##")) {
+          const headingText = line.replace(/^##+\s*/, "").trim() || "-";
+          const headingLines = doc.splitTextToSize(headingText, contentWidth);
+          ensureSpace(headingLines.length * 18 + 8);
+
+          doc.setTextColor(...colors.primary);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.text(headingLines, marginX, y);
+          y += headingLines.length * 18 + 8;
+          return;
+        }
+
+        if (line.startsWith("*")) {
+          const bulletText = `• ${line.replace(/^\*\s*/, "").trim() || "-"}`;
+          const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 10);
+          ensureSpace(bulletLines.length * 15 + 4);
+
+          doc.setTextColor(...colors.text);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(size);
+          doc.text(bulletLines, marginX, y);
+          y += bulletLines.length * 15 + 4;
+          return;
+        }
+
+        const paragraphLines = doc.splitTextToSize(line, contentWidth);
+        ensureSpace(paragraphLines.length * 15 + 4);
 
         doc.setTextColor(...colors.text);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.text(lines, marginX, y);
-        y += lines.length * 15 + 4;
+        doc.setFontSize(size);
+        doc.text(paragraphLines, marginX, y);
+        y += paragraphLines.length * 15 + 4;
       });
 
       y += 6;
@@ -2403,10 +2433,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     drawParagraph(quote.serviceType, 11, colors.text, 18);
 
     drawSectionTitle("Descripción general");
-    drawParagraph(quote.description || "-", 11, colors.text, 18);
+    drawRichTextBlock(quote.description || "-", { size: 11 });
 
     drawSectionTitle("Incluye");
-    drawBulletList(quote.includes);
+    drawRichTextBlock(quote.includes, { size: 11 });
 
     if (customTableRows.length > 0) {
       drawCustomTableSection(customTableTitle, customTableRows);
@@ -2417,7 +2447,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (paymentMethodsText || bankDetails) {
       drawSectionTitle("Datos de pago");
-      drawParagraph(
+      drawRichTextBlock(
         [
           paymentMethodsText
             ? `Métodos disponibles: ${paymentMethodsText}`
@@ -2426,15 +2456,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         ]
           .filter(Boolean)
           .join("\n\n"),
-        10.5,
-        colors.text,
-        12,
+        { size: 10.5, emptyFallback: "-" },
       );
     }
 
     if (notesSectionText) {
       drawSectionTitle("Condiciones y observaciones");
-      drawParagraph(notesSectionText, 10.5, colors.text, 10);
+      drawRichTextBlock(notesSectionText, { size: 10.5 });
     }
 
     doc.setFont("helvetica", "normal");
