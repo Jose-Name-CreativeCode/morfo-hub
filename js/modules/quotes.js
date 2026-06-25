@@ -2578,7 +2578,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (adRequiredValue === "yes" && adSpend <= 0) {
-      showToast("Agrega el monto de pauta publicitaria.", { type: "error" });
+      showToast("Agrega el costo por pauta publicitaria.", { type: "error" });
       return;
     }
 
