@@ -226,7 +226,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getBankDetailsByInvoice(invoiceRequired) {
     const settings = getSettings();
-    const requiresInvoice = invoiceRequired === "Sí" || invoiceRequired === true;
+    const requiresInvoice =
+      invoiceRequired === "Sí" || invoiceRequired === true;
 
     if (requiresInvoice) {
       return (
@@ -1202,10 +1203,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const statusCell = document.createElement("td");
       statusCell.appendChild(
-        createStatusBadge(
-          quote.status || "borrador",
-          `status ${statusClass}`,
-        ),
+        createStatusBadge(quote.status || "borrador", `status ${statusClass}`),
       );
       row.appendChild(statusCell);
 
@@ -1423,10 +1421,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     openManageModal(id);
   }
 
-  async function ensurePendingIncomeForQuote(
-    quoteId,
-    { silent = false } = {},
-  ) {
+  async function ensurePendingIncomeForQuote(quoteId, { silent = false } = {}) {
     const quote = getQuoteById(quoteId);
     if (!quote) {
       if (!silent) {
@@ -1514,10 +1509,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       paymentHistory: [],
     });
 
-      saveIncomes([...incomes, pendingIncome]);
-      syncQuotesWithIncomes();
-      await persistIncomes();
-      await refreshOperationalCollections();
+    saveIncomes([...incomes, pendingIncome]);
+    syncQuotesWithIncomes();
+    await persistIncomes();
+    await refreshOperationalCollections();
 
     if (!silent) {
       showToast(
@@ -1760,7 +1755,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         saveIncomes(incomes);
 
         const updatedQuotes = quotes.map((item) =>
-            String(item.id) === String(quoteId)
+          String(item.id) === String(quoteId)
             ? {
                 ...item,
                 paymentStatus: "pagada total",
@@ -1995,10 +1990,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const quote = getQuoteById(activeManageQuoteId);
         if (!quote) return;
 
-        const isExpanded =
-          managePaymentHistoryList.dataset.expanded === "true";
+        const isExpanded = managePaymentHistoryList.dataset.expanded === "true";
         managePaymentHistoryList.dataset.expanded = String(!isExpanded);
-        renderManagePaymentHistory(quote, getIncomeByQuoteId(activeManageQuoteId));
+        renderManagePaymentHistory(
+          quote,
+          getIncomeByQuoteId(activeManageQuoteId),
+        );
       });
     }
 
@@ -2065,9 +2062,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       quote.adSpendRequired === "Sí" && Number(adBudget) > 0;
     const invoiceTotal =
       Number(quote.invoiceTotal) ||
-      serviceAmount +
-        Number(quote.adSpend || 0) +
-        Number(quote.iva || 0);
+      serviceAmount + Number(quote.adSpend || 0) + Number(quote.iva || 0);
     const notesSectionText = String(quote.notes || "").trim();
     const customTableTitle = String(quote.customTableTitle || "").trim();
     const customTableRows = parseCustomTableRows(quote.customTableRowsText);
@@ -2236,7 +2231,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (line.startsWith("*")) {
           const bulletText = `• ${line.replace(/^\*\s*/, "").trim() || "-"}`;
-          const bulletLines = doc.splitTextToSize(bulletText, contentWidth - 10);
+          const bulletLines = doc.splitTextToSize(
+            bulletText,
+            contentWidth - 10,
+          );
           ensureSpace(bulletLines.length * 15 + 4);
 
           doc.setTextColor(...colors.text);
@@ -2296,7 +2294,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       rows.forEach((row, rowIndex) => {
         const wrappedRow = row.map((cell, index) =>
-          doc.splitTextToSize(String(cell || "-"), colWidths[index] - cellPaddingX * 2),
+          doc.splitTextToSize(
+            String(cell || "-"),
+            colWidths[index] - cellPaddingX * 2,
+          ),
         );
         const tallestCell = Math.max(
           ...wrappedRow.map((lines) => lines.length),
@@ -2322,11 +2323,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           doc.setTextColor(...colors.text);
           doc.setFont("helvetica", "normal");
           doc.setFontSize(10.5);
-          doc.text(
-            wrappedRow[index],
-            x + cellPaddingX,
-            y + cellPaddingY + 10,
-          );
+          doc.text(wrappedRow[index], x + cellPaddingX, y + cellPaddingY + 10);
           x += width;
         });
 
@@ -2530,7 +2527,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       drawCustomTableSection(customTableTitle, customTableRows);
     }
 
-    drawSectionTitle("Resumen económico");
+    drawSectionTitle("Totales");
     drawTotalsBox();
 
     if (paymentMethodsText || bankDetails) {
@@ -2549,7 +2546,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (notesSectionText) {
-      const notesHeadingSpace = 40 + getFirstRichTextBlockHeight(notesSectionText, 10.5);
+      const notesHeadingSpace =
+        40 + getFirstRichTextBlockHeight(notesSectionText, 10.5);
       drawSectionTitle("Condiciones y observaciones", notesHeadingSpace);
       drawRichTextBlock(notesSectionText, { size: 10.5 });
     }
