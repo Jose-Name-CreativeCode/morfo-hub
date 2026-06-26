@@ -2060,6 +2060,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       quote.adSpendRequired === "Sí" && Number(adSpend) > 0;
     const shouldShowAdBudget =
       quote.adSpendRequired === "Sí" && Number(adBudget) > 0;
+    const shouldShowIva =
+      quote.invoiceRequired === "Sí" && Number(quote.iva || 0) > 0;
     const invoiceTotal =
       Number(quote.invoiceTotal) ||
       serviceAmount + Number(quote.adSpend || 0) + Number(quote.iva || 0);
@@ -2337,7 +2339,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const rowH = 26;
       const adRowCount =
         (shouldShowAdManagement ? 1 : 0) + (shouldShowAdBudget ? 1 : 0);
-      const totalRows = 4 + adRowCount;
+      const totalRows = 3 + adRowCount + (shouldShowIva ? 1 : 0);
       const boxHeight = 80 + rowH * totalRows;
 
       ensureSpace(boxHeight + 22);
@@ -2378,16 +2380,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         currentRow += 1;
       }
 
-      doc.text("IVA Morfo", boxX + 16, y + 22 + rowH * currentRow);
-      doc.text(
-        money(quote.iva),
-        boxX + boxWidth - 16,
-        y + 22 + rowH * currentRow,
-        {
-          align: "right",
-        },
-      );
-      currentRow += 1;
+      if (shouldShowIva) {
+        doc.text("IVA Morfo", boxX + 16, y + 22 + rowH * currentRow);
+        doc.text(
+          money(quote.iva),
+          boxX + boxWidth - 16,
+          y + 22 + rowH * currentRow,
+          {
+            align: "right",
+          },
+        );
+        currentRow += 1;
+      }
 
       doc.setFont("helvetica", "bold");
       doc.text("Total Morfo", boxX + 16, y + 22 + rowH * currentRow);
