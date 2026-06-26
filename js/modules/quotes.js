@@ -2527,7 +2527,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       drawCustomTableSection(customTableTitle, customTableRows);
     }
 
-    drawSectionTitle("Totales");
+    drawSectionTitle("Resumen de totales");
     drawTotalsBox();
 
     if (paymentMethodsText || bankDetails) {
