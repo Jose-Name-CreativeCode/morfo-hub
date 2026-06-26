@@ -2170,6 +2170,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return paragraphLines.length * 15 + 4;
     }
 
+    function getParagraphHeight(text, size = 11, extra = 10) {
+      const lines = split(text || "-", size);
+      return lines.length * 16 + extra;
+    }
+
     function drawInfoCard() {
       ensureSpace(100);
 
@@ -2292,7 +2297,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         y += 30;
       }
 
-      drawSectionTitle(title || "Tabla especial");
+      if (title !== "") {
+        drawSectionTitle(title || "Tabla especial");
+      }
       drawTableHeader();
 
       rows.forEach((row, rowIndex) => {
@@ -2450,6 +2457,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       y += boxHeight + 22;
     }
 
+    function getTotalsBoxHeight() {
+      const rowH = 26;
+      const totalRows =
+        1 +
+        (shouldShowAdManagement ? 1 : 0) +
+        (shouldShowIva ? 1 : 0) +
+        (shouldShowInvoiceSummary ? 1 : 0) +
+        (shouldShowAdBudget ? 1 : 0) +
+        1;
+      return 80 + rowH * totalRows + 22;
+    }
+
     async function loadImageAsDataURL(path) {
       const response = await fetch(path);
       const blob = await response.blob();
@@ -2522,27 +2541,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     await drawHeader();
     drawInfoCard();
 
-    drawSectionTitle("Título de la propuesta");
+    drawSectionTitle("Título de la propuesta", 40 + getParagraphHeight(quote.title, 15, 18));
     drawParagraph(quote.title, 15, colors.dark, 18);
 
-    drawSectionTitle("Tipo de servicio");
+    drawSectionTitle(
+      "Tipo de servicio",
+      40 + getParagraphHeight(quote.serviceType, 11, 18),
+    );
     drawParagraph(quote.serviceType, 11, colors.text, 18);
 
-    drawSectionTitle("Descripción general");
+    drawSectionTitle(
+      "Descripción general",
+      40 + getFirstRichTextBlockHeight(quote.description || "-", 11),
+    );
     drawRichTextBlock(quote.description || "-", { size: 11 });
 
-    drawSectionTitle("Incluye");
+    drawSectionTitle(
+      "Incluye",
+      40 + getFirstRichTextBlockHeight(quote.includes || "-", 11),
+    );
     drawRichTextBlock(quote.includes, { size: 11 });
 
     if (customTableRows.length > 0) {
-      drawCustomTableSection(customTableTitle, customTableRows);
+      drawSectionTitle(customTableTitle || "Tabla especial", 76);
+      drawCustomTableSection("", customTableRows);
     }
 
-    drawSectionTitle("Resumen de totales");
+    drawSectionTitle("Resumen de totales", 40 + getTotalsBoxHeight());
     drawTotalsBox();
 
     if (paymentMethodsText || bankDetails) {
-      drawSectionTitle("Datos de pago");
+      const paymentHeadingSpace =
+        40 +
+        getFirstRichTextBlockHeight(
+          [
+            paymentMethodsText
+              ? `Métodos disponibles: ${paymentMethodsText}`
+              : "",
+            bankDetails,
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+          10.5,
+        );
+      drawSectionTitle("Datos de pago", paymentHeadingSpace);
       drawRichTextBlock(
         [
           paymentMethodsText
