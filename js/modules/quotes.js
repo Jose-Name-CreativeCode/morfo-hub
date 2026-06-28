@@ -2537,11 +2537,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         doc.text(contactParts.join("  |  "), marginX, 136);
       }
     }
+    // qwqw
 
     await drawHeader();
     drawInfoCard();
 
-    drawSectionTitle("Título de la propuesta", 40 + getParagraphHeight(quote.title, 15, 18));
+    drawSectionTitle(
+      "Título de la propuesta",
+      40 + getParagraphHeight(quote.title, 15, 18),
+    );
     drawParagraph(quote.title, 15, colors.dark, 18);
 
     drawSectionTitle(
