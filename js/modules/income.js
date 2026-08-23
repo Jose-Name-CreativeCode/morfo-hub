@@ -6,8 +6,13 @@ import {
   saveIncomeRecord,
 } from "../services/income-service.js";
 import {
+  appendRowActions,
   askConfirm,
+  bindRowActions,
+  createEmptyStateRow,
+  createTableCell,
   formatCurrency,
+  formatDate,
   getTodayISO,
   normalizeText,
   setButtonLoading,
@@ -39,6 +44,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     totalPending: document.getElementById("income-total-pending"),
     periodCount: document.getElementById("income-period-count"),
   };
+  const detailModal = document.getElementById("income-detail-modal");
+  const detailOverlay = document.getElementById("income-detail-overlay");
+  const detailCloseButton = document.getElementById("income-detail-close");
+  const detailTitle = document.getElementById("income-detail-title");
+  const detailMeta = document.getElementById("income-detail-meta");
+  const detailTotal = document.getElementById("income-detail-total");
+  const detailPaid = document.getElementById("income-detail-paid");
+  const detailPending = document.getElementById("income-detail-pending");
+  const detailMethod = document.getElementById("income-detail-method");
+  const detailNotes = document.getElementById("income-detail-notes");
 
   let editingIncomeId = null;
   let currentIncomes = [];
@@ -209,20 +224,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     return badge;
   }
 
-  function createCell(text) {
-    const cell = document.createElement("td");
-    cell.textContent = text;
-    return cell;
+  function openIncomeDetail(incomeId) {
+    const income = currentIncomes.find(
+      (item) => String(item.id) === String(incomeId),
+    );
+    if (!income) return;
+
+    const pendingAmount = getPendingAmount(income);
+
+    detailTitle.textContent = income.concept || "Ingreso";
+    detailMeta.textContent = `${income.client || "-"} · ${formatDate(income.date)} · ${income.paymentStatus || "-"}`;
+    detailTotal.textContent = formatCurrency(income.totalAmount || 0);
+    detailPaid.textContent = formatCurrency(income.paidAmount || 0);
+    detailPending.textContent = formatCurrency(pendingAmount);
+    detailMethod.textContent = income.paymentMethod || "-";
+    detailNotes.textContent = income.notes || "Sin observaciones.";
+
+    detailModal.classList.add("open");
+    detailOverlay.classList.add("open");
   }
 
-  function createEmptyStateRow(message, columns) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = columns;
-    cell.style.textAlign = "center";
-    cell.textContent = message;
-    row.appendChild(cell);
-    return row;
+  function closeIncomeDetail() {
+    detailModal.classList.remove("open");
+    detailOverlay.classList.remove("open");
   }
 
   async function loadClientOptions() {
@@ -451,7 +475,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (incomes.length === 0) {
       incomeTableBody.appendChild(
-        createEmptyStateRow("No hay ingresos registrados.", 10),
+        createEmptyStateRow("No hay ingresos registrados.", 11),
       );
       return;
     }
@@ -463,41 +487,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         row.classList.add("income-pending-row");
       }
 
-      row.appendChild(createCell(income.client || "-"));
-      row.appendChild(createCell(income.date || "-"));
-      row.appendChild(createCell(income.concept || "-"));
-      row.appendChild(createCell(formatCurrency(income.totalAmount)));
-      row.appendChild(createCell(formatCurrency(income.paidAmount)));
-      row.appendChild(createCell(formatCurrency(pendingAmount)));
+      row.appendChild(createTableCell(income.client || "-"));
+      row.appendChild(createTableCell(income.date || "-"));
+      row.appendChild(createTableCell(income.concept || "-"));
+      row.appendChild(createTableCell(formatCurrency(income.totalAmount)));
+      row.appendChild(createTableCell(formatCurrency(income.paidAmount)));
+      row.appendChild(createTableCell(formatCurrency(pendingAmount)));
 
       const statusCell = document.createElement("td");
       statusCell.appendChild(getPaymentStatusBadge(income.paymentStatus));
       row.appendChild(statusCell);
 
-      row.appendChild(createCell(income.invoiceRequired || "-"));
+      row.appendChild(createTableCell(income.invoiceRequired || "-"));
 
-      const editCell = document.createElement("td");
-      const editButton = document.createElement("button");
-      editButton.type = "button";
-      editButton.className = "edit-btn";
-      editButton.dataset.id = String(income.id);
-      editButton.textContent = "Editar";
-      editCell.appendChild(editButton);
-      row.appendChild(editCell);
-
-      const deleteCell = document.createElement("td");
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "delete-btn";
-      deleteButton.dataset.id = String(income.id);
-      deleteButton.textContent = "Eliminar";
-      deleteCell.appendChild(deleteButton);
-      row.appendChild(deleteCell);
+      appendRowActions(row, income.id, { onDetail: true });
 
       incomeTableBody.appendChild(row);
     });
-
-    addTableEvents();
   }
 
   function fillForm(income) {
@@ -579,24 +585,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function addTableEvents() {
-    const editButtons = document.querySelectorAll(".edit-btn");
-    const deleteButtons = document.querySelectorAll(".delete-btn");
+  bindRowActions(incomeTableBody, {
+    onDetail: (incomeId) => openIncomeDetail(incomeId),
+    onEdit: (incomeId) => handleEdit(incomeId),
+    onDelete: (incomeId) => handleDelete(incomeId),
+  });
 
-    editButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const incomeId = button.dataset.id;
-        handleEdit(incomeId);
-      });
-    });
-
-    deleteButtons.forEach((button) => {
-      button.addEventListener("click", async () => {
-        const incomeId = button.dataset.id;
-        await handleDelete(incomeId);
-      });
-    });
-  }
+  detailCloseButton.addEventListener("click", closeIncomeDetail);
+  detailOverlay.addEventListener("click", closeIncomeDetail);
 
   async function exportFilteredIncomesToExcel() {
     const incomes = getFilteredIncomes();

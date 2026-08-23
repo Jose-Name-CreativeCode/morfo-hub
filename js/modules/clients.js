@@ -7,7 +7,11 @@ import {
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
 import {
+  appendRowActions,
   askConfirm,
+  bindRowActions,
+  createEmptyStateRow,
+  createTableCell,
   formatCurrency,
   formatDate,
   normalizeText,
@@ -90,22 +94,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById("client-name").focus();
     }
-  }
-
-  function createCell(text) {
-    const cell = document.createElement("td");
-    cell.textContent = text;
-    return cell;
-  }
-
-  function createEmptyStateRow(message, columns) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = columns;
-    cell.style.textAlign = "center";
-    cell.textContent = message;
-    row.appendChild(cell);
-    return row;
   }
 
   function getClientRelatedData(client) {
@@ -296,44 +284,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         row.classList.add("muted-row");
       }
 
-      row.appendChild(createCell(client.name));
-      row.appendChild(createCell(client.contact));
-      row.appendChild(createCell(client.email));
-      row.appendChild(createCell(client.phone));
-      row.appendChild(createCell(client.status));
-      row.appendChild(createCell(client.invoiceRequired));
+      row.appendChild(createTableCell(client.name));
+      row.appendChild(createTableCell(client.contact));
+      row.appendChild(createTableCell(client.email));
+      row.appendChild(createTableCell(client.phone));
+      row.appendChild(createTableCell(client.status));
+      row.appendChild(createTableCell(client.invoiceRequired));
 
-      const detailCell = document.createElement("td");
-      const detailButton = document.createElement("button");
-      detailButton.type = "button";
-      detailButton.className = "pdf-btn client-detail-btn";
-      detailButton.dataset.id = String(client.id);
-      detailButton.textContent = "Ver";
-      detailCell.appendChild(detailButton);
-      row.appendChild(detailCell);
-
-      const editCell = document.createElement("td");
-      const editButton = document.createElement("button");
-      editButton.type = "button";
-      editButton.className = "edit-btn";
-      editButton.dataset.id = String(client.id);
-      editButton.textContent = "Editar";
-      editCell.appendChild(editButton);
-      row.appendChild(editCell);
-
-      const deleteCell = document.createElement("td");
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "delete-btn";
-      deleteButton.dataset.id = String(client.id);
-      deleteButton.textContent = "Eliminar";
-      deleteCell.appendChild(deleteButton);
-      row.appendChild(deleteCell);
+      appendRowActions(row, client.id, { onDetail: true });
 
       clientTableBody.appendChild(row);
     });
-
-    addTableEvents();
   }
 
   function fillForm(client) {
@@ -432,31 +393,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function addTableEvents() {
-    const detailButtons = document.querySelectorAll(".client-detail-btn");
-    const editButtons = document.querySelectorAll(".edit-btn");
-    const deleteButtons = document.querySelectorAll(".delete-btn");
-
-    detailButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        openClientDetail(button.dataset.id);
-      });
-    });
-
-    editButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const clientId = button.dataset.id;
-        handleEdit(clientId);
-      });
-    });
-
-    deleteButtons.forEach((button) => {
-      button.addEventListener("click", async () => {
-        const clientId = button.dataset.id;
-        await handleDelete(clientId);
-      });
-    });
-  }
+  bindRowActions(clientTableBody, {
+    onDetail: (clientId) => openClientDetail(clientId),
+    onEdit: (clientId) => handleEdit(clientId),
+    onDelete: (clientId) => handleDelete(clientId),
+  });
 
   clientForm.addEventListener("submit", async (event) => {
     event.preventDefault();

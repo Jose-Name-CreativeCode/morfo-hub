@@ -140,7 +140,7 @@
             </form>
           </section>
 
-          <section class="cards-grid section-spacing income-stats-grid">
+          <section class="cards-grid section-spacing stats-grid-4">
             <article class="card metric-card pending">
               <div class="card-label">Total</div>
               <div
@@ -266,6 +266,7 @@
                   <th>Saldo</th>
                   <th>Estatus</th>
                   <th>Factura</th>
+                  <th>Ficha</th>
                   <th>Editar</th>
                   <th>Eliminar</th>
                 </tr>
@@ -273,6 +274,50 @@
               <tbody></tbody>
             </table>
           </section>
+
+          <div id="income-detail-overlay" class="manage-overlay"></div>
+
+          <div id="income-detail-modal" class="manage-modal modal-shell">
+            <div class="manage-modal-header">
+              <div>
+                <h3 id="income-detail-title">Ficha del ingreso</h3>
+                <p id="income-detail-meta"></p>
+              </div>
+              <button
+                type="button"
+                id="income-detail-close"
+                class="manage-close-btn"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="manage-payment-summary">
+              <div>
+                <span>Monto total</span>
+                <strong id="income-detail-total">$0.00</strong>
+              </div>
+              <div>
+                <span>Pagado</span>
+                <strong id="income-detail-paid">$0.00</strong>
+              </div>
+              <div>
+                <span>Saldo pendiente</span>
+                <strong id="income-detail-pending">$0.00</strong>
+              </div>
+              <div>
+                <span>Método</span>
+                <strong id="income-detail-method">-</strong>
+              </div>
+            </div>
+
+            <div class="manage-section">
+              <h4>Observaciones</h4>
+              <div id="income-detail-notes" class="client-detail-list">
+                Sin observaciones.
+              </div>
+            </div>
+          </div>
         </main>
       </div>
     </div>

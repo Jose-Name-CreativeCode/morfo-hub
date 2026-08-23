@@ -36,59 +36,11 @@
                 >
                   EcoBridal
                 </a>
-                <a href="operations.html" class="btn-primary btn-link">
-                  Nueva operación
-                </a>
                 <a href="reports.html" class="btn-primary btn-link">
                   Ir a reportes
                 </a>
               </div>
             </div>
-          </section>
-
-          <section class="visual-story-grid section-spacing">
-            <a
-              href="clients.html?quick=1&status=Prospecto&invoice=no"
-              class="story-card story-card-clients"
-            >
-              <span class="story-badge">Paso 1</span>
-              <strong>Empezar con un cliente</strong>
-              <span>
-                Yo entro aquí cuando llega una idea nueva y quiero registrarla
-                sin complicarme.
-              </span>
-            </a>
-
-            <a href="quotes.html?quick=1" class="story-card story-card-quotes">
-              <span class="story-badge">Paso 2</span>
-              <strong>Armar una propuesta</strong>
-              <span>
-                Yo preparo una cotización clara y visual para mover la venta.
-              </span>
-            </a>
-
-            <a
-              href="income.html?quick=1&status=Pendiente&method=Transferencia&invoice=no"
-              class="story-card story-card-income"
-            >
-              <span class="story-badge">Paso 3</span>
-              <strong>Registrar un cobro</strong>
-              <span>
-                Yo dejo listo un ingreso pendiente o un pago recibido en pocos
-                pasos.
-              </span>
-            </a>
-
-            <a
-              href="expenses.html?quick=1&method=Tarjeta&invoice=no"
-              class="story-card story-card-expenses"
-            >
-              <span class="story-badge">Paso 4</span>
-              <strong>Anotar un gasto</strong>
-              <span>
-                Yo capturo una salida y luego la veo reflejada en reportes.
-              </span>
-            </a>
           </section>
 
           <section class="cards-grid section-spacing">
@@ -170,69 +122,67 @@
           <section class="card dashboard-panel section-spacing">
             <h2 class="section-title section-title-sm">Captura rápida</h2>
             <p class="section-subtitle section-subtitle-compact">
-              Entra directo al registro que más usan y empieza con valores ya
-              precargados para capturar más rápido.
+              Entra directo al flujo que más uso, con valores ya precargados
+              para capturar más rápido.
             </p>
 
-            <div class="quick-capture-grid">
-              <a
-                href="clients.html?quick=1&status=Prospecto&invoice=no"
-                class="quick-capture-card"
-              >
-                <strong>Nuevo cliente</strong>
-                <span>Alta rápida como prospecto</span>
-              </a>
+            <div class="operations-grid">
+              <article class="card operation-card">
+                <div class="operation-card-step">Cliente + cotización</div>
+                <p class="operation-card-text">
+                  Doy de alta al cliente y luego creo una cotización lista
+                  para seguimiento comercial.
+                </p>
+                <div class="operation-card-actions">
+                  <a
+                    href="clients.html?quick=1&status=Prospecto&invoice=no"
+                    class="btn-primary btn-link"
+                  >
+                    Nuevo cliente
+                  </a>
+                  <a href="quotes.html?quick=1" class="btn-primary btn-link">
+                    Nueva cotización
+                  </a>
+                </div>
+              </article>
 
-              <a href="quotes.html?quick=1" class="quick-capture-card">
-                <strong>Nueva cotización</strong>
-                <span>Lista para llenar y enviar</span>
-              </a>
+              <article class="card operation-card">
+                <div class="operation-card-step">Cobro</div>
+                <p class="operation-card-text">
+                  Registro un saldo por cobrar o un pago que ya llegó, sin
+                  recorrer pantallas de más.
+                </p>
+                <div class="operation-card-actions">
+                  <a
+                    href="income.html?quick=1&status=Pendiente&method=Transferencia&invoice=no"
+                    class="btn-primary btn-link"
+                  >
+                    Ingreso pendiente
+                  </a>
+                  <a
+                    href="income.html?quick=1&status=Pagado&method=Transferencia&invoice=no"
+                    class="btn-primary btn-link"
+                  >
+                    Cobro recibido
+                  </a>
+                </div>
+              </article>
 
-              <a
-                href="income.html?quick=1&status=Pendiente&method=Transferencia&invoice=no"
-                class="quick-capture-card"
-              >
-                <strong>Ingreso pendiente</strong>
-                <span>Para saldos por cobrar</span>
-              </a>
-
-              <a
-                href="income.html?quick=1&status=Pagado&method=Transferencia&invoice=no"
-                class="quick-capture-card"
-              >
-                <strong>Ingreso cobrado</strong>
-                <span>Para pagos ya recibidos</span>
-              </a>
-
-              <a
-                href="expenses.html?quick=1&method=Tarjeta&invoice=no"
-                class="quick-capture-card"
-              >
-                <strong>Nuevo gasto</strong>
-                <span>Registro operativo rápido</span>
-              </a>
-            </div>
-          </section>
-
-          <section class="card dashboard-panel section-spacing">
-            <h2 class="section-title section-title-sm">Accesos rápidos</h2>
-
-            <div class="quick-links-grid">
-              <a href="clients.html" class="btn-primary btn-center">
-                Clientes
-              </a>
-
-              <a href="income.html" class="btn-primary btn-center">
-                Ingresos
-              </a>
-
-              <a href="expenses.html" class="btn-primary btn-center">
-                Gastos
-              </a>
-
-              <a href="quotes.html" class="btn-primary btn-center">
-                Cotización
-              </a>
+              <article class="card operation-card">
+                <div class="operation-card-step">Gasto</div>
+                <p class="operation-card-text">
+                  Capturo un gasto del día con valores frecuentes, listo para
+                  reportes y cierre.
+                </p>
+                <div class="operation-card-actions">
+                  <a
+                    href="expenses.html?quick=1&method=Tarjeta&invoice=no"
+                    class="btn-primary btn-link"
+                  >
+                    Nuevo gasto
+                  </a>
+                </div>
+              </article>
             </div>
           </section>
 

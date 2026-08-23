@@ -15,11 +15,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await protectPage();
 
   // ===== FORMS =====
-  const agencyForm = document.querySelectorAll("form")[0];
-  const termsForm = document.querySelectorAll("form")[1];
-  const invoiceForm = document.querySelectorAll("form")[2];
-  const advancedForm = document.querySelectorAll("form")[3];
-  const serviceTemplatesForm = document.querySelectorAll("form")[4];
+  const settingsForm = document.getElementById("settings-form");
+  const serviceTemplatesForm = document.querySelectorAll("form")[1];
 
   // ===== INPUTS =====
   const agencyName = document.getElementById("agency-name");
@@ -211,86 +208,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // ===== SAVE AGENCY =====
-  agencyForm.addEventListener("submit", async (e) => {
+  // ===== SAVE SETTINGS =====
+  settingsForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const button = agencyForm.querySelector(".btn-primary");
-    setButtonLoading(button, true, "Guardando...");
-
-    try {
-      const settings = await saveSettingsRecord({
-        ...currentSettings,
-        agency: {
-          name: agencyName.value,
-          email: agencyEmail.value,
-          phone: agencyPhone.value,
-          address: agencyAddress.value,
-          website: agencyWebsite.value,
-        },
-      });
-
-      currentSettings = settings;
-      updateSummaryTable(settings);
-
-      showToast("Datos de la agencia guardados.", { type: "success" });
-    } finally {
-      setButtonLoading(button, false);
-    }
-  });
-
-  // ===== SAVE TERMS =====
-  termsForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const button = termsForm.querySelector(".btn-primary");
-    setButtonLoading(button, true, "Guardando...");
-
-    try {
-      const settings = await saveSettingsRecord({
-        ...currentSettings,
-        terms: defaultTerms.value,
-      });
-
-      currentSettings = settings;
-      updateSummaryTable(settings);
-
-      showToast("Condiciones guardadas.", { type: "success" });
-    } finally {
-      setButtonLoading(button, false);
-    }
-  });
-
-  // ===== SAVE INVOICE =====
-  invoiceForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const button = invoiceForm.querySelector(".btn-primary");
-    setButtonLoading(button, true, "Guardando...");
-
-    try {
-      const settings = await saveSettingsRecord({
-        ...currentSettings,
-        invoice: {
-          tax: Number(invoiceTax.value),
-          note: invoiceNote.value,
-        },
-      });
-
-      currentSettings = settings;
-      updateSummaryTable(settings);
-
-      showToast("Ajustes fiscales guardados.", { type: "success" });
-    } finally {
-      setButtonLoading(button, false);
-    }
-  });
-
-  // ===== SAVE ADVANCED =====
-  advancedForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const button = advancedForm.querySelector(".btn-primary");
+    const button = settingsForm.querySelector(".btn-primary");
     setButtonLoading(button, true, "Guardando...");
 
     try {
@@ -301,6 +223,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const settings = await saveSettingsRecord({
         ...currentSettings,
+        agency: {
+          name: agencyName.value,
+          email: agencyEmail.value,
+          phone: agencyPhone.value,
+          address: agencyAddress.value,
+          website: agencyWebsite.value,
+        },
+        terms: defaultTerms.value,
+        invoice: {
+          tax: Number(invoiceTax.value),
+          note: invoiceNote.value,
+        },
         commercial: {
           advancePercent: Number(advancePercent.value) || 0,
           paymentMethods: methods,
@@ -313,7 +247,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentSettings = settings;
       updateSummaryTable(settings);
 
-      showToast("Configuración avanzada guardada.", { type: "success" });
+      showToast("Configuración guardada correctamente.", { type: "success" });
     } finally {
       setButtonLoading(button, false);
     }

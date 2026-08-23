@@ -541,6 +541,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("quote-invoice-total").value = "";
     document.getElementById("quote-total").value = "";
     document.getElementById("quote-save-intent").value = "draft";
+    document.getElementById("quote-save-intent-group").hidden = false;
     syncAdSpendField();
 
     document.getElementById("quote-notes").value = "";
@@ -1301,14 +1302,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       quote.customTableTitle || "";
     document.getElementById("quote-custom-table-rows").value =
       quote.customTableRowsText || "";
-    document.getElementById("quote-save-intent").value =
-      normalizeStatus(quote.paymentStatus, "") === "pagada total"
-        ? "paid"
-        : normalizeStatus(quote.status, "borrador") === "aprobada"
-          ? "approved"
-          : normalizeStatus(quote.status, "borrador") === "enviada"
-            ? "sent"
-            : "draft";
+    document.getElementById("quote-save-intent-group").hidden = true;
 
     editingQuoteId = quote.id;
     submitButton.textContent = "Actualizar cotización";
@@ -2537,7 +2531,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         doc.text(contactParts.join("  |  "), marginX, 136);
       }
     }
-    // qwqw
 
     await drawHeader();
     drawInfoCard();
@@ -2769,11 +2762,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     let quotes = getQuotes();
-    setButtonLoading(
-      submitButton,
-      true,
-      editingQuoteId ? "Actualizando..." : "Guardando...",
-    );
+    const wasEditing = Boolean(editingQuoteId);
+    setButtonLoading(submitButton, true, wasEditing ? "Actualizando..." : "Guardando...");
 
     try {
       if (editingQuoteId) {
@@ -2801,12 +2791,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           customTableTitle,
           customTableRowsText,
           publicId: currentQuote?.publicId,
-          status:
-            saveIntent === "paid" || saveIntent === "approved"
-              ? "aprobada"
-              : saveIntent === "sent"
-                ? "enviada"
-                : currentQuote?.status || "borrador",
+          status: currentQuote?.status || "borrador",
           paymentHistory: currentQuote?.paymentHistory || [],
         };
 
@@ -2815,23 +2800,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           String(quote.id) === String(editingQuoteId) ? savedQuote : quote,
         );
         saveQuotes(quotes);
-
-        if (saveIntent === "approved") {
-          await ensurePendingIncomeForQuote(savedQuote.id, { silent: true });
-        }
-
-        if (saveIntent === "paid") {
-          await registerPayment({
-            quoteId: savedQuote.id,
-            paymentType: "total",
-            paymentDate: savedQuote.date || getTodayISO(),
-            amountPaid: Number(savedQuote.total || 0),
-            paymentMethod: savedQuote.paymentMethod || "Transferencia",
-            dueDate: "",
-            paymentNotes:
-              "Pago registrado automáticamente al actualizar la cotización.",
-          });
-        }
       } else {
         const existingQuotes = getQuotes();
         const newQuote = {
@@ -2895,7 +2863,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderQuotes();
       resetForm();
       loadFilterOptions();
-      showToast(getSaveIntentMessage(saveIntent), { type: "success" });
+      showToast(
+        wasEditing
+          ? "Cotización actualizada correctamente."
+          : getSaveIntentMessage(saveIntent),
+        { type: "success" },
+      );
     } finally {
       setButtonLoading(submitButton, false);
     }

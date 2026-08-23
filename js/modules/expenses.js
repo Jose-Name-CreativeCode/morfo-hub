@@ -5,7 +5,11 @@ import {
   saveExpenseRecord,
 } from "../services/expenses-service.js";
 import {
+  appendRowActions,
   askConfirm,
+  bindRowActions,
+  createEmptyStateRow,
+  createTableCell,
   formatCurrency,
   formatDate,
   getTodayISO,
@@ -121,22 +125,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById("expense-concept").focus();
     }
-  }
-
-  function createCell(text) {
-    const cell = document.createElement("td");
-    cell.textContent = text;
-    return cell;
-  }
-
-  function createEmptyStateRow(message, columns) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = columns;
-    cell.style.textAlign = "center";
-    cell.textContent = message;
-    row.appendChild(cell);
-    return row;
   }
 
   function loadYearOptions() {
@@ -285,44 +273,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     expenses.forEach((expense) => {
       const row = document.createElement("tr");
-      row.appendChild(createCell(expense.date || "-"));
-      row.appendChild(createCell(expense.concept || "-"));
-      row.appendChild(createCell(expense.category || "-"));
-      row.appendChild(createCell(formatCurrency(expense.amount)));
-      row.appendChild(createCell(expense.paymentMethod || "-"));
-      row.appendChild(createCell(expense.invoice || "-"));
+      row.appendChild(createTableCell(expense.date || "-"));
+      row.appendChild(createTableCell(expense.concept || "-"));
+      row.appendChild(createTableCell(expense.category || "-"));
+      row.appendChild(createTableCell(formatCurrency(expense.amount)));
+      row.appendChild(createTableCell(expense.paymentMethod || "-"));
+      row.appendChild(createTableCell(expense.invoice || "-"));
 
-      const detailCell = document.createElement("td");
-      const detailButton = document.createElement("button");
-      detailButton.type = "button";
-      detailButton.className = "pdf-btn expense-detail-btn";
-      detailButton.dataset.id = String(expense.id);
-      detailButton.textContent = "Ver";
-      detailCell.appendChild(detailButton);
-      row.appendChild(detailCell);
-
-      const editCell = document.createElement("td");
-      const editButton = document.createElement("button");
-      editButton.type = "button";
-      editButton.className = "edit-btn";
-      editButton.dataset.id = String(expense.id);
-      editButton.textContent = "Editar";
-      editCell.appendChild(editButton);
-      row.appendChild(editCell);
-
-      const deleteCell = document.createElement("td");
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "delete-btn";
-      deleteButton.dataset.id = String(expense.id);
-      deleteButton.textContent = "Eliminar";
-      deleteCell.appendChild(deleteButton);
-      row.appendChild(deleteCell);
+      appendRowActions(row, expense.id, { onDetail: true });
 
       expenseTableBody.appendChild(row);
     });
-
-    addTableEvents();
   }
 
   function fillForm(expense) {
@@ -404,31 +365,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function addTableEvents() {
-    const detailButtons = document.querySelectorAll(".expense-detail-btn");
-    const editButtons = document.querySelectorAll(".edit-btn");
-    const deleteButtons = document.querySelectorAll(".delete-btn");
-
-    detailButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        openExpenseDetail(button.dataset.id);
-      });
-    });
-
-    editButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const expenseId = button.dataset.id;
-        handleEdit(expenseId);
-      });
-    });
-
-    deleteButtons.forEach((button) => {
-      button.addEventListener("click", async () => {
-        const expenseId = button.dataset.id;
-        await handleDelete(expenseId);
-      });
-    });
-  }
+  bindRowActions(expenseTableBody, {
+    onDetail: (expenseId) => openExpenseDetail(expenseId),
+    onEdit: (expenseId) => handleEdit(expenseId),
+    onDelete: (expenseId) => handleDelete(expenseId),
+  });
 
   async function exportFilteredExpensesToExcel() {
     const expenses = getFilteredExpenses();

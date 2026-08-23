@@ -1,10 +1,5 @@
 const NAV_ITEMS = [
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
-  {
-    key: "operations",
-    label: "Nueva operación",
-    href: "operations.html",
-  },
   { key: "clients", label: "Clientes", href: "clients.html" },
   { key: "income", label: "Cobros e ingresos", href: "income.html" },
   { key: "expenses", label: "Gastos", href: "expenses.html" },

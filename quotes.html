@@ -232,18 +232,26 @@
                 </p>
               </div>
 
-              <div class="form-group form-group-full">
-                <label for="quote-save-intent">Al guardar</label>
+              <div
+                id="quote-save-intent-group"
+                class="form-group form-group-full"
+              >
+                <label for="quote-save-intent">Estado inicial</label>
                 <select id="quote-save-intent">
-                  <option value="draft">Solo guardar como borrador</option>
-                  <option value="sent">Guardar y dejar como enviada</option>
+                  <option value="draft">Guardar como borrador</option>
+                  <option value="sent">Guardar como enviada</option>
                   <option value="approved">
-                    Guardar y crear ingreso pendiente
+                    Guardar como aprobada y crear ingreso pendiente
                   </option>
                   <option value="paid">
-                    Guardar y registrar como pagada
+                    Guardar como aprobada y registrar como pagada
                   </option>
                 </select>
+                <p class="form-helper-text">
+                  Define el estado con el que nace esta cotización. Para
+                  cambiar el estado de una cotización ya creada, usa
+                  "Gestionar" desde la tabla.
+                </p>
               </div>
 
               <div class="form-group form-group-full form-group-tight">

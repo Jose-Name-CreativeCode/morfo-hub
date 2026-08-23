@@ -165,6 +165,70 @@ function ensureConfirmDialog() {
   return confirmElements;
 }
 
+export function createTableCell(text) {
+  const cell = document.createElement("td");
+  cell.textContent = text;
+  return cell;
+}
+
+export function createEmptyStateRow(message, columns) {
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  cell.colSpan = columns;
+  cell.style.textAlign = "center";
+  cell.textContent = message;
+  row.appendChild(cell);
+  return row;
+}
+
+export function appendRowActions(row, id, { onDetail, detailLabel = "Ver" } = {}) {
+  if (onDetail) {
+    const detailCell = document.createElement("td");
+    const detailButton = document.createElement("button");
+    detailButton.type = "button";
+    detailButton.className = "pdf-btn";
+    detailButton.dataset.rowAction = "detail";
+    detailButton.dataset.id = String(id);
+    detailButton.textContent = detailLabel;
+    detailCell.appendChild(detailButton);
+    row.appendChild(detailCell);
+  }
+
+  const editCell = document.createElement("td");
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.className = "edit-btn";
+  editButton.dataset.rowAction = "edit";
+  editButton.dataset.id = String(id);
+  editButton.textContent = "Editar";
+  editCell.appendChild(editButton);
+  row.appendChild(editCell);
+
+  const deleteCell = document.createElement("td");
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "delete-btn";
+  deleteButton.dataset.rowAction = "delete";
+  deleteButton.dataset.id = String(id);
+  deleteButton.textContent = "Eliminar";
+  deleteCell.appendChild(deleteButton);
+  row.appendChild(deleteCell);
+}
+
+export function bindRowActions(tableBody, { onDetail, onEdit, onDelete } = {}) {
+  tableBody.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-row-action]");
+    if (!button) return;
+
+    const id = button.dataset.id;
+    const action = button.dataset.rowAction;
+
+    if (action === "detail" && onDetail) onDetail(id);
+    if (action === "edit" && onEdit) onEdit(id);
+    if (action === "delete" && onDelete) onDelete(id);
+  });
+}
+
 export function askConfirm({
   title = "Confirmar acción",
   message = "¿Deseas continuar?",

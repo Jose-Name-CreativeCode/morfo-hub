@@ -15,74 +15,78 @@
         <header class="header" data-app-header></header>
 
         <main class="page-content">
-          <h1 class="section-title">Configuración general</h1>
-          <p class="section-subtitle">
-            Administra la información base de Morfo Studio, datos de contacto y
-            textos por defecto para cotizaciones.
-          </p>
-
-          <section class="card section-spacing">
-            <h2 class="section-title section-title-sm">Datos de la agencia</h2>
-
-            <form>
-              <div class="form-group">
-                <label for="agency-name">Nombre de la agencia</label>
-                <input type="text" id="agency-name" value="Morfo Studio" />
-              </div>
-
-              <div class="form-group">
-                <label for="agency-email">Correo electrónico</label>
-                <input
-                  type="email"
-                  id="agency-email"
-                  placeholder="contacto@morfostudio.com"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="agency-phone">Teléfono</label>
-                <input
-                  type="text"
-                  id="agency-phone"
-                  placeholder="222 000 0000"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="agency-address">Dirección</label>
-                <input
-                  type="text"
-                  id="agency-address"
-                  placeholder="Puebla, México"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="agency-website">Sitio web</label>
-                <input
-                  type="text"
-                  id="agency-website"
-                  placeholder="www.morfostudio.com"
-                />
-              </div>
-
-              <button type="submit" class="btn-primary">
-                Guardar datos de la agencia
-              </button>
-            </form>
+          <section class="hero-panel hero-panel-settings">
+            <div class="dashboard-kicker hero-kicker-settings">
+              Configuración
+            </div>
+            <h1 class="section-title dashboard-title">
+              Configuración general
+            </h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Administro aquí la información base de la agencia, condiciones
+              comerciales y textos por defecto para cotizaciones.
+            </p>
           </section>
 
-          <section class="card section-spacing">
-            <h2 class="section-title section-title-sm">
-              Condiciones comerciales por defecto
-            </h2>
+          <section class="card panel-soft form-shell section-spacing">
+            <form id="settings-form">
+              <div class="settings-section">
+                <h2 class="section-title section-title-sm">
+                  Datos de la agencia
+                </h2>
 
-            <form>
-              <div class="form-group">
-                <label for="default-terms"
-                  >Texto por defecto para cotizaciones</label
-                >
-                <textarea id="default-terms" rows="16">
+                <div class="form-group">
+                  <label for="agency-name">Nombre de la agencia</label>
+                  <input type="text" id="agency-name" value="Morfo Studio" />
+                </div>
+
+                <div class="form-group">
+                  <label for="agency-email">Correo electrónico</label>
+                  <input
+                    type="email"
+                    id="agency-email"
+                    placeholder="contacto@morfostudio.com"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="agency-phone">Teléfono</label>
+                  <input
+                    type="text"
+                    id="agency-phone"
+                    placeholder="222 000 0000"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="agency-address">Dirección</label>
+                  <input
+                    type="text"
+                    id="agency-address"
+                    placeholder="Puebla, México"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="agency-website">Sitio web</label>
+                  <input
+                    type="text"
+                    id="agency-website"
+                    placeholder="www.morfostudio.com"
+                  />
+                </div>
+              </div>
+
+              <div class="settings-section">
+                <h2 class="section-title section-title-sm">
+                  Condiciones comerciales por defecto
+                </h2>
+
+                <div class="form-group">
+                  <label for="default-terms"
+                    >Texto por defecto para cotizaciones</label
+                  >
+                  <textarea id="default-terms" rows="16">
 Nota:
 La inversión en pauta publicitaria se destina directamente a la plataforma Meta
 (Facebook e Instagram). Este monto no forma parte del servicio de gestión.
@@ -107,106 +111,104 @@ del servicio de Morfo Studio.
 
 ¡Muchas gracias!
 “Morfo Studio”</textarea
-                >
+                  >
+                </div>
               </div>
 
-              <button type="submit" class="btn-primary">
-                Guardar condiciones
-              </button>
-            </form>
-          </section>
+              <div class="settings-section">
+                <h2 class="section-title section-title-sm">
+                  Ajustes de factura
+                </h2>
 
-          <section class="card section-spacing">
-            <h2 class="section-title section-title-sm">
-              Ajustes de factura
-            </h2>
+                <div class="form-group">
+                  <label for="invoice-tax">IVA por defecto (%)</label>
+                  <input
+                    type="number"
+                    id="invoice-tax"
+                    value="16"
+                    step="0.01"
+                  />
+                </div>
 
-            <form>
-              <div class="form-group">
-                <label for="invoice-tax">IVA por defecto (%)</label>
-                <input type="number" id="invoice-tax" value="16" step="0.01" />
-              </div>
-
-              <div class="form-group">
-                <label for="invoice-note">Nota fiscal por defecto</label>
-                <textarea id="invoice-note" rows="4">
+                <div class="form-group">
+                  <label for="invoice-note">Nota fiscal por defecto</label>
+                  <textarea id="invoice-note" rows="4">
 Si se requiere factura, el IVA se calcula únicamente sobre el servicio de gestión.
 La pauta publicitaria se entrega a la plataforma correspondiente y no forma parte
 del servicio de Morfo Studio.</textarea
-                >
+                  >
+                </div>
+              </div>
+
+              <div class="settings-section">
+                <h2 class="section-title section-title-sm">
+                  Configuración avanzada
+                </h2>
+
+                <div class="form-group">
+                  <label for="advance-percent">
+                    Anticipo por defecto (%)
+                  </label>
+                  <input
+                    type="number"
+                    id="advance-percent"
+                    value="50"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="payment-methods"
+                    >Métodos de pago disponibles</label
+                  >
+                  <textarea
+                    id="payment-methods"
+                    rows="4"
+                    placeholder="Un método por línea. Ej. Transferencia, Efectivo, Tarjeta"
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="bank-details-invoice">
+                    Datos bancarios con factura
+                  </label>
+                  <textarea
+                    id="bank-details-invoice"
+                    rows="5"
+                    placeholder="Ej. Banco BBVA&#10;Titular: Morfo Studio S.A. de C.V.&#10;CLABE: 012345678901234567&#10;RFC: MOR000000XXX"
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="bank-details-no-invoice">
+                    Datos bancarios sin factura
+                  </label>
+                  <textarea
+                    id="bank-details-no-invoice"
+                    rows="5"
+                    placeholder="Ej. Banco Nu&#10;Titular: Nombre Apellido&#10;CLABE: 987654321098765432&#10;Concepto: Nombre del cliente + servicio"
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="legal-note">Texto legal / aceptación</label>
+                  <textarea
+                    id="legal-note"
+                    rows="5"
+                    placeholder="Condiciones legales, vigencia, aceptación de propuesta, etc."
+                  ></textarea>
+                </div>
               </div>
 
               <button type="submit" class="btn-primary">
-                Guardar ajustes fiscales
+                Guardar configuración
               </button>
             </form>
           </section>
 
-          <section class="card section-spacing">
-            <h2 class="section-title section-title-sm">
-              Configuración avanzada
-            </h2>
-
-            <form>
-              <div class="form-group">
-                <label for="advance-percent">Anticipo por defecto (%)</label>
-                <input
-                  type="number"
-                  id="advance-percent"
-                  value="50"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="payment-methods">Métodos de pago disponibles</label>
-                <textarea
-                  id="payment-methods"
-                  rows="4"
-                  placeholder="Un método por línea. Ej. Transferencia, Efectivo, Tarjeta"
-                ></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="bank-details-invoice">
-                  Datos bancarios con factura
-                </label>
-                <textarea
-                  id="bank-details-invoice"
-                  rows="5"
-                  placeholder="Ej. Banco BBVA&#10;Titular: Morfo Studio S.A. de C.V.&#10;CLABE: 012345678901234567&#10;RFC: MOR000000XXX"
-                ></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="bank-details-no-invoice">
-                  Datos bancarios sin factura
-                </label>
-                <textarea
-                  id="bank-details-no-invoice"
-                  rows="5"
-                  placeholder="Ej. Banco Nu&#10;Titular: Nombre Apellido&#10;CLABE: 987654321098765432&#10;Concepto: Nombre del cliente + servicio"
-                ></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="legal-note">Texto legal / aceptación</label>
-                <textarea
-                  id="legal-note"
-                  rows="5"
-                  placeholder="Condiciones legales, vigencia, aceptación de propuesta, etc."
-                ></textarea>
-              </div>
-
-              <button type="submit" class="btn-primary">
-                Guardar configuración avanzada
-              </button>
-            </form>
-          </section>
-
-          <section class="card section-spacing">
+          <section class="card panel-soft form-shell section-spacing">
             <h2 class="section-title section-title-sm">
               Plantillas de servicios para cotizaciones
             </h2>
