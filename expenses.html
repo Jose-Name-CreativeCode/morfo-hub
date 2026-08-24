@@ -27,7 +27,7 @@
           </section>
 
           <section class="card section-spacing form-shell panel-soft">
-            <div class="smart-presets-grid">
+            <div class="smart-presets-grid" id="expense-presets">
               <button
                 type="button"
                 class="preset-chip"
@@ -105,7 +105,7 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" data-invoice-only>
                 <label for="expense-invoice">¿Tiene factura?</label>
                 <select id="expense-invoice">
                   <option value="">Selecciona una opción</option>
@@ -144,7 +144,7 @@
               </div>
             </article>
 
-            <article class="card metric-card">
+            <article class="card metric-card" data-invoice-only>
               <div class="card-label">Con factura</div>
               <div class="card-value metric-card-value" id="expense-invoiced">
                 0
@@ -234,7 +234,7 @@
                   <th>Categoría</th>
                   <th>Monto</th>
                   <th>Método de pago</th>
-                  <th>Factura</th>
+                  <th data-invoice-only>Factura</th>
                   <th>Ficha</th>
                   <th>Editar</th>
                   <th>Eliminar</th>
@@ -274,7 +274,7 @@
                 <span>Método</span>
                 <strong id="expense-detail-method">-</strong>
               </div>
-              <div>
+              <div data-invoice-only>
                 <span>Factura</span>
                 <strong id="expense-detail-invoice">-</strong>
               </div>

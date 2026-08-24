@@ -1,3 +1,10 @@
+import {
+  SCOPES,
+  getActiveScope,
+  getScopeConfig,
+  withScopeParam,
+} from "./scopes.js";
+
 const NAV_ITEMS = [
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
   { key: "clients", label: "Clientes", href: "clients.html" },
@@ -11,31 +18,71 @@ const NAV_ITEMS = [
 
 const MOBILE_BREAKPOINT = 900;
 
+function getNavItem(key) {
+  return NAV_ITEMS.find((item) => item.key === key);
+}
+
 function inferNavKey() {
   const currentFile = window.location.pathname.split("/").pop() || "";
   const match = NAV_ITEMS.find((item) => item.href === currentFile);
   return match?.key || "dashboard";
 }
 
+function renderScopeSwitcher(sidebar, activeScope) {
+  const switcher = document.createElement("div");
+  switcher.className = "scope-switcher";
+  switcher.setAttribute("role", "tablist");
+  switcher.setAttribute("aria-label", "Espacio de trabajo");
+
+  Object.values(SCOPES).forEach((scope) => {
+    const link = document.createElement("a");
+    const target = getNavItem(scope.homeKey)?.href || "expenses.html";
+
+    link.className = "scope-tab";
+    link.href = withScopeParam(target, scope.key);
+    link.textContent = scope.label;
+    link.setAttribute("role", "tab");
+
+    if (scope.key === activeScope) {
+      link.classList.add("active");
+      link.setAttribute("aria-selected", "true");
+    } else {
+      link.setAttribute("aria-selected", "false");
+    }
+
+    switcher.appendChild(link);
+  });
+
+  sidebar.appendChild(switcher);
+}
+
 function renderSidebar(sidebar, activeKey) {
   sidebar.replaceChildren();
   sidebar.setAttribute("aria-hidden", "false");
+
+  const activeScope = getActiveScope();
+  const scopeConfig = getScopeConfig(activeScope);
 
   const brand = document.createElement("div");
   brand.className = "sidebar-brand";
   brand.textContent = "Morfo Hub";
   sidebar.appendChild(brand);
 
+  renderScopeSwitcher(sidebar, activeScope);
+
   const nav = document.createElement("nav");
   nav.className = "sidebar-nav";
 
   const list = document.createElement("ul");
 
-  NAV_ITEMS.forEach((item) => {
+  scopeConfig.navKeys.forEach((key) => {
+    const item = getNavItem(key);
+    if (!item) return;
+
     const listItem = document.createElement("li");
     const link = document.createElement("a");
-    link.href = item.href;
-    link.textContent = item.label;
+    link.href = withScopeParam(item.href, activeScope);
+    link.textContent = scopeConfig.navLabels?.[key] || item.label;
 
     if (item.key === activeKey) {
       link.classList.add("active");
@@ -76,8 +123,13 @@ function renderHeader(header, pageTitle) {
   title.className = "header-title";
   title.textContent = pageTitle;
 
+  const scopeBadge = document.createElement("span");
+  scopeBadge.className = "header-scope-badge";
+  scopeBadge.textContent = getScopeConfig().label;
+
   headerMain.appendChild(mobileMenuButton);
   headerMain.appendChild(title);
+  headerMain.appendChild(scopeBadge);
 
   const user = document.createElement("div");
   user.className = "header-user";

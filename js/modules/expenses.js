@@ -5,6 +5,12 @@ import {
   saveExpenseRecord,
 } from "../services/expenses-service.js";
 import {
+  fillSelectOptions,
+  getActiveScope,
+  getScopeConfig,
+  recordMatchesScope,
+} from "../scopes.js";
+import {
   appendRowActions,
   askConfirm,
   bindRowActions,
@@ -55,6 +61,61 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingExpenseId = null;
   let currentExpenses = [];
 
+  const activeScope = getActiveScope();
+  const scopeConfig = getScopeConfig(activeScope);
+
+  /**
+   * Adapta el formulario y la tabla al espacio activo: categorías, métodos de
+   * pago y, cuando no aplica (Personal y Casa), oculta todo lo de facturación.
+   */
+  function applyScopeToUi() {
+    document.body.dataset.scope = activeScope;
+
+    fillSelectOptions(
+      document.getElementById("expense-category"),
+      scopeConfig.expenseCategories,
+      "Selecciona una categoría",
+    );
+    fillSelectOptions(
+      document.getElementById("expense-payment-method"),
+      scopeConfig.paymentMethods,
+      "Selecciona una opción",
+    );
+
+    document.querySelectorAll("[data-invoice-only]").forEach((element) => {
+      element.hidden = !scopeConfig.showInvoice;
+    });
+
+    if (!scopeConfig.showInvoice) {
+      document.getElementById("expense-invoice").value = "no";
+    }
+
+    renderScopePresets();
+  }
+
+  /** Atajos de captura: en Personal y Casa son las tarjetas que sí se usan. */
+  function renderScopePresets() {
+    const presetsContainer = document.getElementById("expense-presets");
+    if (!presetsContainer || scopeConfig.showInvoice) return;
+
+    presetsContainer.replaceChildren();
+
+    scopeConfig.paymentMethods.forEach((method) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "preset-chip";
+      chip.textContent = method;
+      chip.addEventListener("click", () => {
+        document.getElementById("expense-payment-method").value = method;
+      });
+      presetsContainer.appendChild(chip);
+    });
+  }
+
+  function getTableColumnCount() {
+    return document.querySelectorAll(".table thead th:not([hidden])").length;
+  }
+
   function createRecordId() {
     if (globalThis.crypto?.randomUUID) {
       return globalThis.crypto.randomUUID();
@@ -65,7 +126,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function applyExpenseFormDefaults() {
     document.getElementById("expense-date").value = getTodayISO();
-    document.getElementById("expense-payment-method").value = "Tarjeta";
+    document.getElementById("expense-payment-method").value =
+      scopeConfig.paymentMethods[0] || "";
     document.getElementById("expense-invoice").value = "no";
   }
 
@@ -92,7 +154,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function refreshExpensesCollection() {
-    currentExpenses = await getExpensesCollection();
+    const allExpenses = await getExpensesCollection();
+    currentExpenses = allExpenses.filter((expense) =>
+      recordMatchesScope(expense, activeScope),
+    );
   }
 
   function resetForm() {
@@ -266,7 +331,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (expenses.length === 0) {
       expenseTableBody.appendChild(
-        createEmptyStateRow("No hay gastos registrados.", 9),
+        createEmptyStateRow("No hay gastos registrados.", getTableColumnCount()),
       );
       return;
     }
@@ -278,7 +343,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.appendChild(createTableCell(expense.category || "-"));
       row.appendChild(createTableCell(formatCurrency(expense.amount)));
       row.appendChild(createTableCell(expense.paymentMethod || "-"));
-      row.appendChild(createTableCell(expense.invoice || "-"));
+
+      if (scopeConfig.showInvoice) {
+        row.appendChild(createTableCell(expense.invoice || "-"));
+      }
 
       appendRowActions(row, expense.id, { onDetail: true });
 
@@ -602,6 +670,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const savedExpense = await saveExpenseRecord({
         ...existingExpense,
         id: editingExpenseId || existingExpense.id || createRecordId(),
+        scope: activeScope,
         date,
         concept,
         category,
@@ -683,6 +752,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
+    applyScopeToUi();
     resetForm();
     applyExpensePrefillFromUrl();
     await refreshExpensesCollection();

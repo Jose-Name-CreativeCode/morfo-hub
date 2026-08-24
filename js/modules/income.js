@@ -6,6 +6,12 @@ import {
   saveIncomeRecord,
 } from "../services/income-service.js";
 import {
+  fillSelectOptions,
+  getActiveScope,
+  getScopeConfig,
+  recordMatchesScope,
+} from "../scopes.js";
+import {
   appendRowActions,
   askConfirm,
   bindRowActions,
@@ -58,6 +64,71 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingIncomeId = null;
   let currentIncomes = [];
   let currentClients = [];
+
+  const activeScope = getActiveScope();
+  const scopeConfig = getScopeConfig(activeScope);
+
+  /** Ajusta etiquetas, métodos de pago y facturación al espacio activo. */
+  function applyScopeToUi() {
+    document.body.dataset.scope = activeScope;
+
+    document.getElementById("income-client-label").textContent =
+      scopeConfig.incomeSourceLabel;
+
+    fillSelectOptions(
+      document.getElementById("income-payment-method"),
+      scopeConfig.paymentMethods,
+      "Selecciona una opción",
+    );
+
+    document.querySelectorAll("[data-invoice-only]").forEach((element) => {
+      element.hidden = !scopeConfig.showInvoice;
+    });
+
+    if (!scopeConfig.showInvoice) {
+      document.getElementById("income-invoice").value = "no";
+    }
+
+    renderScopePresets();
+  }
+
+  /**
+   * En Casa el sueldo llega en dos quincenas de 40,000: el atajo precarga una
+   * quincena completa para no recapturarla a mano cada vez.
+   */
+  function renderScopePresets() {
+    const presetsContainer = document.getElementById("income-presets");
+    if (!presetsContainer || activeScope === "morfo") return;
+
+    presetsContainer.replaceChildren();
+
+    if (activeScope !== "casa") return;
+
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "preset-chip";
+    chip.textContent = "Quincena $40,000";
+    chip.addEventListener("click", () => {
+      document.getElementById("income-client").value = "Quincena";
+      document.getElementById("income-concept").value = "Quincena";
+      document.getElementById("income-amount").value = "40000";
+      document.getElementById("income-paid-amount").value = "40000";
+      document.getElementById("income-payment-status").value = "Pagado";
+    });
+
+    presetsContainer.appendChild(chip);
+  }
+
+  function getTableColumnCount() {
+    return document.querySelectorAll(".table thead th:not([hidden])").length;
+  }
+
+  async function refreshIncomesCollection() {
+    const allIncomes = await getIncomeCollection();
+    currentIncomes = allIncomes.filter((income) =>
+      recordMatchesScope(income, activeScope),
+    );
+  }
 
   function createRecordId() {
     if (globalThis.crypto?.randomUUID) {
@@ -250,6 +321,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function loadClientOptions() {
+    // Personal y Casa tienen fuentes fijas; solo Morfo depende de clientes.
+    if (scopeConfig.incomeSources) {
+      fillSelectOptions(
+        clientSelect,
+        scopeConfig.incomeSources,
+        `Selecciona ${scopeConfig.incomeSourceLabel.toLowerCase()}`,
+      );
+      return;
+    }
+
     currentClients = await getClientsCollection();
 
     clientSelect.replaceChildren();
@@ -475,7 +556,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (incomes.length === 0) {
       incomeTableBody.appendChild(
-        createEmptyStateRow("No hay ingresos registrados.", 11),
+        createEmptyStateRow(
+          "No hay ingresos registrados.",
+          getTableColumnCount(),
+        ),
       );
       return;
     }
@@ -498,7 +582,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       statusCell.appendChild(getPaymentStatusBadge(income.paymentStatus));
       row.appendChild(statusCell);
 
-      row.appendChild(createTableCell(income.invoiceRequired || "-"));
+      if (scopeConfig.showInvoice) {
+        row.appendChild(createTableCell(income.invoiceRequired || "-"));
+      }
 
       appendRowActions(row, income.id, { onDetail: true });
 
@@ -881,6 +967,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await saveIncomeRecord({
         ...existingIncome,
         id: editingIncomeId || existingIncome.id || createRecordId(),
+        scope: activeScope,
         client,
         date,
         concept,
@@ -893,7 +980,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       resetForm();
-      currentIncomes = await getIncomeCollection();
+      await refreshIncomesCollection();
       await loadClientOptions();
       loadYearOptions();
       loadDynamicFilterOptions();
@@ -957,8 +1044,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   window.addEventListener("focus", async () => {
-    currentClients = await getClientsCollection();
-    currentIncomes = await getIncomeCollection();
+    await refreshIncomesCollection();
     await loadClientOptions();
     loadYearOptions();
     loadDynamicFilterOptions();
@@ -966,7 +1052,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
-    currentIncomes = await getIncomeCollection();
+    applyScopeToUi();
+    await refreshIncomesCollection();
     resetForm();
     await loadClientOptions();
     applyIncomePrefillFromUrl();

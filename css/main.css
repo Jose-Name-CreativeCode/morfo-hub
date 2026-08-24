@@ -124,6 +124,50 @@ img {
   color: var(--text);
 }
 
+.scope-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.scope-tab {
+  padding: 9px 6px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: center;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.scope-tab:hover {
+  color: var(--text);
+}
+
+.scope-tab.active {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.header-scope-badge {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .sidebar-nav ul {
   display: flex;
   flex-direction: column;

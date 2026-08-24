@@ -27,7 +27,7 @@
           </section>
 
           <section class="card section-spacing form-shell panel-soft">
-            <div class="smart-presets-grid">
+            <div class="smart-presets-grid" id="income-presets">
               <button
                 type="button"
                 class="preset-chip"
@@ -53,7 +53,7 @@
 
             <form class="entry-form-grid">
               <div class="form-group">
-                <label for="income-client">Cliente</label>
+                <label for="income-client" id="income-client-label">Cliente</label>
                 <select id="income-client">
                   <option value="">Selecciona un cliente</option>
                 </select>
@@ -114,7 +114,7 @@
                 </select>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" data-invoice-only>
                 <label for="income-invoice">¿Requiere factura?</label>
                 <select id="income-invoice">
                   <option value="">Selecciona una opción</option>
@@ -265,7 +265,7 @@
                   <th>Pagado</th>
                   <th>Saldo</th>
                   <th>Estatus</th>
-                  <th>Factura</th>
+                  <th data-invoice-only>Factura</th>
                   <th>Ficha</th>
                   <th>Editar</th>
                   <th>Eliminar</th>
