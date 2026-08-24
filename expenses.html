@@ -6,6 +6,7 @@
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
     <title>Morfo Hub | Gastos</title>
     <link rel="stylesheet" href="css/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body data-page-title="Gastos" data-nav-key="expenses">
     <div class="app-layout">
@@ -179,18 +180,11 @@
             </form>
           </section>
 
-          <section class="cards-grid section-spacing stats-grid-4">
+          <section class="cards-grid section-spacing stats-grid-3">
             <article class="card metric-card expense">
               <div class="card-label">Gastos del filtro</div>
               <div class="card-value metric-card-value" id="expense-total">
                 $0.00
-              </div>
-            </article>
-
-            <article class="card metric-card pending">
-              <div class="card-label">Categoría principal</div>
-              <div class="card-value metric-card-value" id="expense-top-category">
-                -
               </div>
             </article>
 
@@ -207,6 +201,21 @@
                 0
               </div>
             </article>
+          </section>
+
+          <section
+            class="card dashboard-panel section-spacing"
+            id="scope-chart-panel"
+            data-scope-chart
+            hidden
+          >
+            <h2 class="section-title section-title-sm">
+              Distribución financiera
+            </h2>
+
+            <div class="chart-frame">
+              <canvas id="scopeFinanceChart"></canvas>
+            </div>
           </section>
 
           <section class="card section-spacing">

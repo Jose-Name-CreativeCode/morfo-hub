@@ -4,6 +4,7 @@ import { getExpensesCollection } from "../services/expenses-service.js";
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
 import { getRuntimeStatus } from "../services/runtime-status.js";
+import { DEFAULT_SCOPE, recordMatchesScope } from "../scopes.js";
 import {
   formatCurrency,
   formatDate,
@@ -572,13 +573,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function refreshDashboardData() {
-    const [runtime, incomes, expenses, clients, quotes] = await Promise.all([
-      getRuntimeStatus(),
-      getIncomeCollection(),
-      getExpensesCollection(),
-      getClientsCollection(),
-      getQuotesCollection(),
-    ]);
+    const [runtime, allIncomes, allExpenses, clients, quotes] =
+      await Promise.all([
+        getRuntimeStatus(),
+        getIncomeCollection(),
+        getExpensesCollection(),
+        getClientsCollection(),
+        getQuotesCollection(),
+      ]);
+
+    // El dashboard es exclusivo de Morfo: los ingresos/gastos de Personal y
+    // Casa no deben mezclarse aquí.
+    const incomes = allIncomes.filter((income) =>
+      recordMatchesScope(income, DEFAULT_SCOPE),
+    );
+    const expenses = allExpenses.filter((expense) =>
+      recordMatchesScope(expense, DEFAULT_SCOPE),
+    );
 
     const data = getDashboardData({
       incomes,

@@ -49,7 +49,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const exportExcelBtn = document.getElementById("export-expense-excel");
   const expenseCounters = {
     total: document.getElementById("expense-total"),
-    topCategory: document.getElementById("expense-top-category"),
     invoiced: document.getElementById("expense-invoiced"),
     count: document.getElementById("expense-count"),
   };
@@ -67,6 +66,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingExpenseId = null;
   let currentExpenses = [];
   let casaIncomesCache = [];
+  let scopeIncomeTotal = 0;
+  let scopeChartInstance = null;
 
   const activeScope = getActiveScope();
   const scopeConfig = getScopeConfig(activeScope);
@@ -292,6 +293,75 @@ document.addEventListener("DOMContentLoaded", async () => {
     input.focus();
   }
 
+  /**
+   * Total de ingresos del espacio activo. En Morfo esta página no muestra
+   * gráfica (ya tiene su propio dashboard), así que no aplica.
+   */
+  async function refreshScopeIncomeTotal() {
+    if (activeScope === "morfo") return;
+
+    if (activeScope === "casa") {
+      scopeIncomeTotal = casaIncomesCache.reduce(
+        (sum, income) => sum + Number(income.paidAmount || 0),
+        0,
+      );
+      return;
+    }
+
+    const scopeIncomes = (await getIncomeCollection()).filter((income) =>
+      recordMatchesScope(income, activeScope),
+    );
+    scopeIncomeTotal = scopeIncomes.reduce(
+      (sum, income) =>
+        sum + Number(income.paidAmount || income.totalAmount || 0),
+      0,
+    );
+  }
+
+  /** Ingresos vs. gastos, solo con los datos del espacio activo. */
+  function renderScopeFinanceChart() {
+    if (activeScope === "morfo") return;
+
+    const panel = document.getElementById("scope-chart-panel");
+    const canvas = document.getElementById("scopeFinanceChart");
+    if (!panel || !canvas || typeof Chart === "undefined") return;
+
+    panel.hidden = false;
+
+    const totalExpenses = currentExpenses.reduce(
+      (sum, expense) => sum + Number(expense.amount || 0),
+      0,
+    );
+
+    if (scopeChartInstance) {
+      scopeChartInstance.destroy();
+    }
+
+    scopeChartInstance = new Chart(canvas, {
+      type: "pie",
+      data: {
+        labels: ["Ingresos", "Gastos"],
+        datasets: [
+          {
+            data: [scopeIncomeTotal, totalExpenses],
+            backgroundColor: ["#98db6b", "#ff8a8a"],
+            borderColor: "#1f1f1f",
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#f3f3f3", padding: 16 },
+          },
+        },
+      },
+    });
+  }
+
   function createRecordId() {
     if (globalThis.crypto?.randomUUID) {
       return globalThis.crypto.randomUUID();
@@ -486,16 +556,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       0,
     );
     const invoiced = expenses.filter((expense) => expense.invoice === "Sí");
-    const byCategory = expenses.reduce((acc, expense) => {
-      const category = expense.category || "Sin categoría";
-      acc[category] = (acc[category] || 0) + Number(expense.amount || 0);
-      return acc;
-    }, {});
-    const topCategory =
-      Object.entries(byCategory).sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
 
     expenseCounters.total.textContent = formatCurrency(total);
-    expenseCounters.topCategory.textContent = topCategory;
     expenseCounters.invoiced.textContent = String(invoiced.length);
     expenseCounters.count.textContent = String(expenses.length);
   }
@@ -505,6 +567,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateExpenseCounters(expenses);
     expenseTableBody.replaceChildren();
     renderCasaLedger();
+    renderScopeFinanceChart();
 
     if (expenses.length === 0) {
       expenseTableBody.appendChild(
@@ -923,10 +986,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.addEventListener("focus", async () => {
     await refreshExpensesCollection();
+    await syncCasaLedger();
+    await refreshScopeIncomeTotal();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();
-    await syncCasaLedger();
   });
 
   try {
@@ -934,10 +998,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     resetForm();
     applyExpensePrefillFromUrl();
     await refreshExpensesCollection();
+    await syncCasaLedger();
+    await refreshScopeIncomeTotal();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();
-    await syncCasaLedger();
   } finally {
     setPageLoading(false);
   }

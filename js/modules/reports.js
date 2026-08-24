@@ -4,6 +4,7 @@ import { getExpensesCollection } from "../services/expenses-service.js";
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
 import { getRuntimeStatus } from "../services/runtime-status.js";
+import { DEFAULT_SCOPE, recordMatchesScope } from "../scopes.js";
 import {
   formatCurrency,
   formatDate,
@@ -734,7 +735,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   ) {
     const reportType = normalizeReportType(reportTypeRaw);
 
-    const [runtime, allIncomes, allExpenses, allQuotes, clients] =
+    const [runtime, rawIncomes, rawExpenses, allQuotes, clients] =
       await Promise.all([
         getRuntimeStatus(),
         getIncomeCollection(),
@@ -742,6 +743,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         getQuotesCollection(),
         getClientsCollection(),
       ]);
+
+    // Reportes es exclusivo de Morfo: no mezclar ingresos/gastos de
+    // Personal o Casa en los totales del negocio.
+    const allIncomes = rawIncomes.filter((income) =>
+      recordMatchesScope(income, DEFAULT_SCOPE),
+    );
+    const allExpenses = rawExpenses.filter((expense) =>
+      recordMatchesScope(expense, DEFAULT_SCOPE),
+    );
 
     const incomes = getFilteredMonthYear(
       allIncomes,
