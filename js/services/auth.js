@@ -1,7 +1,7 @@
 import { apiRequest } from "./api-client.js";
 
 const LOGIN_PATH = "/login.html";
-const DEFAULT_REDIRECT_PATH = "/dashboard.html?scope=resumen";
+const DEFAULT_REDIRECT_PATH = "/dashboard.html?scope=morfo";
 
 function getLoginUrl() {
   return new URL(LOGIN_PATH, window.location.origin).toString();

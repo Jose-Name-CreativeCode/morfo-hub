@@ -1,7 +1,6 @@
 # Arquitectura funcional de Morfo Hub
 
-Morfo Hub es un solo software con tres espacios financieros independientes y
-una vista consolidada.
+Morfo Hub es un solo software con tres espacios financieros independientes.
 
 ## Espacios
 
@@ -23,11 +22,6 @@ una vista consolidada.
 - Clientes, cotizaciones, cobros y gastos.
 - Cuentas por cobrar y lectura comercial.
 
-### Resumen
-
-- Compara los tres espacios sin fusionar sus movimientos.
-- No permite capturar directamente hasta elegir el espacio destino.
-
 ## Flujo de datos
 
 ```mermaid
@@ -37,7 +31,6 @@ flowchart LR
   API --> ORM[Prisma]
   ORM --> DB[(PostgreSQL / Neon)]
 
-  UI --> RES[Resumen]
   UI --> PER[Personal]
   UI --> CAS[Casa]
   UI --> MOR[Morfo]

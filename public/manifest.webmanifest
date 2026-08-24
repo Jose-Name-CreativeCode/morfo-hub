@@ -2,7 +2,7 @@
   "name": "Morfo Hub Finanzas",
   "short_name": "Morfo Hub",
   "description": "Control financiero de Personal, Casa y Morfo.",
-  "start_url": "/dashboard.html?scope=resumen",
+  "start_url": "/dashboard.html?scope=morfo",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f1117",

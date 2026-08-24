@@ -6,18 +6,6 @@ const BASE_METHODS = ["Efectivo", "Transferencia", "Otro"];
 const PERSONAL_METHODS = ["Nu", "BBVA", "Amex", ...BASE_METHODS];
 
 export const SCOPES = {
-  resumen: {
-    key: "resumen",
-    label: "Resumen",
-    navKeys: ["dashboard"],
-    homeKey: "dashboard",
-    expenseCategories: [],
-    paymentMethods: [],
-    incomeSources: [],
-    incomeSourceLabel: "Origen",
-    showInvoice: false,
-    readOnly: true,
-  },
   morfo: {
     key: "morfo",
     label: "Morfo",
@@ -31,7 +19,6 @@ export const SCOPES = {
       "reports",
       "maintenance",
       "settings",
-      "financeSettings",
     ],
     homeKey: "dashboard",
     expenseCategories: [
@@ -57,7 +44,6 @@ export const SCOPES = {
       "movements",
       "income",
       "expenses",
-      "reports",
       "financeSettings",
     ],
     navLabels: { income: "Ingresos" },
@@ -91,7 +77,6 @@ export const SCOPES = {
       "movements",
       "income",
       "expenses",
-      "reports",
       "financeSettings",
     ],
     homeKey: "dashboard",
@@ -166,7 +151,6 @@ export function getScopeConfig(scope = getActiveScope()) {
  * se consideran de Morfo para no perderlos de vista.
  */
 export function recordMatchesScope(record, scope) {
-  if (scope === "resumen") return true;
   return String(record?.scope || DEFAULT_SCOPE) === String(scope);
 }
 

@@ -1,7 +1,7 @@
 # Morfo Hub
 
-Hub financiero para controlar de forma separada y consolidada los espacios
-Personal, Casa y Morfo. Incluye captura rápida, cuentas, presupuestos,
+Hub financiero para controlar por separado los espacios Personal, Casa y Morfo
+en un mismo sistema. Incluye captura rápida, cuentas, presupuestos,
 recurrencias y la operación comercial de la agencia.
 
 ## Stack actual
@@ -54,7 +54,6 @@ recurrencias y la operación comercial de la agencia.
 
 Vistas financieras principales:
 
-- `dashboard.html?scope=resumen`: consolidado de los tres espacios
 - `dashboard.html?scope=personal|casa|morfo`: dashboard independiente
 - `movements.html`: captura rápida y actividad reciente
 - `finance-settings.html`: cuentas, tarjetas, presupuesto y reglas recurrentes
