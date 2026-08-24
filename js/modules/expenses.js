@@ -13,6 +13,7 @@ import {
 import {
   buildCasaAutoIncomeRecord,
   computeCasaBalance,
+  getMissingCasaFixedExpenses,
   getMissingCasaPaydates,
 } from "../casa-ledger.js";
 import { getIncomeCollection, saveIncomeRecord } from "../services/income-service.js";
@@ -147,6 +148,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           recordMatchesScope(income, "casa"),
         )
       : casaIncomes;
+
+    const missingExpenses = getMissingCasaFixedExpenses(currentExpenses);
+    for (const record of missingExpenses) {
+      await saveExpenseRecord(record);
+    }
+
+    if (missingExpenses.length) {
+      await refreshExpensesCollection();
+    }
 
     renderCasaLedger();
   }
