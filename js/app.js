@@ -46,7 +46,7 @@ function enableInstallableApp() {
 
   const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   if ("serviceWorker" in navigator && !isLocal) {
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
+    navigator.serviceWorker.register("/sw.js?v=3").catch((error) => {
       console.warn("No se pudo registrar el modo instalable:", error);
     });
   }
