@@ -184,26 +184,112 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     recentIncomes.forEach((income) => {
-      const card = document.createElement("article");
-      card.className = "card casa-income-card";
-
-      const label = document.createElement("span");
-      label.className = "casa-income-card-label";
-      label.textContent = "Ingreso";
-
-      const amount = document.createElement("div");
-      amount.className = "casa-income-card-amount";
-      amount.textContent = formatCurrency(income.paidAmount || 0);
-
-      const date = document.createElement("div");
-      date.className = "casa-income-card-date";
-      date.textContent = formatDate(income.date);
-
-      card.appendChild(label);
-      card.appendChild(amount);
-      card.appendChild(date);
-      list.appendChild(card);
+      list.appendChild(buildCasaIncomeCard(income));
     });
+  }
+
+  /** Tarjeta de una quincena. Por defecto muestra el monto; "Editar" lo
+   * cambia por un campo numérico para ajustarlo cuando no fueron $40,000. */
+  function buildCasaIncomeCard(income) {
+    const card = document.createElement("article");
+    card.className = "card casa-income-card";
+
+    const label = document.createElement("span");
+    label.className = "casa-income-card-label";
+    label.textContent = "Ingreso";
+
+    const amount = document.createElement("div");
+    amount.className = "casa-income-card-amount";
+    amount.textContent = formatCurrency(income.paidAmount || 0);
+
+    const date = document.createElement("div");
+    date.className = "casa-income-card-date";
+    date.textContent = formatDate(income.date);
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "casa-income-card-edit-btn";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => {
+      startCasaIncomeEdit(card, income);
+    });
+
+    card.appendChild(label);
+    card.appendChild(amount);
+    card.appendChild(date);
+    card.appendChild(editButton);
+
+    return card;
+  }
+
+  function startCasaIncomeEdit(card, income) {
+    card.replaceChildren();
+
+    const label = document.createElement("span");
+    label.className = "casa-income-card-label";
+    label.textContent = "Ingreso";
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.step = "0.01";
+    input.min = "0";
+    input.value = income.paidAmount || 0;
+    input.className = "casa-income-card-input";
+
+    const date = document.createElement("div");
+    date.className = "casa-income-card-date";
+    date.textContent = formatDate(income.date);
+
+    const actions = document.createElement("div");
+    actions.className = "casa-income-card-actions";
+
+    const saveButton = document.createElement("button");
+    saveButton.type = "button";
+    saveButton.className = "btn-primary";
+    saveButton.textContent = "Guardar";
+    saveButton.addEventListener("click", async () => {
+      const newAmount = Number(input.value || 0);
+      setButtonLoading(saveButton, true, "Guardando...");
+
+      try {
+        const updated = await saveIncomeRecord({
+          ...income,
+          totalAmount: newAmount,
+          paidAmount: newAmount,
+          remainingAmount: 0,
+        });
+
+        casaIncomesCache = casaIncomesCache.map((item) =>
+          String(item.id) === String(updated.id) ? updated : item,
+        );
+        renderCasaLedger();
+        showToast("Quincena actualizada.", { type: "success" });
+      } catch (error) {
+        console.error("No se pudo actualizar la quincena:", error);
+        showToast(
+          error?.message || "No se pudo actualizar la quincena.",
+          { type: "error", duration: 4200 },
+        );
+        setButtonLoading(saveButton, false);
+      }
+    });
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "casa-income-card-edit-btn";
+    cancelButton.textContent = "Cancelar";
+    cancelButton.addEventListener("click", () => {
+      card.replaceWith(buildCasaIncomeCard(income));
+    });
+
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+
+    card.appendChild(label);
+    card.appendChild(input);
+    card.appendChild(date);
+    card.appendChild(actions);
+    input.focus();
   }
 
   function createRecordId() {
