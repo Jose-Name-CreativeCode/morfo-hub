@@ -20,43 +20,51 @@ model Client {
 }
 
 model AppSettings {
-  id                    String   @id
-  agencyName            String   @default("Morfo Studio")
-  agencyEmail           String   @default("")
-  agencyPhone           String   @default("")
-  agencyAddress         String   @default("")
-  agencyWebsite         String   @default("")
-  terms                 String   @default("")
-  invoiceTax            Float    @default(16)
-  invoiceNote           String   @default("")
-  advancePercent        Int      @default(50)
-  paymentMethodsJson    String   @default("[\"Transferencia\",\"Efectivo\",\"Tarjeta\",\"Otro\"]")
-  bankDetails           String   @default("")
-  bankDetailsInvoice    String   @default("Banco: BBVA\nTitular: Morfo Studio S.A. de C.V.\nCLABE: 012345678901234567\nRFC: MOR000000XXX\nConcepto: Nombre del cliente + servicio")
-  bankDetailsNoInvoice  String   @default("Banco: Nu\nTitular: Nombre Apellido\nCLABE: 987654321098765432\nConcepto: Nombre del cliente + servicio")
-  legalNote             String   @default("")
-  serviceTemplatesJson  String   @default("{}")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id
+  agencyName           String   @default("Morfo Studio")
+  agencyEmail          String   @default("")
+  agencyPhone          String   @default("")
+  agencyAddress        String   @default("")
+  agencyWebsite        String   @default("")
+  terms                String   @default("")
+  invoiceTax           Float    @default(16)
+  invoiceNote          String   @default("")
+  advancePercent       Int      @default(50)
+  paymentMethodsJson   String   @default("[\"Transferencia\",\"Efectivo\",\"Tarjeta\",\"Otro\"]")
+  bankDetails          String   @default("")
+  bankDetailsInvoice   String   @default("Banco: BBVA\nTitular: Morfo Studio S.A. de C.V.\nCLABE: 012345678901234567\nRFC: MOR000000XXX\nConcepto: Nombre del cliente + servicio")
+  bankDetailsNoInvoice String   @default("Banco: Nu\nTitular: Nombre Apellido\nCLABE: 987654321098765432\nConcepto: Nombre del cliente + servicio")
+  legalNote            String   @default("")
+  serviceTemplatesJson String   @default("{}")
+  financeConfigJson    String   @default("{}")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model IncomeRecord {
-  id           String   @id
-  publicId     String?  @unique
-  quoteId      String?
-  quotePublicId String?
-  client       String?
-  date         String?
-  concept      String?
-  paymentStatus String?
-  paymentMethod String?
-  totalAmount  Float?
-  paidAmount   Float?
+  id              String   @id
+  publicId        String?  @unique
+  quoteId         String?
+  quotePublicId   String?
+  client          String?
+  date            String?
+  concept         String?
+  paymentStatus   String?
+  paymentMethod   String?
+  totalAmount     Float?
+  paidAmount      Float?
   remainingAmount Float?
   invoiceRequired String?
-  rawJson      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  scope           String   @default("morfo")
+  accountId       String?
+  ownerUserId     String?
+  rawJson         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([scope])
+  @@index([ownerUserId])
+  @@index([accountId])
 }
 
 model ExpenseRecord {
@@ -67,28 +75,75 @@ model ExpenseRecord {
   paymentMethod String?
   invoice       String?
   amount        Float?
+  scope         String   @default("morfo")
+  accountId     String?
+  ownerUserId   String?
   rawJson       String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([scope])
+  @@index([ownerUserId])
+  @@index([accountId])
+}
+
+model FinancialAccount {
+  id              String   @id @default(cuid())
+  scope           String
+  name            String
+  type            String
+  institution     String   @default("")
+  startingBalance Float    @default(0)
+  creditLimit     Float?
+  statementDay    Int?
+  paymentDay      Int?
+  color           String   @default("#7c5cff")
+  ownerUserId     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([scope])
+  @@index([ownerUserId])
+}
+
+model RecurringRule {
+  id          String   @id @default(cuid())
+  scope       String
+  name        String
+  type        String
+  amount      Float
+  category    String   @default("")
+  accountId   String?
+  frequency   String
+  dayOne      Int?
+  dayTwo      Int?
+  ownerUserId String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([scope])
+  @@index([ownerUserId])
 }
 
 model QuoteRecord {
-  id             String   @id
-  publicId       String?  @unique
-  client         String?
-  date           String?
-  title          String?
-  serviceType    String?
-  status         String?
-  paymentStatus  String?
-  paymentMethod  String?
-  total          Float?
-  totalPaid      Float?
+  id              String   @id
+  publicId        String?  @unique
+  client          String?
+  date            String?
+  title           String?
+  serviceType     String?
+  status          String?
+  paymentStatus   String?
+  paymentMethod   String?
+  total           Float?
+  totalPaid       Float?
   remainingAmount Float?
-  linkedIncomeId String?
-  rawJson        String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  linkedIncomeId  String?
+  rawJson         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model AppUser {

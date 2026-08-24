@@ -4,19 +4,18 @@ import {
   getExpensesCollection,
   saveExpenseRecord,
 } from "../services/expenses-service.js";
+import { getAccountsCollection } from "../services/accounts-service.js";
 import {
   fillSelectOptions,
   getActiveScope,
   getScopeConfig,
   recordMatchesScope,
 } from "../scopes.js";
+import { computeCasaBalance } from "../casa-ledger.js";
 import {
-  buildCasaAutoIncomeRecord,
-  computeCasaBalance,
-  getMissingCasaFixedExpenses,
-  getMissingCasaPaydates,
-} from "../casa-ledger.js";
-import { getIncomeCollection, saveIncomeRecord } from "../services/income-service.js";
+  getIncomeCollection,
+  saveIncomeRecord,
+} from "../services/income-service.js";
 import {
   appendRowActions,
   askConfirm,
@@ -40,6 +39,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const expenseForm = document.querySelector("form");
   const expenseTableBody = document.querySelector(".table tbody");
   const submitButton = expenseForm.querySelector(".btn-primary");
+  const accountSelect = document.getElementById("expense-account");
 
   const filterYearSelect = document.getElementById("filter-expense-year");
   const filterMonthSelect = document.getElementById("filter-expense-month");
@@ -72,6 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let editingExpenseId = null;
   let currentExpenses = [];
+  let currentAccounts = [];
   let casaIncomesCache = [];
   let scopeIncomeTotal = 0;
   let scopeChartInstance = null;
@@ -132,38 +133,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     return document.querySelectorAll(".table thead th:not([hidden])").length;
   }
 
-  /**
-   * Genera las quincenas de casa que ya deberían existir (día 15 y último
-   * día del mes) y aún no están registradas, y refresca el saldo con lo que
-   * haya en el servidor. Es idempotente: usa un id fijo por fecha, así que
-   * llamarla varias veces nunca duplica un ingreso.
-   */
+  /** Carga únicamente ingresos confirmados. Las reglas no alteran el saldo. */
   async function syncCasaLedger() {
     if (activeScope !== "casa") return;
 
-    const casaIncomes = (await getIncomeCollection()).filter((income) =>
+    casaIncomesCache = (await getIncomeCollection()).filter((income) =>
       recordMatchesScope(income, "casa"),
     );
-
-    const missingDates = getMissingCasaPaydates(casaIncomes);
-    for (const dateIso of missingDates) {
-      await saveIncomeRecord(buildCasaAutoIncomeRecord(dateIso));
-    }
-
-    casaIncomesCache = missingDates.length
-      ? (await getIncomeCollection()).filter((income) =>
-          recordMatchesScope(income, "casa"),
-        )
-      : casaIncomes;
-
-    const missingExpenses = getMissingCasaFixedExpenses(currentExpenses);
-    for (const record of missingExpenses) {
-      await saveExpenseRecord(record);
-    }
-
-    if (missingExpenses.length) {
-      await refreshExpensesCollection();
-    }
 
     renderCasaLedger();
   }
@@ -206,8 +182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /** Tarjeta de una quincena. Por defecto muestra el monto; "Editar" lo
-   * cambia por un campo numérico para ajustarlo cuando no fueron $40,000. */
+  /** Tarjeta de un ingreso de Casa confirmado. */
   function buildCasaIncomeCard(income) {
     const card = document.createElement("article");
     card.className = "card casa-income-card";
@@ -284,10 +259,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         showToast("Quincena actualizada.", { type: "success" });
       } catch (error) {
         console.error("No se pudo actualizar la quincena:", error);
-        showToast(
-          error?.message || "No se pudo actualizar la quincena.",
-          { type: "error", duration: 4200 },
-        );
+        showToast(error?.message || "No se pudo actualizar la quincena.", {
+          type: "error",
+          duration: 4200,
+        });
         setButtonLoading(saveButton, false);
       }
     });
@@ -387,6 +362,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     return `exp-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   }
 
+  async function loadAccountOptions() {
+    currentAccounts = (await getAccountsCollection(activeScope)).filter(
+      (account) => account.isActive !== false,
+    );
+    const previous = accountSelect.value;
+    accountSelect.replaceChildren();
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "Sin cuenta asignada";
+    accountSelect.appendChild(empty);
+    currentAccounts.forEach((account) => {
+      const option = document.createElement("option");
+      option.value = account.id;
+      option.textContent = account.name;
+      accountSelect.appendChild(option);
+    });
+    if (currentAccounts.some((account) => account.id === previous)) {
+      accountSelect.value = previous;
+    }
+  }
+
   function applyExpenseFormDefaults() {
     document.getElementById("expense-date").value = getTodayISO();
     document.getElementById("expense-payment-method").value =
@@ -426,7 +422,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /** Selección para borrado masivo: quita ids que ya no existen. */
   function pruneSelection() {
-    const validIds = new Set(currentExpenses.map((expense) => String(expense.id)));
+    const validIds = new Set(
+      currentExpenses.map((expense) => String(expense.id)),
+    );
     [...selectedExpenseIds].forEach((id) => {
       if (!validIds.has(id)) selectedExpenseIds.delete(id);
     });
@@ -589,7 +587,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (selectedMethod) {
       expenses = expenses.filter(
         (expense) =>
-          normalizeText(expense.paymentMethod) === normalizeText(selectedMethod),
+          normalizeText(expense.paymentMethod) ===
+          normalizeText(selectedMethod),
       );
     }
 
@@ -617,7 +616,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (expenses.length === 0) {
       expenseTableBody.appendChild(
-        createEmptyStateRow("No hay gastos registrados.", getTableColumnCount()),
+        createEmptyStateRow(
+          "No hay gastos registrados.",
+          getTableColumnCount(),
+        ),
       );
       if (selectAllCheckbox) {
         selectAllCheckbox.checked = false;
@@ -671,6 +673,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-amount").value = expense.amount || 0;
     document.getElementById("expense-payment-method").value =
       expense.paymentMethod || "";
+    accountSelect.value = expense.accountId || "";
     document.getElementById("expense-invoice").value =
       expense.invoice === "Sí" ? "yes" : "no";
     document.getElementById("expense-notes").value = expense.notes || "";
@@ -1053,6 +1056,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const paymentMethod = document.getElementById(
       "expense-payment-method",
     ).value;
+    const accountId = accountSelect.value;
     const invoice = document.getElementById("expense-invoice").value;
     const notes = document.getElementById("expense-notes").value.trim();
 
@@ -1086,6 +1090,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ...existingExpense,
         id: editingExpenseId || existingExpense.id || createRecordId(),
         scope: activeScope,
+        accountId,
         date,
         concept,
         category,
@@ -1174,6 +1179,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.addEventListener("focus", async () => {
     await refreshExpensesCollection();
+    await loadAccountOptions();
     await syncCasaLedger();
     await refreshScopeIncomeTotal();
     loadYearOptions();
@@ -1186,6 +1192,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     resetForm();
     applyExpensePrefillFromUrl();
     await refreshExpensesCollection();
+    await loadAccountOptions();
     await syncCasaLedger();
     await refreshScopeIncomeTotal();
     loadYearOptions();

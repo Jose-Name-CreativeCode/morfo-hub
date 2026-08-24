@@ -1,7 +1,8 @@
 # Morfo Hub
 
-Sistema interno de gestión para Morfo: clientes, cobros e ingresos, gastos,
-cotizaciones, reportes y configuración.
+Hub financiero para controlar de forma separada y consolidada los espacios
+Personal, Casa y Morfo. Incluye captura rápida, cuentas, presupuestos,
+recurrencias y la operación comercial de la agencia.
 
 ## Stack actual
 
@@ -51,6 +52,13 @@ cotizaciones, reportes y configuración.
 - `docs/`: documentación interna
 - `vercel.json`: configuración de despliegue en Vercel
 
+Vistas financieras principales:
+
+- `dashboard.html?scope=resumen`: consolidado de los tres espacios
+- `dashboard.html?scope=personal|casa|morfo`: dashboard independiente
+- `movements.html`: captura rápida y actividad reciente
+- `finance-settings.html`: cuentas, tarjetas, presupuesto y reglas recurrentes
+
 ## Variables de entorno
 
 Yo configuro esto como mínimo:
@@ -76,7 +84,7 @@ AUTH_SEED_PASSWORD="cambia-esta-clave"
 1. Yo corro `npm install`
 2. Yo configuro `DATABASE_URL` en `.env`
 3. Yo corro `npm run prisma:generate`
-4. Yo corro `npm run prisma:push`
+4. Yo corro `npm run prisma:migrate`
 5. Yo corro `npm run dev:full`
 
 Frontend:
@@ -134,6 +142,26 @@ La API ya cubre:
 - `DELETE /api/quotes/:id`
 - `GET /api/settings`
 - `PUT /api/settings`
+- `GET|POST /api/accounts`
+- `PUT|DELETE /api/accounts/:id`
+- `GET|POST /api/recurring-rules`
+- `PUT|DELETE /api/recurring-rules/:id`
+
+## Modelo financiero
+
+- `Personal` es privado para el usuario que crea cada registro nuevo.
+- `Casa` y `Morfo` son espacios compartidos.
+- Las cuentas guardan el saldo inicial; el saldo estimado se calcula con los
+  movimientos asociados.
+- Las reglas recurrentes son expectativas. Nunca crean ingresos o gastos
+  pagados por el simple hecho de abrir una pantalla.
+- Los registros anteriores sin `scope` conservan compatibilidad como `Morfo`.
+
+Para una base ya migrada, despliego cambios futuros con:
+
+```bash
+npm run prisma:migrate
+```
 
 ## Runtime y diagnóstico
 

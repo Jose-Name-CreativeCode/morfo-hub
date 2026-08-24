@@ -2,14 +2,27 @@ import { Router } from "express";
 import crypto from "node:crypto";
 import { prisma } from "../lib/prisma.js";
 import { parseJsonRecord } from "../lib/json-record.js";
+import {
+  canAccessFinanceRecord,
+  normalizeFinanceScope,
+  ownerForScope,
+  visibleFinanceWhere,
+} from "../lib/finance-access.js";
 
 export const incomeRouter = Router();
 
-function mapIncomePayload(body = {}) {
+function mapIncomePayload(body = {}, userId, existing = null) {
   const id = String(body.id || crypto.randomUUID()).trim();
+  const scope = normalizeFinanceScope(body.scope || existing?.scope);
+  const ownerUserId =
+    scope === "personal"
+      ? existing?.ownerUserId || ownerForScope(scope, userId)
+      : null;
   const record = {
     ...body,
     id,
+    scope,
+    accountId: body.accountId ? String(body.accountId) : null,
   };
 
   return {
@@ -31,6 +44,9 @@ function mapIncomePayload(body = {}) {
         ? Number(body.remainingAmount || 0)
         : null,
     invoiceRequired: body.invoiceRequired ? String(body.invoiceRequired) : null,
+    scope,
+    accountId: body.accountId ? String(body.accountId) : null,
+    ownerUserId,
     rawJson: JSON.stringify(record),
   };
 }
@@ -43,13 +59,16 @@ function mapIncomeRecord(record) {
     publicId: record.publicId || data.publicId || "",
     quoteId: record.quoteId || data.quoteId || "",
     quotePublicId: record.quotePublicId || data.quotePublicId || "",
+    scope: record.scope || data.scope || "morfo",
+    accountId: record.accountId || data.accountId || "",
     createdAtMs: record.createdAt.getTime(),
     updatedAtMs: record.updatedAt.getTime(),
   };
 }
 
-incomeRouter.get("/", async (_request, response) => {
+incomeRouter.get("/", async (request, response) => {
   const incomes = await prisma.incomeRecord.findMany({
+    where: visibleFinanceWhere(request.auth.user.id, request.query.scope),
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
   });
 
@@ -57,7 +76,19 @@ incomeRouter.get("/", async (_request, response) => {
 });
 
 incomeRouter.post("/", async (request, response) => {
-  const payload = mapIncomePayload(request.body);
+  const requestedId = String(request.body?.id || "").trim();
+  const existing = requestedId
+    ? await prisma.incomeRecord.findUnique({ where: { id: requestedId } })
+    : null;
+  if (existing && !canAccessFinanceRecord(existing, request.auth.user.id)) {
+    response.status(403).json({ message: "No tienes acceso a este ingreso." });
+    return;
+  }
+  const payload = mapIncomePayload(
+    request.body,
+    request.auth.user.id,
+    existing,
+  );
   if (!payload.id) {
     response.status(400).json({
       error: "invalid_income_id",
@@ -76,10 +107,26 @@ incomeRouter.post("/", async (request, response) => {
 });
 
 incomeRouter.put("/:id", async (request, response) => {
-  const payload = mapIncomePayload({
-    ...request.body,
-    id: request.params.id,
+  const existing = await prisma.incomeRecord.findUnique({
+    where: { id: request.params.id },
   });
+
+  if (existing && !canAccessFinanceRecord(existing, request.auth.user.id)) {
+    response.status(403).json({
+      error: "forbidden",
+      message: "No tienes acceso a este ingreso personal.",
+    });
+    return;
+  }
+
+  const payload = mapIncomePayload(
+    {
+      ...request.body,
+      id: request.params.id,
+    },
+    request.auth.user.id,
+    existing,
+  );
 
   const updated = await prisma.incomeRecord.upsert({
     where: { id: request.params.id },
@@ -99,6 +146,14 @@ incomeRouter.delete("/:id", async (request, response) => {
     response.status(404).json({
       error: "income_not_found",
       message: "No se encontró el ingreso solicitado.",
+    });
+    return;
+  }
+
+  if (!canAccessFinanceRecord(existing, request.auth.user.id)) {
+    response.status(403).json({
+      error: "forbidden",
+      message: "No tienes acceso a este ingreso personal.",
     });
     return;
   }

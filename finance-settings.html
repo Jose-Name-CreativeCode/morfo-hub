@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Morfo Hub | Cuentas y reglas</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Cuentas y reglas" data-nav-key="financeSettings">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+        <main class="page-content">
+          <section class="hero-panel">
+            <div class="dashboard-kicker">Base financiera</div>
+            <h1 class="section-title dashboard-title">
+              Cuentas, presupuesto y recurrencias
+            </h1>
+            <p
+              class="section-subtitle hero-panel-subtitle"
+              id="finance-settings-subtitle"
+            >
+              Define dónde está el dinero y qué movimientos esperas. Nada se
+              marcará como pagado automáticamente.
+            </p>
+          </section>
+
+          <section class="dashboard-split-grid">
+            <article class="card form-shell">
+              <h2 class="section-title section-title-sm">
+                Presupuesto mensual
+              </h2>
+              <p class="section-subtitle section-subtitle-compact">
+                Es un límite de referencia, no modifica tus saldos.
+              </p>
+              <form id="budget-form">
+                <div class="form-group">
+                  <label for="monthly-budget"
+                    >Monto máximo de gasto al mes</label
+                  >
+                  <input
+                    id="monthly-budget"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </div>
+                <button type="submit" class="btn-primary">
+                  Guardar presupuesto
+                </button>
+              </form>
+            </article>
+
+            <article class="card form-shell">
+              <h2 class="section-title section-title-sm">
+                Nueva cuenta o tarjeta
+              </h2>
+              <form id="account-form" class="entry-form-grid">
+                <input id="account-id" type="hidden" />
+                <div class="form-group">
+                  <label for="account-name">Nombre corto</label>
+                  <input
+                    id="account-name"
+                    type="text"
+                    placeholder="Ej. BBVA nómina"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="account-type">Tipo</label>
+                  <select id="account-type">
+                    <option value="bank">Cuenta bancaria</option>
+                    <option value="cash">Efectivo</option>
+                    <option value="debit">Tarjeta de débito</option>
+                    <option value="credit">Tarjeta de crédito</option>
+                    <option value="savings">Ahorro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="account-institution">Institución</label>
+                  <input
+                    id="account-institution"
+                    type="text"
+                    placeholder="Ej. BBVA, Nu o Amex"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="account-balance">Saldo inicial</label>
+                  <input
+                    id="account-balance"
+                    type="number"
+                    step="0.01"
+                    value="0"
+                  />
+                </div>
+                <div class="form-group credit-only" hidden>
+                  <label for="account-limit">Límite de crédito</label>
+                  <input id="account-limit" type="number" min="0" step="0.01" />
+                </div>
+                <div class="form-group credit-only" hidden>
+                  <label for="account-statement-day">Día de corte</label>
+                  <input
+                    id="account-statement-day"
+                    type="number"
+                    min="1"
+                    max="31"
+                  />
+                </div>
+                <div class="form-group credit-only" hidden>
+                  <label for="account-payment-day">Día límite de pago</label>
+                  <input
+                    id="account-payment-day"
+                    type="number"
+                    min="1"
+                    max="31"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="account-color">Color</label>
+                  <input id="account-color" type="color" value="#7c5cff" />
+                </div>
+                <div class="form-group form-group-full form-group-tight">
+                  <button type="submit" class="btn-primary">
+                    Guardar cuenta
+                  </button>
+                </div>
+              </form>
+            </article>
+          </section>
+
+          <section class="card dashboard-panel section-spacing">
+            <h2 class="section-title section-title-sm">Tus cuentas</h2>
+            <div class="settings-card-grid" id="account-settings-list"></div>
+          </section>
+
+          <section class="dashboard-split-grid">
+            <article class="card form-shell">
+              <h2 class="section-title section-title-sm">
+                Nueva regla recurrente
+              </h2>
+              <p class="section-subtitle section-subtitle-compact">
+                Úsala para quincenas, renta, colegiatura, servicios o
+                suscripciones.
+              </p>
+              <form id="rule-form" class="entry-form-grid">
+                <input id="rule-id" type="hidden" />
+                <div class="form-group form-group-full">
+                  <label for="rule-name">Nombre</label>
+                  <input
+                    id="rule-name"
+                    type="text"
+                    placeholder="Ej. Quincena o renta"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="rule-type">Tipo</label>
+                  <select id="rule-type">
+                    <option value="expense">Gasto</option>
+                    <option value="income">Ingreso</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="rule-amount">Monto esperado</label>
+                  <input
+                    id="rule-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="rule-frequency">Frecuencia</label>
+                  <select id="rule-frequency">
+                    <option value="monthly">Mensual</option>
+                    <option value="biweekly">Quincenal</option>
+                    <option value="weekly">Semanal</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="rule-day-one">Primer día</label>
+                  <input
+                    id="rule-day-one"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value="1"
+                  />
+                </div>
+                <div class="form-group" id="rule-day-two-group" hidden>
+                  <label for="rule-day-two">Segundo día</label>
+                  <input
+                    id="rule-day-two"
+                    type="number"
+                    min="1"
+                    max="31"
+                    placeholder="Vacío = fin de mes"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="rule-category">Categoría</label>
+                  <input
+                    id="rule-category"
+                    type="text"
+                    placeholder="Ej. Vivienda"
+                  />
+                </div>
+                <div class="form-group form-group-full">
+                  <label for="rule-account">Cuenta habitual</label>
+                  <select id="rule-account"></select>
+                </div>
+                <div class="form-group form-group-full form-group-tight">
+                  <button type="submit" class="btn-primary">
+                    Guardar regla
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card dashboard-panel">
+              <h2 class="section-title section-title-sm">
+                Movimientos esperados
+              </h2>
+              <p class="section-subtitle section-subtitle-compact">
+                Se muestran en tu dashboard, pero sólo afectan el saldo después
+                de confirmarlos.
+              </p>
+              <div class="rule-settings-list" id="rule-settings-list"></div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/finance-settings.js"></script>
+  </body>
+</html>

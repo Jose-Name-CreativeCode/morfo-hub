@@ -4,7 +4,7 @@ import { getExpensesCollection } from "../services/expenses-service.js";
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
 import { getRuntimeStatus } from "../services/runtime-status.js";
-import { DEFAULT_SCOPE, recordMatchesScope } from "../scopes.js";
+import { getActiveScope, recordMatchesScope } from "../scopes.js";
 import {
   formatCurrency,
   formatDate,
@@ -16,6 +16,7 @@ import {
 document.addEventListener("DOMContentLoaded", async () => {
   setPageLoading(true);
   await protectPage();
+  const activeScope = getActiveScope();
 
   const reportForm = document.querySelector("form");
   const exportPdfBtn = document.getElementById("exportReportPdfBtn");
@@ -698,10 +699,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         .filter((item) => shouldCountIncomeAsReceivable(item))
         .map((item) => ({
           concept:
-            item.concept ||
-            item.clientName ||
-            item.client ||
-            "Saldo pendiente",
+            item.concept || item.clientName || item.client || "Saldo pendiente",
           category: "Por cobrar / Parcial",
           date: formatDate(item.date || item.createdAt),
           amount: formatCurrency(getIncomePendingAmount(item)),
@@ -740,37 +738,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         getRuntimeStatus(),
         getIncomeCollection(),
         getExpensesCollection(),
-        getQuotesCollection(),
-        getClientsCollection(),
+        activeScope === "morfo" ? getQuotesCollection() : Promise.resolve([]),
+        activeScope === "morfo" ? getClientsCollection() : Promise.resolve([]),
       ]);
 
-    // Reportes es exclusivo de Morfo: no mezclar ingresos/gastos de
-    // Personal o Casa en los totales del negocio.
     const allIncomes = rawIncomes.filter((income) =>
-      recordMatchesScope(income, DEFAULT_SCOPE),
+      recordMatchesScope(income, activeScope),
     );
     const allExpenses = rawExpenses.filter((expense) =>
-      recordMatchesScope(expense, DEFAULT_SCOPE),
+      recordMatchesScope(expense, activeScope),
     );
 
-    const incomes = getFilteredMonthYear(
-      allIncomes,
-      "date",
-      month,
-      year,
-    );
-    const expenses = getFilteredMonthYear(
-      allExpenses,
-      "date",
-      month,
-      year,
-    );
-    const quotes = getFilteredMonthYear(
-      allQuotes,
-      "date",
-      month,
-      year,
-    );
+    const incomes = getFilteredMonthYear(allIncomes, "date", month, year);
+    const expenses = getFilteredMonthYear(allExpenses, "date", month, year);
+    const quotes = getFilteredMonthYear(allQuotes, "date", month, year);
 
     loadReportFilterOptions({
       incomes: allIncomes,
@@ -1156,7 +1137,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       { cell: "E4", label: "Gastos", value: totalExpenses },
       { cell: "D6", label: "Utilidad", value: estimatedUtility },
       { cell: "E6", label: "Pendiente", value: pendingAmount },
-      { cell: "D8", label: "Cotizaciones", value: quotes.length, isCount: true },
+      {
+        cell: "D8",
+        label: "Cotizaciones",
+        value: quotes.length,
+        isCount: true,
+      },
     ];
 
     summaryColumns.forEach(({ cell, label, value, isCount }) => {
@@ -1219,7 +1205,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       selectedRows.forEach((row, index) => {
         const excelRow = worksheet.getRow(tableStartRow + 1 + index);
-        excelRow.values = [row.concept, row.category, row.date, row.amount, row.type];
+        excelRow.values = [
+          row.concept,
+          row.category,
+          row.date,
+          row.amount,
+          row.type,
+        ];
 
         excelRow.eachCell((cell, colNumber) => {
           cell.alignment = {

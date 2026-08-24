@@ -74,6 +74,11 @@ const DEFAULT_SETTINGS = {
     legalNote: "",
   },
   serviceTemplates: DEFAULT_SERVICE_TEMPLATES,
+  finance: {
+    personal: { monthlyBudget: 0 },
+    casa: { monthlyBudget: 0 },
+    morfo: { monthlyBudget: 0 },
+  },
 };
 
 function safeParseJson(value, fallback) {
@@ -115,6 +120,7 @@ function mapSettingsRecord(record) {
       record.serviceTemplatesJson,
       DEFAULT_SETTINGS.serviceTemplates,
     ),
+    finance: safeParseJson(record.financeConfigJson, DEFAULT_SETTINGS.finance),
   };
 }
 
@@ -157,10 +163,13 @@ function mapSettingsPayload(body = {}) {
         ? commercial.bankDetailsNoInvoice
         : DEFAULT_SETTINGS.commercial.bankDetailsNoInvoice,
     ),
-    legalNote: String(hasOwn(commercial, "legalNote") ? commercial.legalNote : ""),
+    legalNote: String(
+      hasOwn(commercial, "legalNote") ? commercial.legalNote : "",
+    ),
     serviceTemplatesJson: JSON.stringify(
       body.serviceTemplates || DEFAULT_SETTINGS.serviceTemplates,
     ),
+    financeConfigJson: JSON.stringify(body.finance || DEFAULT_SETTINGS.finance),
   };
 }
 

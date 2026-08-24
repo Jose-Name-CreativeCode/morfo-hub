@@ -1,10 +1,17 @@
 import { protectPage } from "../services/auth.js";
+import { getAccountsCollection } from "../services/accounts-service.js";
 import { getClientsCollection } from "../services/clients-service.js";
 import { getExpensesCollection } from "../services/expenses-service.js";
 import { getIncomeCollection } from "../services/income-service.js";
 import { getQuotesCollection } from "../services/quotes-service.js";
-import { getRuntimeStatus } from "../services/runtime-status.js";
-import { DEFAULT_SCOPE, recordMatchesScope } from "../scopes.js";
+import { getRecurringRules } from "../services/recurring-service.js";
+import { getSettingsRecord } from "../services/settings-service.js";
+import {
+  SCOPES,
+  getActiveScope,
+  recordMatchesScope,
+  withScopeParam,
+} from "../scopes.js";
 import {
   formatCurrency,
   formatDate,
@@ -16,609 +23,372 @@ document.addEventListener("DOMContentLoaded", async () => {
   setPageLoading(true);
   await protectPage();
 
-  const cards = document.querySelectorAll(".cards-grid .card-value");
+  const activeScope = getActiveScope();
+  const isSummary = activeScope === "resumen";
+  const scopeLabel = SCOPES[activeScope]?.label || "Morfo";
+  const money = (value) => formatCurrency(Number(value || 0));
+  const paidIncome = (item) => Number(item.paidAmount || item.amount || 0);
+  const expenseAmount = (item) => Number(item.amount || 0);
 
-  if (cards.length < 5) {
-    console.error(
-      "No se encontraron las 5 tarjetas principales del dashboard.",
-    );
-    return;
-  }
-
-  const incomeCard = cards[0];
-  const expenseCard = cards[1];
-  const utilityCard = cards[2];
-  const clientsCard = cards[3];
-  const pendingCard = cards[4];
-
-  const quoteDraftCount = document.getElementById("quoteDraftCount");
-  const quoteSentCount = document.getElementById("quoteSentCount");
-  const quoteApprovedCount = document.getElementById("quoteApprovedCount");
-  const quoteRejectedCount = document.getElementById("quoteRejectedCount");
-  const recentActivityBody = document.getElementById("recentActivityBody");
-  const runtimeModeValue = document.getElementById("dashboardRuntimeModeValue");
-  const runtimeModeNote = document.getElementById("dashboardRuntimeModeNote");
-  const runtimeApiValue = document.getElementById("dashboardRuntimeApiValue");
-  const runtimeApiNote = document.getElementById("dashboardRuntimeApiNote");
-  const runtimeDbValue = document.getElementById("dashboardRuntimeDbValue");
-  const runtimeDbNote = document.getElementById("dashboardRuntimeDbNote");
-  const quotesFollowUpCount = document.getElementById("quotesFollowUpCount");
-  const pendingIncomeCount = document.getElementById("pendingIncomeCount");
-  const prospectClientsCount = document.getElementById("prospectClientsCount");
-  const topClientsBody = document.getElementById("topClientsBody");
-
-  let financePieChartInstance = null;
-
-  function safeTimestamp(value) {
-    if (!value) return 0;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
-  }
-
-  function isPrettyQuoteCode(value) {
-    const identifier = String(value || "").trim();
-    return /^[A-Za-z]{2,10}-\d{1,6}$/.test(identifier);
-  }
-
-  function getQuoteIdentifier(quote) {
-    const preferredIdentifier =
-      quote.quoteNumber ||
-      quote.folio ||
-      quote.code ||
-      quote.quoteCode ||
-      quote.quoteLabel ||
-      "";
-
-    const identifier = String(preferredIdentifier || "").trim();
-
-    if (isPrettyQuoteCode(identifier)) {
-      return identifier;
-    }
-
-    return "";
-  }
-
-  function getQuoteDisplayName(quote) {
-    const baseName =
-      quote.title ||
-      quote.serviceName ||
-      quote.concept ||
-      quote.name ||
-      "Cotización";
-
-    const identifier = getQuoteIdentifier(quote);
-
-    return identifier ? `${baseName} (${identifier})` : baseName;
-  }
-
-  function getIncomeQuoteReference(item) {
-    const preferredReference =
-      item.quoteNumber || item.quoteRef || item.quoteCode || item.folio || "";
-
-    const reference = String(preferredReference || "").trim();
-
-    if (isPrettyQuoteCode(reference)) {
-      return reference;
-    }
-
-    return "";
-  }
-
-  function getIncomeAmount(item) {
-    const paidAmount = Number(item.paidAmount || 0);
-    const totalAmount = Number(item.totalAmount || 0);
-    const baseAmount = Number(item.amount || 0);
-
-    if (paidAmount > 0) {
-      return paidAmount;
-    }
-
-    if (totalAmount > 0 && paidAmount === 0) {
-      return 0;
-    }
-
-    return baseAmount;
-  }
-
-  function getIncomePendingAmount(item) {
-    const explicitRemaining = Number(item.remainingAmount);
-    if (Number.isFinite(explicitRemaining) && explicitRemaining > 0) {
-      return explicitRemaining;
-    }
-
-    const totalAmount = Number(item.totalAmount || 0);
-    const paidAmount = Number(item.paidAmount || 0);
-
-    if (totalAmount <= 0) return 0;
-
-    return Math.max(totalAmount - paidAmount, 0);
-  }
-
-  function shouldCountIncomeAsReceivable(item) {
-    const paymentStatus = normalizeText(item.paymentStatus);
-    const pendingAmount = getIncomePendingAmount(item);
-
-    if (pendingAmount <= 0) return false;
-
-    return (
-      paymentStatus === "parcial" ||
-      paymentStatus === "pago parcial" ||
-      paymentStatus === "anticipo pagado" ||
-      paymentStatus === "pendiente" ||
-      paymentStatus === "no pagada" ||
-      paymentStatus === "no_pagada"
-    );
-  }
-
-  function getExpenseAmount(item) {
-    return Number(item.amount || item.totalAmount || 0);
-  }
-
-  function getQuoteTotal(item) {
-    return Number(item.total || item.totalAmount || item.amount || 0);
-  }
-
-  function getQuotePaidAmount(item) {
-    const quoteTotalPaid = Number(item.totalPaid || 0);
-    if (quoteTotalPaid > 0) return quoteTotalPaid;
-
-    const explicitPaid = Number(item.paidAmount || 0);
-    const partialPaid = Number(
-      item.partialPayment?.amount ||
-        item.partialPaymentAmount ||
-        item.depositAmount ||
-        item.advanceAmount ||
-        0,
-    );
-
-    if (explicitPaid > 0) return explicitPaid;
-    if (partialPaid > 0) return partialPaid;
-
-    const paymentStatus = normalizeText(
-      item.paymentStatus || item.payment_state,
-    );
-
-    if (
-      paymentStatus === "pagada total" ||
-      paymentStatus === "pagada_total" ||
-      paymentStatus === "paid"
-    ) {
-      return getQuoteTotal(item);
-    }
-
-    return 0;
-  }
-
-  function getLinkedIncomeForQuote(quote, incomes) {
-    return incomes.find((income) => {
-      const quoteIdMatches =
-        income.quoteId &&
-        quote.id &&
-        String(income.quoteId) === String(quote.id);
-      const quotePublicIdMatches =
-        income.quotePublicId &&
-        quote.publicId &&
-        String(income.quotePublicId) === String(quote.publicId);
-      const linkedIncomeMatches =
-        quote.linkedIncomeId &&
-        income.publicId &&
-        String(quote.linkedIncomeId) === String(income.publicId);
-
-      return quoteIdMatches || quotePublicIdMatches || linkedIncomeMatches;
-    });
-  }
-
-  function hasLinkedIncomeForQuote(quote, incomes) {
-    return Boolean(getLinkedIncomeForQuote(quote, incomes));
-  }
-
-  function getQuotePendingAmount(item, incomes = []) {
-    const explicitRemaining = Number(item.remainingAmount);
-    if (Number.isFinite(explicitRemaining) && explicitRemaining >= 0) {
-      return explicitRemaining;
-    }
-
-    const total = getQuoteTotal(item);
-    const linkedIncome = getLinkedIncomeForQuote(item, incomes);
-    const linkedPaid = Number(linkedIncome?.paidAmount || 0);
-    const paid = Math.max(getQuotePaidAmount(item), linkedPaid);
-    return Math.max(total - paid, 0);
-  }
-
-  function shouldCountQuoteAsReceivable(item) {
-    const status = normalizeText(item.status);
-    const paymentStatus = normalizeText(
-      item.paymentStatus || item.payment_state,
-    );
-
-    const validStatus =
-      status === "aprobada" ||
-      status === "enviada" ||
-      status === "approved" ||
-      status === "sent";
-
-    const unpaidStatus =
-      paymentStatus === "no pagada" ||
-      paymentStatus === "no_pagada" ||
-      paymentStatus === "anticipo pagado" ||
-      paymentStatus === "anticipo_pagado" ||
-      paymentStatus === "parcial" ||
-      paymentStatus === "partial" ||
-      paymentStatus === "";
-
-    return validStatus && unpaidStatus;
+  function pendingIncome(item) {
+    const explicit = Number(item.remainingAmount);
+    if (Number.isFinite(explicit) && explicit > 0) return explicit;
+    return Math.max(Number(item.totalAmount || 0) - paidIncome(item), 0);
   }
 
   function isCurrentMonth(value) {
     if (!value) return false;
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return false;
-
+    const [year, month] = String(value).split("-").map(Number);
     const now = new Date();
-
-    return (
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    );
+    return year === now.getFullYear() && month === now.getMonth() + 1;
   }
 
-  function getDashboardData({ incomes, expenses, clients, quotes }) {
-    const monthlyIncomes = incomes.filter((item) =>
-      isCurrentMonth(item.date || item.createdAt),
-    );
+  function filterScope(records, scope = activeScope) {
+    return scope === "resumen"
+      ? records
+      : records.filter((record) => recordMatchesScope(record, scope));
+  }
 
-    const monthlyExpenses = expenses.filter((item) =>
-      isCurrentMonth(item.date || item.createdAt),
-    );
+  function emptyMessage(text) {
+    const element = document.createElement("p");
+    element.className = "empty-message";
+    element.textContent = text;
+    return element;
+  }
 
-    const totalIncome = monthlyIncomes.reduce(
-      (sum, item) => sum + getIncomeAmount(item),
-      0,
-    );
+  function configurePage() {
+    const title = document.getElementById("dashboard-title");
+    const subtitle = document.getElementById("dashboard-subtitle");
+    const kicker = document.getElementById("dashboard-kicker");
 
-    const totalExpenses = monthlyExpenses.reduce(
-      (sum, item) => sum + getExpenseAmount(item),
-      0,
-    );
+    if (isSummary) {
+      kicker.textContent = "Vista consolidada";
+      title.textContent = "Todo tu dinero, sin revolverlo";
+      subtitle.textContent =
+        "Compara Personal, Casa y Morfo; entra a cada espacio para tomar decisiones con detalle.";
+      document.getElementById("dashboard-actions").hidden = true;
+    } else {
+      title.textContent = scopeLabel;
+      kicker.textContent =
+        activeScope === "morfo" ? "Negocio" : "Control financiero";
+      subtitle.textContent =
+        activeScope === "casa"
+          ? "Sigue cada quincena, los gastos compartidos y lo comprometido antes del siguiente ingreso."
+          : activeScope === "personal"
+            ? "Una vista privada para entender en qué gastas y cuánto puedes usar con tranquilidad."
+            : "Flujo de efectivo, cobros pendientes y operación comercial de la agencia.";
+    }
 
-    const estimatedUtility = totalIncome - totalExpenses;
-
-    const activeClients = clients.filter(
-      (client) => normalizeText(client.status) === "activo",
-    ).length;
-
-    const incomePendingAmount = incomes
-      .filter((income) => shouldCountIncomeAsReceivable(income))
-      .reduce((sum, income) => sum + getIncomePendingAmount(income), 0);
-
-    const quotePendingAmount = quotes
-      .filter(
-        (quote) =>
-          shouldCountQuoteAsReceivable(quote) &&
-          !hasLinkedIncomeForQuote(quote, incomes),
-      )
-      .reduce(
-        (sum, quote) => sum + getQuotePendingAmount(quote, incomes),
-        0,
+    ["quick-movement-link", "view-movements-link"].forEach((id) => {
+      document.getElementById(id).href = withScopeParam(
+        "movements.html",
+        activeScope,
       );
-
-    const pendingAmount = incomePendingAmount + quotePendingAmount;
-
-    const quoteStats = {
-      borrador: 0,
-      enviada: 0,
-      aprobada: 0,
-      rechazada: 0,
-    };
-
-    quotes.forEach((quote) => {
-      const status = normalizeText(quote.status);
-
-      if (Object.prototype.hasOwnProperty.call(quoteStats, status)) {
-        quoteStats[status] += 1;
-      }
     });
+    document.getElementById("manage-accounts-link").href = withScopeParam(
+      "finance-settings.html",
+      activeScope,
+    );
+  }
 
-    const followUpQuotesCount = quotes.filter((quote) => {
-      const status = normalizeText(quote.status);
-      return status === "enviada" || status === "aprobada";
-    }).length;
+  function renderMetrics(incomes, expenses, settings) {
+    const monthIncomes = incomes.filter((item) => isCurrentMonth(item.date));
+    const monthExpenses = expenses.filter((item) => isCurrentMonth(item.date));
+    const totalIncome = monthIncomes.reduce(
+      (sum, item) => sum + paidIncome(item),
+      0,
+    );
+    const totalExpense = monthExpenses.reduce(
+      (sum, item) => sum + expenseAmount(item),
+      0,
+    );
+    const pending = incomes.reduce((sum, item) => sum + pendingIncome(item), 0);
+    const net = totalIncome - totalExpense;
+    const budget = isSummary
+      ? 0
+      : Number(settings.finance?.[activeScope]?.monthlyBudget || 0);
 
-    const pendingIncomeCount = incomes.filter((income) =>
-      shouldCountIncomeAsReceivable(income),
-    ).length;
+    document.getElementById("metric-income").textContent = money(totalIncome);
+    document.getElementById("metric-expense").textContent = money(totalExpense);
+    document.getElementById("metric-net").textContent = money(net);
+    document.getElementById("metric-pending").textContent = money(pending);
+    document
+      .getElementById("metric-net-card")
+      .classList.add(net >= 0 ? "income" : "expense");
 
-    const prospectClientsCount = clients.filter((client) => {
-      const status = normalizeText(client.status);
-      return status === "prospecto" || status === "prospect";
-    }).length;
+    if (budget > 0) {
+      const available = budget - totalExpense;
+      document.getElementById("metric-budget").textContent = money(available);
+      document.getElementById("metric-budget-note").textContent =
+        `${money(totalExpense)} usados de ${money(budget)}`;
+      if (available < 0)
+        document.getElementById("budget-card").classList.add("expense");
+    } else if (isSummary) {
+      document.getElementById("budget-card").hidden = true;
+    }
 
-    const revenueByClient = new Map();
+    return { totalIncome, totalExpense, pending, net, budget };
+  }
 
-    incomes
-      .filter((income) => getIncomeAmount(income) > 0)
-      .forEach((income) => {
-        const clientName = String(
-          income.client || income.clientName || "Sin cliente",
-        ).trim();
+  function renderScopeOverview(allIncomes, allExpenses) {
+    if (!isSummary) return;
+    const container = document.getElementById("scope-overview");
+    container.hidden = false;
 
-        revenueByClient.set(
-          clientName,
-          Number(revenueByClient.get(clientName) || 0) +
-            getIncomeAmount(income),
-        );
+    ["personal", "casa", "morfo"].forEach((scope) => {
+      const incoming = filterScope(allIncomes, scope)
+        .filter((item) => isCurrentMonth(item.date))
+        .reduce((sum, item) => sum + paidIncome(item), 0);
+      const outgoing = filterScope(allExpenses, scope)
+        .filter((item) => isCurrentMonth(item.date))
+        .reduce((sum, item) => sum + expenseAmount(item), 0);
+      const card = document.createElement("a");
+      card.className = `card scope-overview-card scope-${scope}`;
+      card.href = withScopeParam("dashboard.html", scope);
+      card.innerHTML = `<div class="scope-card-top"><span>${SCOPES[scope].label}</span><b>→</b></div><strong>${money(incoming - outgoing)}</strong><small>${money(incoming)} entró · ${money(outgoing)} salió</small>`;
+      container.appendChild(card);
+    });
+  }
+
+  function categoryTotals(expenses) {
+    const totals = new Map();
+    expenses
+      .filter((item) => isCurrentMonth(item.date))
+      .forEach((item) => {
+        const category = item.category || "Sin categoría";
+        totals.set(category, (totals.get(category) || 0) + expenseAmount(item));
       });
-
-    const topClients = [...revenueByClient.entries()]
-      .map(([client, total]) => ({ client, total }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
-
-    return {
-      incomes,
-      expenses,
-      clients,
-      quotes,
-      totalIncome,
-      totalExpenses,
-      estimatedUtility,
-      activeClients,
-      pendingAmount,
-      quoteStats,
-      followUpQuotesCount,
-      pendingIncomeCount,
-      prospectClientsCount,
-      topClients,
-    };
+    return [...totals.entries()].sort((a, b) => b[1] - a[1]);
   }
 
-  function buildRecentActivity(data) {
-    const incomeRows = data.incomes
-      .filter((item) => getIncomeAmount(item) > 0)
-      .map((item) => {
-        const quoteRef = getIncomeQuoteReference(item);
-        const conceptBase =
-          item.concept ||
-          item.clientName ||
-          item.client ||
-          item.name ||
-          "Ingreso";
+  function renderInsights(metrics, expenses) {
+    const list = document.getElementById("insight-list");
+    const insights = [];
 
-        return {
-          type: "Ingreso",
-          concept: quoteRef ? `${conceptBase} (${quoteRef})` : conceptBase,
-          date: item.date || item.createdAt || "",
-          amount: getIncomeAmount(item),
-          sortValue: safeTimestamp(item.date || item.createdAt),
-        };
-      });
-
-    const expenseRows = data.expenses.map((item) => ({
-      type: "Gasto",
-      concept: item.concept || item.name || item.supplier || "Gasto",
-      date: item.date || item.createdAt || "",
-      amount: getExpenseAmount(item),
-      sortValue: safeTimestamp(item.date || item.createdAt),
-    }));
-
-    const quotePendingRows = data.quotes
-      .filter(
-        (quote) =>
-          shouldCountQuoteAsReceivable(quote) &&
-          !hasLinkedIncomeForQuote(quote, data.incomes),
-      )
-      .map((quote) => ({
-        type: "Cotización",
-        concept: getQuoteDisplayName(quote),
-        date: quote.date || quote.createdAt || "",
-        amount: getQuotePendingAmount(quote, data.incomes),
-        sortValue: safeTimestamp(quote.date || quote.createdAt),
-      }))
-      .filter((row) => row.amount > 0);
-
-    const incomePendingRows = data.incomes
-      .filter((item) => shouldCountIncomeAsReceivable(item))
-      .map((item) => ({
-        type: "Por cobrar",
-        concept: item.concept || item.client || "Saldo pendiente",
-        date: item.date || item.createdAt || "",
-        amount: getIncomePendingAmount(item),
-        sortValue: safeTimestamp(item.date || item.createdAt),
-      }));
-
-    return [...incomeRows, ...expenseRows, ...incomePendingRows, ...quotePendingRows]
-      .sort((a, b) => b.sortValue - a.sortValue)
-      .slice(0, 6);
-  }
-
-  function createCell(text) {
-    const cell = document.createElement("td");
-    cell.textContent = text;
-    return cell;
-  }
-
-  function setRuntimeField(element, value, tone = "") {
-    if (!element) return;
-
-    element.textContent = value;
-    element.classList.remove("is-success", "is-warning", "is-danger");
-
-    if (tone) {
-      element.classList.add(tone);
-    }
-  }
-
-  function createEmptyStateRow(message, columns) {
-    const row = document.createElement("tr");
-    const cell = document.createElement("td");
-    cell.colSpan = columns;
-    cell.style.textAlign = "center";
-    cell.textContent = message;
-    row.appendChild(cell);
-    return row;
-  }
-
-  function renderRuntimeStatus(runtime) {
-    setRuntimeField(runtimeModeValue, runtime.modeValue, runtime.modeTone);
-    if (runtimeModeNote) runtimeModeNote.textContent = runtime.modeNote;
-    setRuntimeField(runtimeApiValue, runtime.apiValue, runtime.apiTone);
-    if (runtimeApiNote) runtimeApiNote.textContent = runtime.apiNote;
-    setRuntimeField(runtimeDbValue, runtime.dbValue, runtime.dbTone);
-    if (runtimeDbNote) runtimeDbNote.textContent = runtime.dbNote;
-  }
-
-  function renderOperationalPriorities(data) {
-    if (quotesFollowUpCount) {
-      quotesFollowUpCount.textContent = String(data.followUpQuotesCount);
+    if (metrics.totalIncome === 0 && metrics.totalExpense === 0) {
+      insights.push([
+        "Empieza por capturar",
+        "Registra el primer ingreso o gasto para construir una lectura útil.",
+        "neutral",
+      ]);
+    } else if (metrics.net < 0) {
+      insights.push([
+        "El gasto supera al ingreso",
+        `Este mes has gastado ${money(Math.abs(metrics.net))} más de lo recibido.`,
+        "danger",
+      ]);
+    } else {
+      const ratio = metrics.totalIncome
+        ? metrics.totalExpense / metrics.totalIncome
+        : 0;
+      insights.push([
+        ratio >= 0.8 ? "Margen apretado" : "Flujo positivo",
+        ratio >= 0.8
+          ? `Ya utilizaste ${Math.round(ratio * 100)}% de lo que ingresó este mes.`
+          : `Conservas ${money(metrics.net)} después de los gastos registrados.`,
+        ratio >= 0.8 ? "warning" : "success",
+      ]);
     }
 
-    if (pendingIncomeCount) {
-      pendingIncomeCount.textContent = String(data.pendingIncomeCount);
+    if (metrics.budget > 0) {
+      const used = metrics.totalExpense / metrics.budget;
+      insights.push([
+        used > 1 ? "Presupuesto rebasado" : "Presupuesto mensual",
+        used > 1
+          ? `Excediste el límite por ${money(metrics.totalExpense - metrics.budget)}.`
+          : `Has utilizado ${Math.round(used * 100)}% del presupuesto.`,
+        used > 1 ? "danger" : used > 0.8 ? "warning" : "neutral",
+      ]);
     }
 
-    if (prospectClientsCount) {
-      prospectClientsCount.textContent = String(data.prospectClientsCount);
+    const top = categoryTotals(expenses)[0];
+    if (top) {
+      insights.push([
+        "Principal categoría",
+        `${top[0]} concentra ${money(top[1])} del gasto mensual.`,
+        "neutral",
+      ]);
     }
+
+    insights.slice(0, 3).forEach(([title, copy, tone]) => {
+      const item = document.createElement("div");
+      item.className = `insight-item insight-${tone}`;
+      item.innerHTML = `<span class="insight-dot"></span><div><strong>${title}</strong><p>${copy}</p></div>`;
+      list.appendChild(item);
+    });
   }
 
-  function renderTopClients(data) {
-    if (!topClientsBody) return;
-
-    topClientsBody.replaceChildren();
-
-    if (!data.topClients.length) {
-      topClientsBody.appendChild(
-        createEmptyStateRow("No hay ingresos cobrados todavía.", 2),
+  function renderAccounts(accounts, incomes, expenses) {
+    const list = document.getElementById("account-list");
+    const visible = filterScope(accounts).filter(
+      (account) => account.isActive !== false,
+    );
+    if (!visible.length) {
+      list.appendChild(
+        emptyMessage("Todavía no has configurado cuentas o tarjetas."),
       );
       return;
     }
 
-    data.topClients.forEach((item) => {
-      const row = document.createElement("tr");
-      row.appendChild(createCell(item.client));
-      row.appendChild(createCell(formatCurrency(item.total)));
-      topClientsBody.appendChild(row);
+    visible.forEach((account) => {
+      const incoming = incomes
+        .filter((item) => item.accountId === account.id)
+        .reduce((sum, item) => sum + paidIncome(item), 0);
+      const outgoing = expenses
+        .filter((item) => item.accountId === account.id)
+        .reduce((sum, item) => sum + expenseAmount(item), 0);
+      const balance =
+        Number(account.startingBalance || 0) + incoming - outgoing;
+      const row = document.createElement("div");
+      row.className = "account-row";
+      row.innerHTML = `<span class="account-color" style="--account-color:${account.color}"></span><div><strong>${account.name}</strong><small>${account.institution || account.type}</small></div><b>${money(balance)}</b>`;
+      list.appendChild(row);
     });
   }
 
-  function renderRecentActivity(rows) {
-    if (!recentActivityBody) return;
+  function renderCategories(expenses) {
+    const container = document.getElementById("category-bars");
+    const rows = categoryTotals(expenses).slice(0, 6);
+    if (!rows.length) {
+      container.appendChild(emptyMessage("Aún no hay gastos este mes."));
+      return;
+    }
+    const max = rows[0][1] || 1;
+    rows.forEach(([name, amount]) => {
+      const row = document.createElement("div");
+      row.className = "category-bar-row";
+      row.innerHTML = `<div><span>${name}</span><strong>${money(amount)}</strong></div><div class="category-track"><span style="width:${Math.max(5, (amount / max) * 100)}%"></span></div>`;
+      container.appendChild(row);
+    });
+  }
 
-    recentActivityBody.replaceChildren();
+  function ruleSchedule(rule) {
+    if (rule.frequency === "biweekly") {
+      return `Días ${rule.dayOne || 15} y ${rule.dayTwo || "fin de mes"}`;
+    }
+    if (rule.frequency === "weekly") return "Cada semana";
+    return `Día ${rule.dayOne || 1} de cada mes`;
+  }
+
+  function renderCommitments(rules, accounts) {
+    const list = document.getElementById("commitment-list");
+    const visible = filterScope(rules).filter(
+      (rule) => rule.isActive !== false,
+    );
+    if (!visible.length) {
+      list.appendChild(
+        emptyMessage("Agrega quincenas o gastos fijos en Cuentas y reglas."),
+      );
+      return;
+    }
+    visible.slice(0, 7).forEach((rule) => {
+      const account = accounts.find((item) => item.id === rule.accountId);
+      const row = document.createElement("div");
+      row.className = "commitment-row";
+      row.innerHTML = `<span class="transaction-icon ${rule.type}">${rule.type === "income" ? "+" : "−"}</span><div><strong>${rule.name}</strong><small>${ruleSchedule(rule)}${account ? ` · ${account.name}` : ""}</small></div><b>${money(rule.amount)}</b>`;
+      list.appendChild(row);
+    });
+  }
+
+  function renderRecent(incomes, expenses, accounts) {
+    const body = document.getElementById("recent-activity-body");
+    const rows = [
+      ...incomes.map((item) => ({
+        ...item,
+        kind: "Ingreso",
+        amountValue: paidIncome(item),
+      })),
+      ...expenses.map((item) => ({
+        ...item,
+        kind: "Gasto",
+        amountValue: expenseAmount(item),
+      })),
+    ]
+      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
+      .slice(0, 10);
 
     if (!rows.length) {
-      recentActivityBody.appendChild(
-        createEmptyStateRow("No hay actividad reciente.", 4),
-      );
+      const row = document.createElement("tr");
+      row.innerHTML = `<td colspan="6" class="table-empty-cell">No hay movimientos registrados.</td>`;
+      body.appendChild(row);
       return;
     }
 
-    rows.forEach((row) => {
-      const tr = document.createElement("tr");
-      tr.appendChild(createCell(row.type));
-      tr.appendChild(createCell(row.concept));
-      tr.appendChild(createCell(formatDate(row.date)));
-      tr.appendChild(createCell(formatCurrency(row.amount)));
-
-      recentActivityBody.appendChild(tr);
+    rows.forEach((item) => {
+      const row = document.createElement("tr");
+      const account = accounts.find((entry) => entry.id === item.accountId);
+      const cells = [
+        SCOPES[item.scope || "morfo"]?.label || "Morfo",
+        item.kind,
+        item.concept || item.client || "Movimiento",
+        account?.name || item.paymentMethod || "-",
+        formatDate(item.date),
+        money(item.amountValue),
+      ];
+      cells.forEach((value, index) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        if (index === 5) {
+          cell.className =
+            item.kind === "Ingreso" ? "amount-positive" : "amount-negative";
+        }
+        row.appendChild(cell);
+      });
+      body.appendChild(row);
     });
   }
 
-  function renderQuoteStats(stats) {
-    if (quoteDraftCount) quoteDraftCount.textContent = stats.borrador;
-    if (quoteSentCount) quoteSentCount.textContent = stats.enviada;
-    if (quoteApprovedCount) quoteApprovedCount.textContent = stats.aprobada;
-    if (quoteRejectedCount) quoteRejectedCount.textContent = stats.rechazada;
-  }
-
-  function renderFinancePieChart(data) {
-    const canvas = document.getElementById("financePieChart");
-    if (!canvas || typeof Chart === "undefined") return;
-
-    if (financePieChartInstance) {
-      financePieChartInstance.destroy();
-    }
-
-    financePieChartInstance = new Chart(canvas, {
-      type: "pie",
-      data: {
-        labels: ["Ingresos cobrados", "Gastos", "Por cobrar"],
-        datasets: [
-          {
-            data: [
-              Number(data.totalIncome || 0),
-              Number(data.totalExpenses || 0),
-              Number(data.pendingAmount || 0),
-            ],
-            backgroundColor: ["#98db6b", "#ff8a8a", "#7fd9e8"],
-            borderColor: "#1f1f1f",
-            borderWidth: 2,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: {
-              color: "#f3f3f3",
-              padding: 16,
-            },
-          },
-        },
-      },
-    });
-  }
-
-  async function refreshDashboardData() {
-    const [runtime, allIncomes, allExpenses, clients, quotes] =
-      await Promise.all([
-        getRuntimeStatus(),
-        getIncomeCollection(),
-        getExpensesCollection(),
-        getClientsCollection(),
-        getQuotesCollection(),
-      ]);
-
-    // El dashboard es exclusivo de Morfo: los ingresos/gastos de Personal y
-    // Casa no deben mezclarse aquí.
-    const incomes = allIncomes.filter((income) =>
-      recordMatchesScope(income, DEFAULT_SCOPE),
+  function renderCommercial(clients, quotes, pending) {
+    if (activeScope !== "morfo") return;
+    document.getElementById("morfo-commercial-panel").hidden = false;
+    document.getElementById("active-clients").textContent = String(
+      clients.filter((item) => normalizeText(item.status) === "activo").length,
     );
-    const expenses = allExpenses.filter((expense) =>
-      recordMatchesScope(expense, DEFAULT_SCOPE),
+    document.getElementById("quotes-follow-up").textContent = String(
+      quotes.filter((item) =>
+        ["enviada", "aprobada"].includes(normalizeText(item.status)),
+      ).length,
     );
-
-    const data = getDashboardData({
-      incomes,
-      expenses,
-      clients,
-      quotes,
-    });
-
-    renderRuntimeStatus(runtime);
-    incomeCard.textContent = formatCurrency(data.totalIncome);
-    expenseCard.textContent = formatCurrency(data.totalExpenses);
-    utilityCard.textContent = formatCurrency(data.estimatedUtility);
-    clientsCard.textContent = data.activeClients;
-    pendingCard.textContent = formatCurrency(data.pendingAmount);
-
-    renderQuoteStats(data.quoteStats);
-    renderOperationalPriorities(data);
-    renderTopClients(data);
-    renderRecentActivity(buildRecentActivity(data));
-    renderFinancePieChart(data);
+    document.getElementById("morfo-pending").textContent = money(pending);
   }
 
   try {
-    await refreshDashboardData();
+    configurePage();
+    const [
+      allIncomes,
+      allExpenses,
+      accounts,
+      rules,
+      settings,
+      clients,
+      quotes,
+    ] = await Promise.all([
+      getIncomeCollection(),
+      getExpensesCollection(),
+      getAccountsCollection(),
+      getRecurringRules(),
+      getSettingsRecord(),
+      activeScope === "morfo" ? getClientsCollection() : Promise.resolve([]),
+      activeScope === "morfo" ? getQuotesCollection() : Promise.resolve([]),
+    ]);
+    const incomes = filterScope(allIncomes);
+    const expenses = filterScope(allExpenses);
+    const metrics = renderMetrics(incomes, expenses, settings);
+    renderScopeOverview(allIncomes, allExpenses);
+    renderInsights(metrics, expenses);
+    renderAccounts(accounts, incomes, expenses);
+    renderCategories(expenses);
+    renderCommitments(rules, accounts);
+    renderRecent(incomes, expenses, accounts);
+    renderCommercial(clients, quotes, metrics.pending);
+  } catch (error) {
+    console.error("No se pudo cargar el dashboard financiero:", error);
+    document
+      .getElementById("insight-list")
+      .appendChild(
+        emptyMessage(error.message || "No se pudo cargar la información."),
+      );
   } finally {
     setPageLoading(false);
   }
-
-  window.addEventListener("focus", async () => {
-    await refreshDashboardData();
-  });
 });

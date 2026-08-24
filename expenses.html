@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+    <meta
+      name="robots"
+      content="noindex, nofollow, noarchive, nosnippet, noimageindex"
+    />
     <title>Morfo Hub | Gastos</title>
     <link rel="stylesheet" href="css/main.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -55,7 +58,7 @@
             </article>
 
             <article class="card metric-card">
-              <div class="card-label">Pendiente en tarjeta Nu</div>
+              <div class="card-label">Gastos planeados</div>
               <div class="card-value metric-card-value" id="casa-pending-total">
                 $0.00
               </div>
@@ -68,10 +71,12 @@
             data-casa-only
             hidden
           >
-            <h2 class="section-title section-title-sm">Quincenas de casa</h2>
+            <h2 class="section-title section-title-sm">
+              Ingresos confirmados de Casa
+            </h2>
             <p class="section-subtitle section-subtitle-compact">
-              Se generan solas el día 15 y el último día de cada mes, $40,000
-              cada una. No hace falta capturarlas a mano.
+              Las quincenas esperadas se configuran en Cuentas y reglas. Aquí
+              sólo aparecen cuando confirmas que el dinero realmente llegó.
             </p>
 
             <div class="operations-grid" id="casa-income-list"></div>
@@ -143,6 +148,13 @@
                   placeholder="0.00"
                   step="0.01"
                 />
+              </div>
+
+              <div class="form-group">
+                <label for="expense-account">Cuenta o tarjeta</label>
+                <select id="expense-account">
+                  <option value="">Sin cuenta asignada</option>
+                </select>
               </div>
 
               <div class="form-group">

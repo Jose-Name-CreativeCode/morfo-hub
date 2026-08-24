@@ -70,6 +70,11 @@ const DEFAULT_SETTINGS = {
     legalNote: "",
   },
   serviceTemplates: DEFAULT_SERVICE_TEMPLATES,
+  finance: {
+    personal: { monthlyBudget: 0 },
+    casa: { monthlyBudget: 0 },
+    morfo: { monthlyBudget: 0 },
+  },
 };
 
 function mergeSettingsWithDefaults(settings = {}) {
@@ -92,6 +97,10 @@ function mergeSettingsWithDefaults(settings = {}) {
     commercial: {
       ...DEFAULT_SETTINGS.commercial,
       ...(settings.commercial || {}),
+    },
+    finance: {
+      ...DEFAULT_SETTINGS.finance,
+      ...(settings.finance || {}),
     },
     serviceTemplates: hasServiceTemplates
       ? settings.serviceTemplates || {}
@@ -125,6 +134,10 @@ export async function saveSettingsRecord(partialSettings) {
     commercial: {
       ...current.commercial,
       ...(partialSettings.commercial || {}),
+    },
+    finance: {
+      ...current.finance,
+      ...(partialSettings.finance || {}),
     },
     serviceTemplates:
       partialSettings.serviceTemplates !== undefined

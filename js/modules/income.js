@@ -1,5 +1,6 @@
 import { protectPage } from "../services/auth.js";
 import { getClientsCollection } from "../services/clients-service.js";
+import { getAccountsCollection } from "../services/accounts-service.js";
 import {
   deleteIncomeRecord,
   getIncomeCollection,
@@ -36,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const incomeTableBody = document.querySelector(".table tbody");
   const submitButton = incomeForm.querySelector(".btn-primary");
   const clientSelect = document.getElementById("income-client");
+  const accountSelect = document.getElementById("income-account");
 
   const filterYearSelect = document.getElementById("filter-income-year");
   const filterMonthSelect = document.getElementById("filter-income-month");
@@ -64,6 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingIncomeId = null;
   let currentIncomes = [];
   let currentClients = [];
+  let currentAccounts = [];
 
   const activeScope = getActiveScope();
   const scopeConfig = getScopeConfig(activeScope);
@@ -92,10 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderScopePresets();
   }
 
-  /**
-   * En Casa el sueldo llega en dos quincenas de 40,000: el atajo precarga una
-   * quincena completa para no recapturarla a mano cada vez.
-   */
+  /** En Casa el atajo prepara una quincena sin inventar monto ni confirmarla. */
   function renderScopePresets() {
     const presetsContainer = document.getElementById("income-presets");
     if (!presetsContainer || activeScope === "morfo") return;
@@ -107,12 +107,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "preset-chip";
-    chip.textContent = "Quincena $40,000";
+    chip.textContent = "Registrar quincena";
     chip.addEventListener("click", () => {
       document.getElementById("income-client").value = "Quincena";
       document.getElementById("income-concept").value = "Quincena";
-      document.getElementById("income-amount").value = "40000";
-      document.getElementById("income-paid-amount").value = "40000";
+      document.getElementById("income-amount").value = "";
+      document.getElementById("income-paid-amount").value = "";
       document.getElementById("income-payment-status").value = "Pagado";
     });
 
@@ -130,6 +130,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
+  async function loadAccountOptions() {
+    currentAccounts = (await getAccountsCollection(activeScope)).filter(
+      (account) => account.isActive !== false,
+    );
+    const previous = accountSelect.value;
+    accountSelect.replaceChildren();
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "Sin cuenta asignada";
+    accountSelect.appendChild(empty);
+    currentAccounts.forEach((account) => {
+      const option = document.createElement("option");
+      option.value = account.id;
+      option.textContent = account.name;
+      accountSelect.appendChild(option);
+    });
+    if (currentAccounts.some((account) => account.id === previous)) {
+      accountSelect.value = previous;
+    }
+  }
+
   function createRecordId() {
     if (globalThis.crypto?.randomUUID) {
       return globalThis.crypto.randomUUID();
@@ -140,7 +161,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function syncPaidAmountWithStatus() {
     const totalAmountInput = document.getElementById("income-amount");
-    const paymentStatusSelect = document.getElementById("income-payment-status");
+    const paymentStatusSelect = document.getElementById(
+      "income-payment-status",
+    );
     const paidAmountInput = document.getElementById("income-paid-amount");
 
     const totalAmount = Number(totalAmountInput.value || 0);
@@ -165,8 +188,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function applyIncomePreset(preset) {
-    const paymentStatusSelect = document.getElementById("income-payment-status");
-    const paymentMethodSelect = document.getElementById("income-payment-method");
+    const paymentStatusSelect = document.getElementById(
+      "income-payment-status",
+    );
+    const paymentMethodSelect = document.getElementById(
+      "income-payment-method",
+    );
     const invoiceSelect = document.getElementById("income-invoice");
     const totalAmountInput = document.getElementById("income-amount");
     const paidAmountInput = document.getElementById("income-paid-amount");
@@ -198,7 +225,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function normalizeDuplicateValue(value) {
-    return String(value ?? "").trim().toLowerCase();
+    return String(value ?? "")
+      .trim()
+      .toLowerCase();
   }
 
   function getIncomeDuplicateKey(income) {
@@ -323,9 +352,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadClientOptions() {
     // Personal y Casa tienen fuentes fijas; solo Morfo depende de clientes.
     if (scopeConfig.incomeSources) {
+      const knownSources = [
+        ...new Set([
+          ...scopeConfig.incomeSources,
+          ...currentIncomes.map((income) => income.client).filter(Boolean),
+        ]),
+      ];
       fillSelectOptions(
         clientSelect,
-        scopeConfig.incomeSources,
+        knownSources,
         `Selecciona ${scopeConfig.incomeSourceLabel.toLowerCase()}`,
       );
       return;
@@ -507,7 +542,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (selectedClient) {
       incomes = incomes.filter(
-        (income) => normalizeText(income.client) === normalizeText(selectedClient),
+        (income) =>
+          normalizeText(income.client) === normalizeText(selectedClient),
       );
     }
 
@@ -603,6 +639,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       income.paidAmount || 0;
     document.getElementById("income-payment-method").value =
       income.paymentMethod || "";
+    accountSelect.value = income.accountId || "";
     document.getElementById("income-invoice").value =
       income.invoiceRequired === "Sí" ? "yes" : "no";
     document.getElementById("income-notes").value = income.notes || "";
@@ -641,9 +678,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       if (
-        incomeIdsToDelete.some(
-          (id) => String(id) === String(editingIncomeId),
-        )
+        incomeIdsToDelete.some((id) => String(id) === String(editingIncomeId))
       ) {
         resetForm();
       }
@@ -934,6 +969,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const paymentMethod = document.getElementById(
       "income-payment-method",
     ).value;
+    const accountId = accountSelect.value;
     const invoiceRequired = document.getElementById("income-invoice").value;
     const notes = document.getElementById("income-notes").value.trim();
 
@@ -968,6 +1004,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ...existingIncome,
         id: editingIncomeId || existingIncome.id || createRecordId(),
         scope: activeScope,
+        accountId,
         client,
         date,
         concept,
@@ -1046,6 +1083,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener("focus", async () => {
     await refreshIncomesCollection();
     await loadClientOptions();
+    await loadAccountOptions();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderIncomes();
@@ -1054,6 +1092,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     applyScopeToUi();
     await refreshIncomesCollection();
+    await loadAccountOptions();
     resetForm();
     await loadClientOptions();
     applyIncomePrefillFromUrl();

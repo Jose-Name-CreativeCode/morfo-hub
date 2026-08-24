@@ -8,6 +8,8 @@ import { incomeRouter } from "./routes/income.js";
 import { expensesRouter } from "./routes/expenses.js";
 import { quotesRouter } from "./routes/quotes.js";
 import { settingsRouter } from "./routes/settings.js";
+import { accountsRouter } from "./routes/accounts.js";
+import { recurringRulesRouter } from "./routes/recurring-rules.js";
 
 export function createApp() {
   const app = express();
@@ -21,7 +23,14 @@ export function createApp() {
           "http://127.0.0.1:5173",
         ].filter(Boolean);
 
-        if (!origin || allowedOrigins.includes(origin)) {
+        const isLocalDevelopmentOrigin =
+          /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin || "");
+
+        if (
+          !origin ||
+          allowedOrigins.includes(origin) ||
+          isLocalDevelopmentOrigin
+        ) {
           callback(null, true);
           return;
         }
@@ -48,6 +57,8 @@ export function createApp() {
   app.use("/api/expenses", requireSession, expensesRouter);
   app.use("/api/quotes", requireSession, quotesRouter);
   app.use("/api/settings", requireSession, settingsRouter);
+  app.use("/api/accounts", requireSession, accountsRouter);
+  app.use("/api/recurring-rules", requireSession, recurringRulesRouter);
 
   app.use((error, _request, response, next) => {
     void next;

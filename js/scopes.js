@@ -6,11 +6,24 @@ const BASE_METHODS = ["Efectivo", "Transferencia", "Otro"];
 const PERSONAL_METHODS = ["Nu", "BBVA", "Amex", ...BASE_METHODS];
 
 export const SCOPES = {
+  resumen: {
+    key: "resumen",
+    label: "Resumen",
+    navKeys: ["dashboard"],
+    homeKey: "dashboard",
+    expenseCategories: [],
+    paymentMethods: [],
+    incomeSources: [],
+    incomeSourceLabel: "Origen",
+    showInvoice: false,
+    readOnly: true,
+  },
   morfo: {
     key: "morfo",
     label: "Morfo",
     navKeys: [
       "dashboard",
+      "movements",
       "clients",
       "income",
       "expenses",
@@ -18,6 +31,7 @@ export const SCOPES = {
       "reports",
       "maintenance",
       "settings",
+      "financeSettings",
     ],
     homeKey: "dashboard",
     expenseCategories: [
@@ -38,7 +52,14 @@ export const SCOPES = {
   personal: {
     key: "personal",
     label: "Personal",
-    navKeys: ["income", "expenses"],
+    navKeys: [
+      "dashboard",
+      "movements",
+      "income",
+      "expenses",
+      "reports",
+      "financeSettings",
+    ],
     navLabels: { income: "Ingresos" },
     homeKey: "expenses",
     expenseCategories: [
@@ -53,10 +74,11 @@ export const SCOPES = {
     ],
     paymentMethods: PERSONAL_METHODS,
     incomeSources: [
-      "Insectalia",
-      "EcoBridal",
-      "Griselda Alcázar",
-      "Soluciones Hidráulicas",
+      "Sueldo / Quincena",
+      "Freelance",
+      "Venta",
+      "Reembolso",
+      "Otro",
     ],
     incomeSourceLabel: "Fuente de ingreso",
     showInvoice: false,
@@ -64,10 +86,15 @@ export const SCOPES = {
   casa: {
     key: "casa",
     label: "Casa",
-    // Sin "income": los ingresos de casa son las quincenas automáticas,
-    // no se capturan a mano (ver casa-ledger.js).
-    navKeys: ["expenses"],
-    homeKey: "expenses",
+    navKeys: [
+      "dashboard",
+      "movements",
+      "income",
+      "expenses",
+      "reports",
+      "financeSettings",
+    ],
+    homeKey: "dashboard",
     expenseCategories: [
       "Renta / Hipoteca",
       "Luz",
@@ -85,7 +112,7 @@ export const SCOPES = {
       "Otro",
     ],
     paymentMethods: ["Nu", ...BASE_METHODS],
-    incomeSources: null,
+    incomeSources: ["Quincena", "Aportación", "Reembolso", "Otro"],
     incomeSourceLabel: "Origen",
     showInvoice: false,
   },
@@ -139,6 +166,7 @@ export function getScopeConfig(scope = getActiveScope()) {
  * se consideran de Morfo para no perderlos de vista.
  */
 export function recordMatchesScope(record, scope) {
+  if (scope === "resumen") return true;
   return String(record?.scope || DEFAULT_SCOPE) === String(scope);
 }
 

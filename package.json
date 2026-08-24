@@ -16,6 +16,7 @@
     "deploy:vercel": "vercel --prod",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate deploy",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",

@@ -1,7 +1,7 @@
 import { apiRequest } from "./api-client.js";
 
 const LOGIN_PATH = "/login.html";
-const DEFAULT_REDIRECT_PATH = "/dashboard.html";
+const DEFAULT_REDIRECT_PATH = "/dashboard.html?scope=resumen";
 
 function getLoginUrl() {
   return new URL(LOGIN_PATH, window.location.origin).toString();
@@ -58,7 +58,9 @@ function getDisplayName(user) {
   const explicitName = String(user?.name || "").trim();
   if (explicitName) return explicitName;
 
-  const email = String(user?.email || "").trim().toLowerCase();
+  const email = String(user?.email || "")
+    .trim()
+    .toLowerCase();
 
   if (email.startsWith("manolo") || email.startsWith("manolonat17")) {
     return "Jose";

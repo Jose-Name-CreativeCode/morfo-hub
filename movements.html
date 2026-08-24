@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Morfo Hub | Movimientos</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Movimientos" data-nav-key="movements">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+        <main class="page-content">
+          <section class="hero-panel quick-entry-hero">
+            <div class="dashboard-kicker">Captura rápida</div>
+            <h1 class="section-title dashboard-title">
+              Registra y sigue tu dinero
+            </h1>
+            <p class="section-subtitle hero-panel-subtitle">
+              Sólo lo indispensable. Después puedes completar los detalles desde
+              Ingresos o Gastos.
+            </p>
+          </section>
+
+          <section class="quick-movement-layout section-spacing">
+            <article class="card quick-entry-card">
+              <form id="quick-movement-form">
+                <div
+                  class="movement-type-switch"
+                  role="radiogroup"
+                  aria-label="Tipo de movimiento"
+                >
+                  <label class="movement-type-option expense active">
+                    <input
+                      type="radio"
+                      name="movement-type"
+                      value="expense"
+                      checked
+                    />
+                    <span>− Gasto</span>
+                  </label>
+                  <label class="movement-type-option income">
+                    <input type="radio" name="movement-type" value="income" />
+                    <span>+ Ingreso</span>
+                  </label>
+                </div>
+
+                <div class="quick-amount-field">
+                  <span>$</span>
+                  <input
+                    id="movement-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+
+                <div class="entry-form-grid">
+                  <div class="form-group" id="movement-scope-group" hidden>
+                    <label for="movement-scope">Espacio</label>
+                    <select id="movement-scope"></select>
+                  </div>
+                  <div class="form-group">
+                    <label for="movement-date">Fecha</label>
+                    <input id="movement-date" type="date" required />
+                  </div>
+                  <div class="form-group form-group-full">
+                    <label for="movement-concept">¿Qué fue?</label>
+                    <input
+                      id="movement-concept"
+                      type="text"
+                      maxlength="120"
+                      placeholder="Ej. Supermercado, quincena o pago de cliente"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="movement-category">Categoría</label>
+                    <select id="movement-category" required></select>
+                  </div>
+                  <div class="form-group">
+                    <label for="movement-account">Cuenta o tarjeta</label>
+                    <select id="movement-account"></select>
+                    <small class="field-help" id="account-help"></small>
+                  </div>
+                  <div
+                    class="form-group form-group-full"
+                    id="income-source-group"
+                    hidden
+                  >
+                    <label for="movement-source">Origen del ingreso</label>
+                    <input
+                      id="movement-source"
+                      type="text"
+                      maxlength="100"
+                      placeholder="Ej. Sueldo, cliente o venta"
+                    />
+                  </div>
+                  <div
+                    class="form-group form-group-full"
+                    id="income-status-group"
+                    hidden
+                  >
+                    <label class="check-row">
+                      <input id="movement-received" type="checkbox" checked />
+                      <span>El dinero ya fue recibido</span>
+                    </label>
+                  </div>
+                  <div class="form-group form-group-full">
+                    <label for="movement-notes">Nota opcional</label>
+                    <textarea
+                      id="movement-notes"
+                      rows="3"
+                      placeholder="Detalle que te ayude a recordarlo"
+                    ></textarea>
+                  </div>
+                </div>
+                <button type="submit" class="btn-primary quick-save-button">
+                  Guardar movimiento
+                </button>
+              </form>
+            </article>
+
+            <aside class="card quick-tip-card">
+              <span class="quick-tip-label">Para que funcione de verdad</span>
+              <h2>Regístralo cuando sucede</h2>
+              <p>
+                Con monto, categoría y cuenta ya podemos darte una lectura útil.
+                Los detalles pueden esperar.
+              </p>
+              <a
+                id="quick-settings-link"
+                class="text-link"
+                href="finance-settings.html"
+                >Configurar cuentas y reglas →</a
+              >
+            </aside>
+          </section>
+
+          <section class="card dashboard-panel section-spacing">
+            <div class="panel-heading-row">
+              <div>
+                <h2 class="section-title section-title-sm">
+                  Movimientos recientes
+                </h2>
+                <p
+                  class="section-subtitle section-subtitle-compact"
+                  id="movement-list-subtitle"
+                ></p>
+              </div>
+              <div class="filter-chips" id="movement-filter-chips">
+                <button
+                  type="button"
+                  class="preset-chip active"
+                  data-filter="all"
+                >
+                  Todos
+                </button>
+                <button type="button" class="preset-chip" data-filter="income">
+                  Ingresos
+                </button>
+                <button type="button" class="preset-chip" data-filter="expense">
+                  Gastos
+                </button>
+              </div>
+            </div>
+            <div class="movement-feed" id="movement-feed"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/movements.js"></script>
+  </body>
+</html>

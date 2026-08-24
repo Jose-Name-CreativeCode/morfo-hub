@@ -7,6 +7,7 @@ import {
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
+  { key: "movements", label: "Movimientos", href: "movements.html" },
   { key: "clients", label: "Clientes", href: "clients.html" },
   { key: "income", label: "Cobros e ingresos", href: "income.html" },
   { key: "expenses", label: "Gastos", href: "expenses.html" },
@@ -14,6 +15,11 @@ const NAV_ITEMS = [
   { key: "reports", label: "Reportes", href: "reports.html" },
   { key: "maintenance", label: "Mantenimiento", href: "maintenance.html" },
   { key: "settings", label: "Configuración", href: "settings.html" },
+  {
+    key: "financeSettings",
+    label: "Cuentas y reglas",
+    href: "finance-settings.html",
+  },
 ];
 
 const MOBILE_BREAKPOINT = 900;
