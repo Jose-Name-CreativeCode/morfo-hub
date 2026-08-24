@@ -137,7 +137,7 @@ export function recordMatchesScope(record, scope) {
 }
 
 export function withScopeParam(href, scope) {
-  if (!isValidScope(scope) || scope === DEFAULT_SCOPE) return href;
+  if (!isValidScope(scope)) return href;
   return `${href}${href.includes("?") ? "&" : "?"}scope=${scope}`;
 }
 
