@@ -224,16 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       (account) => account.isActive !== false,
     );
 
-    let totalCash = 0;
-    let totalCreditAvailable = 0;
-    let totalCreditUsed = 0;
-    let totalCreditLimit = 0;
-
     if (!visible.length) {
-      document.getElementById("total-cash").textContent = money(0);
-      document.getElementById("total-credit").textContent = money(0);
-      document.getElementById("total-credit-note").textContent =
-        "Configura tus cuentas para calcularlo";
       list.appendChild(
         emptyMessage("Todavía no has configurado cuentas o tarjetas."),
       );
@@ -247,32 +238,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const outgoing = expenses
         .filter((item) => item.accountId === account.id)
         .reduce((sum, item) => sum + expenseAmount(item), 0);
-      const startingBalance = Number(account.startingBalance || 0);
-      const isCredit = account.type === "credit";
-      const balance = isCredit
-        ? Math.max(startingBalance + outgoing - incoming, 0)
-        : startingBalance + incoming - outgoing;
-
-      if (isCredit) {
-        const creditLimit = Number(account.creditLimit || 0);
-        totalCreditLimit += creditLimit;
-        totalCreditUsed += balance;
-        totalCreditAvailable += Math.max(creditLimit - balance, 0);
-      } else {
-        totalCash += balance;
-      }
-
+      const balance =
+        Number(account.startingBalance || 0) + incoming - outgoing;
       const row = document.createElement("div");
       row.className = "account-row";
-      row.innerHTML = `<span class="account-color" style="--account-color:${account.color}"></span><div><strong>${account.name}</strong><small>${account.institution || account.type}${isCredit ? " · crédito usado" : ""}</small></div><b>${money(balance)}</b>`;
+      row.innerHTML = `<span class="account-color" style="--account-color:${account.color}"></span><div><strong>${account.name}</strong><small>${account.institution || account.type}</small></div><b>${money(balance)}</b>`;
       list.appendChild(row);
     });
-
-    document.getElementById("total-cash").textContent = money(totalCash);
-    document.getElementById("total-credit").textContent =
-      money(totalCreditAvailable);
-    document.getElementById("total-credit-note").textContent =
-      `${money(totalCreditUsed)} usado de ${money(totalCreditLimit)}`;
   }
 
   function renderCategories(expenses) {

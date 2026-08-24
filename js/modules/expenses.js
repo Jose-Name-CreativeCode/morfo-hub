@@ -103,6 +103,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       element.hidden = !scopeConfig.showInvoice;
     });
 
+    document.querySelectorAll("[data-casa-only]").forEach((element) => {
+      element.hidden = activeScope !== "casa";
+    });
+
     if (!scopeConfig.showInvoice) {
       document.getElementById("expense-invoice").value = "no";
     }
@@ -605,6 +609,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     expenseCounters.total.textContent = formatCurrency(total);
     expenseCounters.invoiced.textContent = String(invoiced.length);
     expenseCounters.count.textContent = String(expenses.length);
+
+    if (activeScope === "casa") {
+      const cashTotal = expenses
+        .filter((expense) => isCasaCashExpense(expense))
+        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+      const creditTotal = expenses
+        .filter((expense) => isCasaCreditExpense(expense))
+        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+
+      document.getElementById("casa-cash-total").textContent =
+        formatCurrency(cashTotal);
+      document.getElementById("casa-credit-total").textContent =
+        formatCurrency(creditTotal);
+    }
+  }
+
+  function getExpenseAccount(expense) {
+    return currentAccounts.find(
+      (account) => String(account.id) === String(expense.accountId || ""),
+    );
+  }
+
+  function isCasaCashExpense(expense) {
+    const account = getExpenseAccount(expense);
+    if (account) return account.type === "cash";
+    return normalizeText(expense.paymentMethod) === "efectivo";
+  }
+
+  function isCasaCreditExpense(expense) {
+    const account = getExpenseAccount(expense);
+    if (account) return account.type === "credit";
+
+    return ["nu", "tarjeta", "tarjeta de credito", "credito", "amex"].includes(
+      normalizeText(expense.paymentMethod),
+    );
   }
 
   function renderExpenses() {
