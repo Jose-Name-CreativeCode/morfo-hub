@@ -11,6 +11,12 @@ import {
   recordMatchesScope,
 } from "../scopes.js";
 import {
+  buildCasaAutoIncomeRecord,
+  computeCasaBalance,
+  getMissingCasaPaydates,
+} from "../casa-ledger.js";
+import { getIncomeCollection, saveIncomeRecord } from "../services/income-service.js";
+import {
   appendRowActions,
   askConfirm,
   bindRowActions,
@@ -60,6 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let editingExpenseId = null;
   let currentExpenses = [];
+  let casaIncomesCache = [];
 
   const activeScope = getActiveScope();
   const scopeConfig = getScopeConfig(activeScope);
@@ -114,6 +121,89 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getTableColumnCount() {
     return document.querySelectorAll(".table thead th:not([hidden])").length;
+  }
+
+  /**
+   * Genera las quincenas de casa que ya deberían existir (día 15 y último
+   * día del mes) y aún no están registradas, y refresca el saldo con lo que
+   * haya en el servidor. Es idempotente: usa un id fijo por fecha, así que
+   * llamarla varias veces nunca duplica un ingreso.
+   */
+  async function syncCasaLedger() {
+    if (activeScope !== "casa") return;
+
+    const casaIncomes = (await getIncomeCollection()).filter((income) =>
+      recordMatchesScope(income, "casa"),
+    );
+
+    const missingDates = getMissingCasaPaydates(casaIncomes);
+    for (const dateIso of missingDates) {
+      await saveIncomeRecord(buildCasaAutoIncomeRecord(dateIso));
+    }
+
+    casaIncomesCache = missingDates.length
+      ? (await getIncomeCollection()).filter((income) =>
+          recordMatchesScope(income, "casa"),
+        )
+      : casaIncomes;
+
+    renderCasaLedger();
+  }
+
+  /** Recalcula el saldo con los gastos actuales; no vuelve a pedir ingresos. */
+  function renderCasaLedger() {
+    if (activeScope !== "casa") return;
+
+    const { balance, totalIncome, settledExpenses, pendingExpenses } =
+      computeCasaBalance(casaIncomesCache, currentExpenses);
+
+    document.getElementById("casa-balance-grid").hidden = false;
+    document.getElementById("casa-income-panel").hidden = false;
+    document.getElementById("casa-balance").textContent =
+      formatCurrency(balance);
+    document.getElementById("casa-income-total").textContent =
+      formatCurrency(totalIncome);
+    document.getElementById("casa-settled-total").textContent =
+      formatCurrency(settledExpenses);
+    document.getElementById("casa-pending-total").textContent =
+      formatCurrency(pendingExpenses);
+
+    const list = document.getElementById("casa-income-list");
+    list.replaceChildren();
+
+    const recentIncomes = [...casaIncomesCache]
+      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
+      .slice(0, 6);
+
+    if (recentIncomes.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "section-subtitle section-subtitle-compact";
+      empty.textContent = "Todavía no hay quincenas registradas.";
+      list.appendChild(empty);
+      return;
+    }
+
+    recentIncomes.forEach((income) => {
+      const card = document.createElement("article");
+      card.className = "card casa-income-card";
+
+      const label = document.createElement("span");
+      label.className = "casa-income-card-label";
+      label.textContent = "Ingreso";
+
+      const amount = document.createElement("div");
+      amount.className = "casa-income-card-amount";
+      amount.textContent = formatCurrency(income.paidAmount || 0);
+
+      const date = document.createElement("div");
+      date.className = "casa-income-card-date";
+      date.textContent = formatDate(income.date);
+
+      card.appendChild(label);
+      card.appendChild(amount);
+      card.appendChild(date);
+      list.appendChild(card);
+    });
   }
 
   function createRecordId() {
@@ -328,6 +418,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const expenses = getFilteredExpenses();
     updateExpenseCounters(expenses);
     expenseTableBody.replaceChildren();
+    renderCasaLedger();
 
     if (expenses.length === 0) {
       expenseTableBody.appendChild(
@@ -749,6 +840,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();
+    await syncCasaLedger();
   });
 
   try {
@@ -759,6 +851,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();
+    await syncCasaLedger();
   } finally {
     setPageLoading(false);
   }

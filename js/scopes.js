@@ -64,8 +64,9 @@ export const SCOPES = {
   casa: {
     key: "casa",
     label: "Casa",
-    navKeys: ["income", "expenses"],
-    navLabels: { income: "Ingresos" },
+    // Sin "income": los ingresos de casa son las quincenas automáticas,
+    // no se capturan a mano (ver casa-ledger.js).
+    navKeys: ["expenses"],
     homeKey: "expenses",
     expenseCategories: [
       "Renta / Hipoteca",
@@ -78,8 +79,8 @@ export const SCOPES = {
       "Limpieza",
       "Otro",
     ],
-    paymentMethods: PERSONAL_METHODS,
-    incomeSources: ["Quincena"],
+    paymentMethods: ["Nu", ...BASE_METHODS],
+    incomeSources: null,
     incomeSourceLabel: "Origen",
     showInvoice: false,
   },

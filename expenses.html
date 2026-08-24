@@ -26,6 +26,56 @@
             </p>
           </section>
 
+          <section
+            class="cards-grid section-spacing stats-grid-4"
+            id="casa-balance-grid"
+            data-casa-only
+            hidden
+          >
+            <article class="card metric-card pending">
+              <div class="card-label">Saldo disponible</div>
+              <div class="card-value metric-card-value" id="casa-balance">
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card income">
+              <div class="card-label">Ingresos recibidos</div>
+              <div class="card-value metric-card-value" id="casa-income-total">
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card expense">
+              <div class="card-label">Gastos liquidados</div>
+              <div class="card-value metric-card-value" id="casa-settled-total">
+                $0.00
+              </div>
+            </article>
+
+            <article class="card metric-card">
+              <div class="card-label">Pendiente en tarjeta Nu</div>
+              <div class="card-value metric-card-value" id="casa-pending-total">
+                $0.00
+              </div>
+            </article>
+          </section>
+
+          <section
+            class="card dashboard-panel section-spacing"
+            id="casa-income-panel"
+            data-casa-only
+            hidden
+          >
+            <h2 class="section-title section-title-sm">Quincenas de casa</h2>
+            <p class="section-subtitle section-subtitle-compact">
+              Se generan solas el día 15 y el último día de cada mes, $40,000
+              cada una. No hace falta capturarlas a mano.
+            </p>
+
+            <div class="operations-grid" id="casa-income-list"></div>
+          </section>
+
           <section class="card section-spacing form-shell panel-soft">
             <div class="smart-presets-grid" id="expense-presets">
               <button
