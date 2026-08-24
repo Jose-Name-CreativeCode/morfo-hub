@@ -22,6 +22,7 @@ import {
   askConfirm,
   bindRowActions,
   createEmptyStateRow,
+  createSelectCell,
   createTableCell,
   formatCurrency,
   formatDate,
@@ -53,6 +54,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     invoiced: document.getElementById("expense-invoiced"),
     count: document.getElementById("expense-count"),
   };
+  const selectAllCheckbox = document.getElementById("select-all-expenses");
+  const bulkBar = document.getElementById("expense-bulk-bar");
+  const bulkCountLabel = document.getElementById("expense-bulk-count");
+  const bulkDeleteButton = document.getElementById("expense-bulk-delete");
+  const bulkClearButton = document.getElementById("expense-bulk-clear");
   const detailModal = document.getElementById("expense-detail-modal");
   const detailOverlay = document.getElementById("expense-detail-overlay");
   const detailCloseButton = document.getElementById("expense-detail-close");
@@ -69,6 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let casaIncomesCache = [];
   let scopeIncomeTotal = 0;
   let scopeChartInstance = null;
+  const selectedExpenseIds = new Set();
 
   const activeScope = getActiveScope();
   const scopeConfig = getScopeConfig(activeScope);
@@ -414,6 +421,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentExpenses = allExpenses.filter((expense) =>
       recordMatchesScope(expense, activeScope),
     );
+    pruneSelection();
+  }
+
+  /** Selección para borrado masivo: quita ids que ya no existen. */
+  function pruneSelection() {
+    const validIds = new Set(currentExpenses.map((expense) => String(expense.id)));
+    [...selectedExpenseIds].forEach((id) => {
+      if (!validIds.has(id)) selectedExpenseIds.delete(id);
+    });
+  }
+
+  function renderBulkBar() {
+    if (!bulkBar) return;
+
+    const count = selectedExpenseIds.size;
+    bulkBar.hidden = count === 0;
+
+    if (bulkCountLabel) {
+      bulkCountLabel.textContent = `${count} seleccionado${count === 1 ? "" : "s"}`;
+    }
+  }
+
+  function clearSelection() {
+    selectedExpenseIds.clear();
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+    renderBulkBar();
   }
 
   function resetForm() {
@@ -583,11 +619,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       expenseTableBody.appendChild(
         createEmptyStateRow("No hay gastos registrados.", getTableColumnCount()),
       );
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+      }
+      renderBulkBar();
       return;
     }
 
     expenses.forEach((expense) => {
+      const id = String(expense.id);
       const row = document.createElement("tr");
+
+      const selectCell = createSelectCell(id);
+      selectCell.querySelector("input").checked = selectedExpenseIds.has(id);
+      row.appendChild(selectCell);
+
       row.appendChild(createTableCell(expense.date || "-"));
       row.appendChild(createTableCell(expense.concept || "-"));
       row.appendChild(createTableCell(expense.category || "-"));
@@ -602,6 +649,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       expenseTableBody.appendChild(row);
     });
+
+    if (selectAllCheckbox) {
+      const allSelected = expenses.every((expense) =>
+        selectedExpenseIds.has(String(expense.id)),
+      );
+      const someSelected = expenses.some((expense) =>
+        selectedExpenseIds.has(String(expense.id)),
+      );
+      selectAllCheckbox.checked = allSelected;
+      selectAllCheckbox.indeterminate = someSelected && !allSelected;
+    }
+
+    renderBulkBar();
   }
 
   function fillForm(expense) {
@@ -670,6 +730,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentExpenses = currentExpenses.filter(
         (expense) => String(expense.id) !== String(expenseId),
       );
+      selectedExpenseIds.delete(String(expenseId));
       loadYearOptions();
       renderExpenses();
       showToast("Gasto eliminado correctamente.", { type: "success" });
@@ -683,11 +744,115 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  async function handleBulkDelete() {
+    const ids = [...selectedExpenseIds];
+    if (ids.length === 0) return;
+
+    const confirmed = await askConfirm({
+      title: "Eliminar gastos seleccionados",
+      message: `¿Seguro que quieres eliminar ${ids.length} gasto${ids.length === 1 ? "" : "s"}? Esta acción no se puede deshacer.`,
+      confirmText: "Eliminar",
+    });
+    if (!confirmed) return;
+
+    const wasEditingSelected = ids.includes(String(editingExpenseId));
+    setButtonLoading(bulkDeleteButton, true, "Eliminando...");
+
+    try {
+      for (const id of ids) {
+        await deleteExpenseRecord(id);
+      }
+
+      currentExpenses = currentExpenses.filter(
+        (expense) => !selectedExpenseIds.has(String(expense.id)),
+      );
+      clearSelection();
+
+      if (wasEditingSelected) {
+        resetForm();
+      }
+
+      loadYearOptions();
+      loadDynamicFilterOptions();
+      renderExpenses();
+      showToast(
+        `${ids.length} gasto${ids.length === 1 ? "" : "s"} eliminado${ids.length === 1 ? "" : "s"}.`,
+        { type: "success" },
+      );
+    } catch (error) {
+      console.error("No se pudieron eliminar los gastos seleccionados:", error);
+      showToast(
+        error?.message ||
+          "No se pudieron eliminar algunos gastos. Revisa permisos o conexión.",
+        { type: "error", duration: 5000 },
+      );
+      await refreshExpensesCollection();
+      loadYearOptions();
+      loadDynamicFilterOptions();
+      renderExpenses();
+    } finally {
+      setButtonLoading(bulkDeleteButton, false);
+    }
+  }
+
   bindRowActions(expenseTableBody, {
     onDetail: (expenseId) => openExpenseDetail(expenseId),
     onEdit: (expenseId) => handleEdit(expenseId),
     onDelete: (expenseId) => handleDelete(expenseId),
   });
+
+  expenseTableBody.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-row-select]");
+    if (!checkbox) return;
+
+    const id = checkbox.dataset.id;
+    if (checkbox.checked) {
+      selectedExpenseIds.add(id);
+    } else {
+      selectedExpenseIds.delete(id);
+    }
+
+    if (selectAllCheckbox) {
+      const rowCheckboxes = [
+        ...expenseTableBody.querySelectorAll("[data-row-select]"),
+      ];
+      const allChecked =
+        rowCheckboxes.length > 0 && rowCheckboxes.every((cb) => cb.checked);
+      const someChecked = rowCheckboxes.some((cb) => cb.checked);
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    }
+
+    renderBulkBar();
+  });
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener("change", () => {
+      const rowCheckboxes = [
+        ...expenseTableBody.querySelectorAll("[data-row-select]"),
+      ];
+
+      rowCheckboxes.forEach((checkbox) => {
+        checkbox.checked = selectAllCheckbox.checked;
+        if (selectAllCheckbox.checked) {
+          selectedExpenseIds.add(checkbox.dataset.id);
+        } else {
+          selectedExpenseIds.delete(checkbox.dataset.id);
+        }
+      });
+
+      selectAllCheckbox.indeterminate = false;
+      renderBulkBar();
+    });
+  }
+
+  if (bulkDeleteButton) {
+    bulkDeleteButton.addEventListener("click", handleBulkDelete);
+  }
+
+  if (bulkClearButton) {
+    bulkClearButton.addEventListener("click", clearSelection);
+  }
 
   async function exportFilteredExpensesToExcel() {
     const expenses = getFilteredExpenses();
@@ -952,11 +1117,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   if (filterYearSelect) {
-    filterYearSelect.addEventListener("change", renderExpenses);
+    filterYearSelect.addEventListener("change", () => {
+      clearSelection();
+      renderExpenses();
+    });
   }
 
   if (filterMonthSelect) {
-    filterMonthSelect.addEventListener("change", renderExpenses);
+    filterMonthSelect.addEventListener("change", () => {
+      clearSelection();
+      renderExpenses();
+    });
   }
 
   if (clearFiltersBtn) {
@@ -965,16 +1136,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (filterMonthSelect) filterMonthSelect.value = "";
       if (filterCategorySelect) filterCategorySelect.value = "";
       if (filterMethodSelect) filterMethodSelect.value = "";
+      clearSelection();
       renderExpenses();
     });
   }
 
   if (filterCategorySelect) {
-    filterCategorySelect.addEventListener("change", renderExpenses);
+    filterCategorySelect.addEventListener("change", () => {
+      clearSelection();
+      renderExpenses();
+    });
   }
 
   if (filterMethodSelect) {
-    filterMethodSelect.addEventListener("change", renderExpenses);
+    filterMethodSelect.addEventListener("change", () => {
+      clearSelection();
+      renderExpenses();
+    });
   }
 
   if (exportExcelBtn) {

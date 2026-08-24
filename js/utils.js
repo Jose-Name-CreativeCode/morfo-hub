@@ -181,6 +181,20 @@ export function createEmptyStateRow(message, columns) {
   return row;
 }
 
+export function createSelectCell(id) {
+  const cell = document.createElement("td");
+  cell.className = "select-column";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.className = "row-select-checkbox";
+  checkbox.dataset.rowSelect = "true";
+  checkbox.dataset.id = String(id);
+
+  cell.appendChild(checkbox);
+  return cell;
+}
+
 export function appendRowActions(row, id, { onDetail, detailLabel = "Ver" } = {}) {
   if (onDetail) {
     const detailCell = document.createElement("td");

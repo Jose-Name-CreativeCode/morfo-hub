@@ -1315,6 +1315,78 @@ img {
   background: var(--danger);
 }
 
+.table th.select-column,
+.table td.select-column {
+  width: 40px;
+  text-align: center;
+}
+
+.row-select-checkbox,
+.select-all-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+
+.bulk-actions-bar-count {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bulk-actions-bar-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-danger {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--danger);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.btn-danger:hover {
+  background: #ff8a8a;
+}
+
+.btn-ghost {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.btn-ghost:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
 .maintenance-clean-btn {
   background: linear-gradient(135deg, var(--primary), var(--secondary));
 }

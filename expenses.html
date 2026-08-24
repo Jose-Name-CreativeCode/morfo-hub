@@ -284,10 +284,32 @@
             </div>
           </section>
 
+          <div class="bulk-actions-bar" id="expense-bulk-bar" hidden>
+            <span class="bulk-actions-bar-count" id="expense-bulk-count">
+              0 seleccionados
+            </span>
+            <div class="bulk-actions-bar-buttons">
+              <button type="button" class="btn-ghost" id="expense-bulk-clear">
+                Cancelar selección
+              </button>
+              <button type="button" class="btn-danger" id="expense-bulk-delete">
+                Eliminar seleccionados
+              </button>
+            </div>
+          </div>
+
           <section class="table-wrapper">
             <table class="table">
               <thead>
                 <tr>
+                  <th class="select-column">
+                    <input
+                      type="checkbox"
+                      class="select-all-checkbox"
+                      id="select-all-expenses"
+                      title="Seleccionar todos"
+                    />
+                  </th>
                   <th>Fecha</th>
                   <th>Concepto</th>
                   <th>Categoría</th>
