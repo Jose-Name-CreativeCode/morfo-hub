@@ -168,6 +168,15 @@
                 </select>
               </div>
 
+              <div class="form-group" data-personal-only hidden>
+                <label for="expense-payer">Quién paga</label>
+                <select id="expense-payer">
+                  <option value="">Selecciona una opción</option>
+                  <option value="Pago mío">Pago mío</option>
+                  <option value="Pago papá">Pago papá</option>
+                </select>
+              </div>
+
               <div class="form-group" data-invoice-only>
                 <label for="expense-invoice">¿Tiene factura?</label>
                 <select id="expense-invoice">
@@ -288,6 +297,19 @@
                 </select>
               </div>
 
+              <div
+                class="form-group form-group-tight"
+                data-personal-only
+                hidden
+              >
+                <label for="filter-expense-payer">Quién paga</label>
+                <select id="filter-expense-payer">
+                  <option value="">Todos</option>
+                  <option value="Pago mío">Pago mío</option>
+                  <option value="Pago papá">Pago papá</option>
+                </select>
+              </div>
+
               <div class="form-group form-group-tight">
                 <button
                   type="button"
@@ -341,6 +363,7 @@
                   <th>Categoría</th>
                   <th>Monto</th>
                   <th>Método de pago</th>
+                  <th data-personal-only hidden>Quién paga</th>
                   <th data-invoice-only>Factura</th>
                   <th>Ficha</th>
                   <th>Editar</th>
@@ -380,6 +403,10 @@
               <div>
                 <span>Método</span>
                 <strong id="expense-detail-method">-</strong>
+              </div>
+              <div data-personal-only hidden>
+                <span>Quién paga</span>
+                <strong id="expense-detail-payer">-</strong>
               </div>
               <div data-invoice-only>
                 <span>Factura</span>

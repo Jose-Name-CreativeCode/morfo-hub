@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const expenseTableBody = document.querySelector(".table tbody");
   const submitButton = expenseForm.querySelector(".btn-primary");
   const accountSelect = document.getElementById("expense-account");
+  const payerSelect = document.getElementById("expense-payer");
 
   const filterYearSelect = document.getElementById("filter-expense-year");
   const filterMonthSelect = document.getElementById("filter-expense-month");
@@ -47,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     "filter-expense-category",
   );
   const filterMethodSelect = document.getElementById("filter-expense-method");
+  const filterPayerSelect = document.getElementById("filter-expense-payer");
   const clearFiltersBtn = document.getElementById("clear-expense-filters");
   const exportExcelBtn = document.getElementById("export-expense-excel");
   const expenseCounters = {
@@ -67,6 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const detailAmount = document.getElementById("expense-detail-amount");
   const detailCategory = document.getElementById("expense-detail-category");
   const detailMethod = document.getElementById("expense-detail-method");
+  const detailPayer = document.getElementById("expense-detail-payer");
   const detailInvoice = document.getElementById("expense-detail-invoice");
   const detailNotes = document.getElementById("expense-detail-notes");
 
@@ -105,6 +108,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.querySelectorAll("[data-casa-only]").forEach((element) => {
       element.hidden = activeScope !== "casa";
+    });
+
+    document.querySelectorAll("[data-personal-only]").forEach((element) => {
+      element.hidden = activeScope !== "personal";
     });
 
     if (!scopeConfig.showInvoice) {
@@ -392,6 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-payment-method").value =
       scopeConfig.paymentMethods[0] || "";
     document.getElementById("expense-invoice").value = "no";
+    if (payerSelect) payerSelect.value = "";
   }
 
   function applyExpensePreset(preset) {
@@ -565,6 +573,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? filterCategorySelect.value
       : "";
     const selectedMethod = filterMethodSelect ? filterMethodSelect.value : "";
+    const selectedPayer = filterPayerSelect ? filterPayerSelect.value : "";
 
     if (selectedYear) {
       expenses = expenses.filter(
@@ -593,6 +602,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         (expense) =>
           normalizeText(expense.paymentMethod) ===
           normalizeText(selectedMethod),
+      );
+    }
+
+    if (selectedPayer) {
+      expenses = expenses.filter(
+        (expense) =>
+          normalizeText(expense.payer) === normalizeText(selectedPayer),
       );
     }
 
@@ -682,6 +698,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.appendChild(createTableCell(formatCurrency(expense.amount)));
       row.appendChild(createTableCell(expense.paymentMethod || "-"));
 
+      if (activeScope === "personal") {
+        row.appendChild(createTableCell(expense.payer || "Sin asignar"));
+      }
+
       if (scopeConfig.showInvoice) {
         row.appendChild(createTableCell(expense.invoice || "-"));
       }
@@ -712,6 +732,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-amount").value = expense.amount || 0;
     document.getElementById("expense-payment-method").value =
       expense.paymentMethod || "";
+    if (payerSelect) payerSelect.value = expense.payer || "";
     accountSelect.value = expense.accountId || "";
     document.getElementById("expense-invoice").value =
       expense.invoice === "Sí" ? "yes" : "no";
@@ -742,6 +763,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     detailAmount.textContent = formatCurrency(expense.amount || 0);
     detailCategory.textContent = expense.category || "-";
     detailMethod.textContent = expense.paymentMethod || "-";
+    if (detailPayer) detailPayer.textContent = expense.payer || "Sin asignar";
     detailInvoice.textContent = expense.invoice || "-";
     detailNotes.textContent = expense.notes || "Sin observaciones.";
 
@@ -1096,6 +1118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "expense-payment-method",
     ).value;
     const accountId = accountSelect.value;
+    const payer = payerSelect?.value || "";
     const invoice = document.getElementById("expense-invoice").value;
     const notes = document.getElementById("expense-notes").value.trim();
 
@@ -1105,7 +1128,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       !category ||
       !amount ||
       !paymentMethod ||
-      !invoice
+      !invoice ||
+      (activeScope === "personal" && !payer)
     ) {
       showToast("Por favor, completa todos los campos obligatorios.", {
         type: "error",
@@ -1135,6 +1159,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         category,
         amount: Number(amount),
         paymentMethod,
+        payer: activeScope === "personal" ? payer : "",
         invoice: invoice === "yes" ? "Sí" : "No",
         notes,
       });
@@ -1180,6 +1205,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (filterMonthSelect) filterMonthSelect.value = "";
       if (filterCategorySelect) filterCategorySelect.value = "";
       if (filterMethodSelect) filterMethodSelect.value = "";
+      if (filterPayerSelect) filterPayerSelect.value = "";
       clearSelection();
       renderExpenses();
     });
@@ -1194,6 +1220,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (filterMethodSelect) {
     filterMethodSelect.addEventListener("change", () => {
+      clearSelection();
+      renderExpenses();
+    });
+  }
+
+  if (filterPayerSelect) {
+    filterPayerSelect.addEventListener("change", () => {
       clearSelection();
       renderExpenses();
     });
