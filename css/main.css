@@ -2228,6 +2228,49 @@ img {
   gap: 12px;
 }
 
+.account-totals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.account-total-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.account-total-card span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-total-card strong {
+  overflow-wrap: anywhere;
+  font-size: 1.3rem;
+}
+
+.account-total-card small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.cash-total strong {
+  color: var(--success);
+}
+
+.credit-total strong {
+  color: var(--secondary);
+}
+
 .insight-item {
   display: grid;
   grid-template-columns: 12px 1fr;
@@ -2620,6 +2663,9 @@ img {
 }
 
 @media (max-width: 430px) {
+  .account-totals-grid {
+    grid-template-columns: 1fr;
+  }
   .finance-metrics {
     grid-template-columns: 1fr;
   }

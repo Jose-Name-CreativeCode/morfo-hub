@@ -135,6 +135,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function syncCreditFields() {
     const isCredit = document.getElementById("account-type").value === "credit";
+    document.getElementById("account-balance-label").textContent = isCredit
+      ? "Deuda actual"
+      : "Saldo inicial";
     document.querySelectorAll(".credit-only").forEach((element) => {
       element.hidden = !isCredit;
     });
