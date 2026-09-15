@@ -229,9 +229,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     leftValue.classList.toggle("is-negative", owes);
     leftValue.classList.toggle("is-positive", !owes);
 
-    $("rs-spent-label").textContent = "Gastaste";
-    $("rs-spent-value").textContent = `−${money(debt.spentInPeriod)}`;
-    $("rs-paid-value").textContent = `+${money(debt.paidInPeriod)}`;
+    // Totales de todo lo registrado, para que la resta cuadre con la deuda.
+    $("rs-spent-label").textContent = "Gastado con tarjeta";
+    $("rs-spent-value").textContent = `−${money(debt.charged)}`;
+    $("rs-paid-value").textContent = `+${money(debt.paid)}`;
 
     const fill = $("rs-bar-fill");
     fill.style.width = `${debt.percentPaid}%`;
@@ -239,12 +240,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     fill.classList.add("is-good");
     $("rs-bar-note").textContent =
       debt.charged > 0
-        ? `Has pagado ${money(debt.paid)} de ${money(debt.charged)} que gastaste con tarjeta`
+        ? `Llevas pagado el ${debt.percentPaid}% de lo que has gastado con tarjeta`
         : "Aún no tienes gastos con tarjeta";
 
+    // Los chips sí son del periodo que se está viendo.
     setSplitChips([
-      ["Efectivo y transferencia", money(debt.cashInPeriod)],
-      ["Con tarjeta", money(debt.cardInPeriod)],
+      [`Gastaste ${periodNoun(state.period)}`, money(debt.spentInPeriod)],
+      ["De eso, con tarjeta", money(debt.cardInPeriod)],
     ]);
   }
 
