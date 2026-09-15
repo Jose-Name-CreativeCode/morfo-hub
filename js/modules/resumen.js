@@ -23,6 +23,7 @@ import {
   buildPeriodSummary,
   carriesLeftover,
   isCardExpense,
+  isDateInPeriod,
   periodForDate,
   periodIncomeId,
   periodKey,
@@ -42,7 +43,6 @@ import {
   isCardPayment,
   isNuExpense,
   isReimbursement,
-  shortDate,
 } from "../card-ledger.js";
 import {
   askConfirm,
@@ -132,8 +132,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       fundedTouched: false,
     },
     detailKind: "gasto",
-    moneyMode: "",
-    moneyMethod: "",
   };
 
   const $ = (id) => document.getElementById(id);
@@ -141,8 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const expenseSheet = $("rs-expense-sheet");
   const detailSheet = $("rs-detail-sheet");
   const incomeSheet = $("rs-income-sheet");
-  const moneySheet = $("rs-money-sheet");
-  const sheets = [expenseSheet, detailSheet, incomeSheet, moneySheet];
+  const sheets = [expenseSheet, detailSheet, incomeSheet];
   // En Casa se lleva lo que Jose pone por papá; en Personal, su tarjeta Nu.
   const tracksPapaDebt = scope === "casa";
   // En Personal el número grande es la deuda: gastos con tarjeta menos pagos.
@@ -358,8 +355,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
     // Los pagos de tarjeta van en la lista en verde; no tienen categoría.
-    const payments =
-      tracksDebt && !state.category ? currentDebt().payments : [];
+    const payments = state.category
+      ? []
+      : tracksDebt
+        ? currentDebt().payments
+        : state.incomes.filter(
+            (income) =>
+              isReimbursement(income) &&
+              isDateInPeriod(income.date, state.period),
+          );
     const items = [
       ...visible.map((record) => ({ kind: "gasto", record })),
       ...payments.map((record) => ({ kind: "pago", record })),
@@ -410,7 +414,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const text = el("span", "rs-move-text");
         text.appendChild(el("strong", "", expense.concept || "Pago"));
         text.appendChild(
-          el("small", "", `Pago · ${expense.paymentMethod || "Tarjeta"}`),
+          el(
+            "small",
+            "",
+            `${tracksDebt ? "Pago" : "Pago de papá"} · ${expense.paymentMethod || "Tarjeta"}`,
+          ),
         );
         button.append(
           dot,
@@ -463,35 +471,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function renderLedgerList(container, records, emptyText) {
-    container.replaceChildren();
-    const recent = [...records]
-      .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-      .slice(0, 5);
-
-    if (!recent.length) {
-      container.appendChild(el("p", "rs-ledger-empty", emptyText));
-      return;
-    }
-
-    recent.forEach((record) => {
-      const row = el("div", "rs-ledger-row");
-      const text = el("span", "", shortDate(record.date));
-      if (record.paymentMethod) {
-        text.appendChild(el("small", "", ` · ${record.paymentMethod}`));
-      }
-      const remove = el("button", "rs-ledger-remove", "×");
-      remove.type = "button";
-      remove.setAttribute(
-        "aria-label",
-        `Eliminar ${money(record.paidAmount)} del ${shortDate(record.date)}`,
-      );
-      remove.addEventListener("click", () => removeMoneyRecord(record));
-      row.append(text, el("strong", "", money(record.paidAmount)), remove);
-      container.appendChild(row);
-    });
-  }
-
   function renderPapaDebt() {
     const section = $("rs-debt");
     section.hidden = !tracksPapaDebt;
@@ -512,11 +491,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? "Están a mano"
         : `Pusiste ${money(debt.frontedTotal)} · te ha dado ${money(debt.repaid)}`;
     $("rs-debt-status").classList.toggle("is-ok", debt.balance === 0);
-    renderLedgerList(
-      $("rs-debt-list"),
-      reimbursements,
-      "Aún no registras pagos de papá.",
-    );
   }
 
   function render() {
@@ -591,7 +565,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const isPago = form.type === "pago";
     $("rs-category-field").hidden = isPago;
-    const methods = isPago ? cardOptions() : paymentOptions();
+    const methods = isPago ? paymentTargets() : paymentOptions();
     if (
       form.method &&
       !methods.some((option) => option.key === form.method.key)
@@ -621,15 +595,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  /** Tarjetas a las que se les puede pagar. */
-  function cardOptions() {
-    return paymentOptions().filter((option) =>
-      isCardExpense(
+  /** Con qué se registra un pago: tarjetas en Personal; efectivo o transferencia en Casa. */
+  function paymentTargets() {
+    return paymentOptions().filter((option) => {
+      const isCard = isCardExpense(
         { paymentMethod: option.paymentMethod },
         state.paymentMethods,
-      ),
-    );
+      );
+      return tracksDebt ? isCard : !isCard;
+    });
   }
+
+  /** Cómo se llama y qué pide un "Pago" en cada espacio. */
+  const paymentCopy = tracksDebt
+    ? {
+        toggle: "Pago",
+        title: "pago",
+        methodLabel: "¿A qué tarjeta?",
+        methodError: "Elige a qué tarjeta pagaste.",
+        conceptPrefix: "Pago a",
+        kind: CARD_PAYMENT_KIND,
+        savedToast: "Pago guardado.",
+      }
+    : {
+        toggle: "Pago de papá",
+        title: "pago de papá",
+        methodLabel: "¿Cómo te lo dio?",
+        methodError: "Elige cómo te lo dio.",
+        conceptPrefix: "Papá me pagó en",
+        kind: REIMBURSEMENT_KIND,
+        savedToast: "Pago de papá guardado.",
+      };
 
   function applyFormType() {
     const { form } = state;
@@ -642,7 +638,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.setAttribute("aria-pressed", String(isOn));
     });
     $("rs-expense-title").textContent = `${isEditing ? "Editar" : "Nuevo"} ${
-      isPago ? "pago" : "gasto"
+      isPago ? paymentCopy.title : "gasto"
     }`;
     $("rs-expense-submit").textContent = isEditing
       ? "Guardar cambios"
@@ -650,10 +646,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? "Guardar pago"
         : "Guardar gasto";
     $("rs-method-label").textContent = isPago
-      ? "¿A qué tarjeta?"
+      ? paymentCopy.methodLabel
       : "Pagado con";
     $("rs-concept-label").textContent = isPago ? "Nota (opcional)" : "Qué fue";
-    $("rs-concept").placeholder = isPago ? "Ej. Pago a Nu" : "Ej. Walmart";
+    $("rs-concept").placeholder = isPago
+      ? `Ej. ${paymentCopy.conceptPrefix} efectivo`
+      : "Ej. Walmart";
     renderExpenseChips();
   }
 
@@ -696,7 +694,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     const amount = isPago ? expense?.paidAmount : expense?.amount;
-    $("rs-type-toggle").hidden = !tracksDebt || Boolean(expense);
+    $("rs-type-toggle").hidden = Boolean(expense);
     $("rs-amount").value = expense ? String(amount ?? "") : "";
     fitAmountInput($("rs-amount"));
     $("rs-concept").value = expense?.concept || "";
@@ -738,8 +736,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const rows = isPago
       ? [
           ["Fecha", dayLabel(String(expense.date || "").slice(0, 10))],
-          ["Pagado a", expense.paymentMethod || "Tarjeta"],
-          ["Tipo", "Pago de tarjeta"],
+          [
+            tracksDebt ? "Pagado a" : "Te lo dio en",
+            expense.paymentMethod || "Tarjeta",
+          ],
+          ["Tipo", tracksDebt ? "Pago de tarjeta" : "Pago de papá"],
         ]
       : [
           ["Fecha", dayLabel(String(expense.date || "").slice(0, 10))],
@@ -787,109 +788,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     openSheet(incomeSheet, $("rs-income-amount"));
   }
 
-  const MONEY_METHODS = ["Efectivo", "Transferencia"];
-
-  function renderMoneyMethodChips() {
-    renderChips(
-      $("rs-money-method-chips"),
-      MONEY_METHODS.map((method) => ({ key: method, label: method })),
-      state.moneyMethod,
-      (option) => {
-        state.moneyMethod = option.key;
-        renderMoneyMethodChips();
-      },
-    );
-  }
-
-  /** Dinero que papá le devolvió a Jose (Casa). */
-  function openMoneyForm() {
-    const suggested = Math.max(
-      0,
-      buildPapaDebt({
-        expenses: state.expenses,
-        reimbursements: state.incomes.filter(isReimbursement),
-      }).balance,
-    );
-    $("rs-money-title").textContent = "Papá me pagó";
-    $("rs-money-note").textContent =
-      "Baja lo que papá te debe. No cambia los gastos de Casa, que ya están contados.";
-    state.moneyMethod = "Efectivo";
-    renderMoneyMethodChips();
-    $("rs-money-amount").value = suggested
-      ? String(Math.round(suggested * 100) / 100)
-      : "";
-    fitAmountInput($("rs-money-amount"));
-    $("rs-money-date").value = today;
-    $("rs-money-error").textContent = "";
-    openSheet(moneySheet, $("rs-money-amount"));
-  }
-
-  async function removeMoneyRecord(record) {
-    const confirmed = await askConfirm({
-      title: "Eliminar pago de papá",
-      message: `¿Eliminar ${money(record.paidAmount)} del ${shortDate(record.date)}?`,
-      confirmText: "Eliminar",
-    });
-    if (!confirmed) return;
-
-    try {
-      await deleteIncomeRecord(record.id);
-      await loadData();
-      render();
-      showToast("Eliminado.", { type: "success" });
-    } catch (deleteError) {
-      console.error("No se pudo eliminar el registro:", deleteError);
-      showToast(deleteError?.message || "No se pudo eliminar.", {
-        type: "error",
-      });
-    }
-  }
-
   /* ---------- Acciones ---------- */
 
-  moneySheet.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const amount = parseAmount($("rs-money-amount").value);
-    const date = $("rs-money-date").value;
-    const errorBox = $("rs-money-error");
-
-    errorBox.textContent = !amount
-      ? "Escribe el monto."
-      : !date
-        ? "Elige la fecha."
-        : "";
-    if (errorBox.textContent) return;
-
-    const button = $("rs-money-submit");
-    setButtonLoading(button, true, "Guardando...");
-
-    try {
-      await saveIncomeRecord({
-        id: createId(),
-        kind: REIMBURSEMENT_KIND,
-        scope,
-        date,
-        concept: "Papá me pagó",
-        paymentMethod: state.moneyMethod,
-        paymentStatus: "Pagado",
-        totalAmount: amount,
-        paidAmount: amount,
-        remainingAmount: 0,
-      });
-      await loadData();
-      closeSheets();
-      render();
-      showToast("Pago de papá guardado.", { type: "success" });
-    } catch (saveError) {
-      console.error("No se pudo guardar:", saveError);
-      errorBox.textContent =
-        saveError?.message || "No se pudo guardar. Intenta de nuevo.";
-    } finally {
-      setButtonLoading(button, false);
-    }
-  });
-
-  $("rs-debt-add").addEventListener("click", () => openMoneyForm());
+  document.querySelector('[data-rs-type="pago"]').textContent =
+    paymentCopy.toggle;
 
   document.querySelectorAll("[data-rs-type]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -898,9 +800,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Un pago sólo puede ir a una tarjeta: si lo elegido no lo es, se usa la primera.
       if (
         form.type === "pago" &&
-        !cardOptions().some((option) => option.key === form.method?.key)
+        !paymentTargets().some((option) => option.key === form.method?.key)
       ) {
-        form.method = cardOptions()[0] || null;
+        form.method = paymentTargets()[0] || null;
       }
       applyFormType();
     });
@@ -915,7 +817,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     errorBox.textContent = !amount
       ? "Escribe el monto."
       : !form.method
-        ? "Elige a qué tarjeta pagaste."
+        ? paymentCopy.methodError
         : !date
           ? "Elige la fecha."
           : "";
@@ -933,10 +835,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       await saveIncomeRecord({
         ...existing,
         id: existing.id || createId(),
-        kind: CARD_PAYMENT_KIND,
+        kind: paymentCopy.kind,
         scope,
         date,
-        concept: $("rs-concept").value.trim() || `Pago a ${form.method.label}`,
+        concept:
+          $("rs-concept").value.trim() ||
+          `${paymentCopy.conceptPrefix} ${form.method.label.toLowerCase()}`,
         paymentMethod: form.method.paymentMethod,
         accountId: form.method.accountId || "",
         paymentStatus: "Pagado",
@@ -949,7 +853,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.category = "";
       closeSheets();
       render();
-      showToast(wasEditing ? "Cambios guardados." : "Pago guardado.", {
+      showToast(wasEditing ? "Cambios guardados." : paymentCopy.savedToast, {
         type: "success",
       });
     } catch (saveError) {
@@ -1113,18 +1017,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (event.key === "Escape" && !backdrop.hidden) closeSheets();
   });
 
-  ["rs-amount", "rs-income-amount", "rs-money-amount"].forEach((id) => {
+  ["rs-amount", "rs-income-amount"].forEach((id) => {
     $(id).addEventListener("input", (event) => fitAmountInput(event.target));
   });
 
   $("rs-income-btn").addEventListener("click", openIncomeForm);
   $("rs-income-btn").hidden = tracksDebt;
   $("rs-paid").hidden = !tracksDebt;
-  if (tracksDebt) {
-    document.querySelectorAll("[data-rs-add]").forEach((button) => {
-      button.textContent = "+ Agregar";
-    });
-  }
+  // El botón sirve para gastos y para pagos en los dos espacios.
+  document.querySelectorAll("[data-rs-add]").forEach((button) => {
+    button.textContent = "+ Agregar";
+  });
   $("rs-prev").addEventListener("click", () => {
     state.period = shiftPeriod(state.period, -1);
     state.category = "";

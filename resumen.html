@@ -87,23 +87,16 @@
                 <h2 id="rs-debt-title">Lo que pones tú</h2>
                 <small
                   >Gastos de Casa pagados con tu Nu o tu efectivo, menos lo que
-                  papá ya te dio.</small
+                  papá ya te dio. Lo que te devuelva regístralo con “+ Agregar →
+                  Pago de papá”.</small
                 >
               </div>
-              <button
-                type="button"
-                class="rs-btn rs-btn-soft rs-btn-sm"
-                id="rs-debt-add"
-              >
-                Papá me pagó
-              </button>
             </div>
             <div class="rs-ledger-main">
               <span id="rs-debt-label"></span>
               <strong id="rs-debt-value"></strong>
               <span class="rs-ledger-status" id="rs-debt-status"></span>
             </div>
-            <div class="rs-ledger-list" id="rs-debt-list"></div>
           </section>
 
           <div class="rs-cols">
@@ -283,53 +276,6 @@
       </label>
       <p class="rs-sheet-note" id="rs-income-note"></p>
       <button type="submit" class="rs-btn rs-btn-main" id="rs-income-submit">
-        Guardar
-      </button>
-    </form>
-
-    <form
-      class="rs-sheet"
-      id="rs-money-sheet"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="rs-money-title"
-      novalidate
-      hidden
-    >
-      <div class="rs-grab"></div>
-      <div class="rs-sheet-head">
-        <h3 id="rs-money-title"></h3>
-        <button
-          type="button"
-          class="rs-icon-btn"
-          data-rs-close
-          aria-label="Cerrar"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <label class="rs-amount-field" for="rs-money-amount">
-        <span>$</span>
-        <input
-          id="rs-money-amount"
-          inputmode="decimal"
-          placeholder="0"
-          autocomplete="off"
-        />
-      </label>
-      <div class="rs-field" id="rs-money-method-field">
-        <span>¿Cómo te lo dio?</span>
-        <div class="rs-chips" id="rs-money-method-chips"></div>
-      </div>
-      <div class="rs-field">
-        <label for="rs-money-date">Fecha</label>
-        <input type="date" id="rs-money-date" />
-      </div>
-      <p class="rs-sheet-note" id="rs-money-note"></p>
-      <p class="rs-error" id="rs-money-error" role="alert"></p>
-      <button type="submit" class="rs-btn rs-btn-main" id="rs-money-submit">
         Guardar
       </button>
     </form>
