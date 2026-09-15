@@ -6,6 +6,7 @@ import {
 } from "./scopes.js";
 
 const NAV_ITEMS = [
+  { key: "resumen", label: "Resumen", href: "resumen.html" },
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
   { key: "movements", label: "Movimientos", href: "movements.html" },
   { key: "clients", label: "Clientes", href: "clients.html" },
@@ -221,6 +222,29 @@ function setupMobileSidebar() {
   syncMobileNavState();
 }
 
+// Personal y Casa se manejan sólo desde el Resumen; estas páginas son de Morfo.
+const PAGES_REPLACED_BY_RESUMEN = [
+  "dashboard",
+  "movements",
+  "income",
+  "expenses",
+];
+
+function redirectToResumenIfNeeded(activeKey) {
+  const scope = getActiveScope();
+  const scopeConfig = getScopeConfig(scope);
+
+  if (
+    scopeConfig.homeKey !== "resumen" ||
+    !PAGES_REPLACED_BY_RESUMEN.includes(activeKey)
+  ) {
+    return false;
+  }
+
+  window.location.replace(withScopeParam("resumen.html", scope));
+  return true;
+}
+
 function renderAppShell() {
   const sidebar = document.querySelector("[data-app-sidebar]");
   const header = document.querySelector("[data-app-header]");
@@ -229,6 +253,8 @@ function renderAppShell() {
 
   const pageTitle = document.body.dataset.pageTitle || "Morfo Hub";
   const activeKey = document.body.dataset.navKey || inferNavKey();
+
+  if (redirectToResumenIfNeeded(activeKey)) return;
 
   renderSidebar(sidebar, activeKey);
   renderHeader(header, pageTitle);

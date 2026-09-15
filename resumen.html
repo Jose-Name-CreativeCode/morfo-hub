@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Morfo Hub | Resumen</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Resumen" data-nav-key="resumen" class="rs-page">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+
+        <main class="page-content rs-content">
+          <section class="rs-period-row">
+            <div class="rs-period-nav">
+              <button
+                type="button"
+                class="rs-icon-btn"
+                id="rs-prev"
+                aria-label="Periodo anterior"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <div class="rs-period-text">
+                <span class="rs-period-kicker" id="rs-period-kicker"></span>
+                <h1 class="rs-period-title" id="rs-period-title">&nbsp;</h1>
+              </div>
+              <button
+                type="button"
+                class="rs-icon-btn"
+                id="rs-next"
+                aria-label="Periodo siguiente"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+            <button
+              type="button"
+              class="rs-btn rs-btn-main rs-desktop-add"
+              data-rs-add
+            >
+              + Agregar gasto
+            </button>
+          </section>
+
+          <section class="rs-summary" aria-label="Resumen del periodo">
+            <div class="rs-left">
+              <span class="rs-left-label" id="rs-left-label">Me queda</span>
+              <strong class="rs-left-value" id="rs-left-value">$0</strong>
+            </div>
+            <div class="rs-pair">
+              <button type="button" class="rs-income-btn" id="rs-income-btn">
+                <span>Entró <em>Editar</em></span>
+                <strong id="rs-income-value">$0</strong>
+              </button>
+              <div class="rs-spent">
+                <span id="rs-spent-label">Gasté</span>
+                <strong id="rs-spent-value">$0</strong>
+              </div>
+            </div>
+            <div class="rs-bar-wrap">
+              <div class="rs-bar"><i id="rs-bar-fill"></i></div>
+              <p class="rs-bar-note" id="rs-bar-note"></p>
+            </div>
+            <div class="rs-split" id="rs-split"></div>
+          </section>
+
+          <div class="rs-cols">
+            <section aria-labelledby="rs-cats-title">
+              <div class="rs-block-title">
+                <h2 id="rs-cats-title">Por categoría</h2>
+                <small>Toca para filtrar</small>
+              </div>
+              <div class="rs-cats" id="rs-cats"></div>
+            </section>
+
+            <section aria-labelledby="rs-moves-title" class="rs-moves-block">
+              <div class="rs-block-title">
+                <h2 id="rs-moves-title">Movimientos</h2>
+                <small id="rs-moves-count"></small>
+              </div>
+              <div class="rs-filter-note" id="rs-filter-note" hidden>
+                Mostrando: <strong id="rs-filter-name"></strong>
+                <button type="button" id="rs-clear-filter">
+                  Quitar filtro
+                </button>
+              </div>
+              <div id="rs-moves"></div>
+              <button type="button" class="rs-excel" id="rs-excel">
+                Descargar Excel
+              </button>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="rs-bottom-bar">
+      <button type="button" class="rs-btn rs-btn-main" data-rs-add>
+        + Agregar gasto
+      </button>
+    </div>
+
+    <div class="rs-backdrop" id="rs-backdrop" hidden></div>
+
+    <form
+      class="rs-sheet"
+      id="rs-expense-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rs-expense-title"
+      novalidate
+      hidden
+    >
+      <div class="rs-grab"></div>
+      <div class="rs-sheet-head">
+        <h3 id="rs-expense-title">Nuevo gasto</h3>
+        <button
+          type="button"
+          class="rs-icon-btn"
+          data-rs-close
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <label class="rs-amount-field" for="rs-amount">
+        <span>$</span>
+        <input
+          id="rs-amount"
+          inputmode="decimal"
+          placeholder="0"
+          autocomplete="off"
+        />
+      </label>
+      <div class="rs-field">
+        <label for="rs-concept">Qué fue</label>
+        <input
+          type="text"
+          id="rs-concept"
+          placeholder="Ej. Walmart"
+          autocomplete="off"
+        />
+      </div>
+      <div class="rs-field">
+        <span>Categoría</span>
+        <div class="rs-chips" id="rs-category-chips"></div>
+      </div>
+      <div class="rs-field">
+        <span>Pagado con</span>
+        <div class="rs-chips" id="rs-method-chips"></div>
+      </div>
+      <div class="rs-field" id="rs-payer-field" hidden>
+        <span>Quién pagó</span>
+        <div class="rs-chips" id="rs-payer-chips"></div>
+      </div>
+      <div class="rs-field">
+        <label for="rs-date">Fecha</label>
+        <input type="date" id="rs-date" />
+      </div>
+      <p class="rs-error" id="rs-expense-error" role="alert"></p>
+      <button type="submit" class="rs-btn rs-btn-main" id="rs-expense-submit">
+        Guardar gasto
+      </button>
+    </form>
+
+    <div
+      class="rs-sheet"
+      id="rs-detail-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rs-detail-title"
+      hidden
+    >
+      <div class="rs-grab"></div>
+      <div class="rs-sheet-head">
+        <h3 id="rs-detail-title"></h3>
+        <button
+          type="button"
+          class="rs-icon-btn"
+          data-rs-close
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <strong class="rs-detail-amount" id="rs-detail-amount"></strong>
+      <dl class="rs-detail-list" id="rs-detail-list"></dl>
+      <div class="rs-row-btns">
+        <button type="button" class="rs-btn rs-btn-soft" id="rs-detail-edit">
+          Editar
+        </button>
+        <button
+          type="button"
+          class="rs-btn rs-btn-danger"
+          id="rs-detail-delete"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+
+    <form
+      class="rs-sheet"
+      id="rs-income-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rs-income-title"
+      novalidate
+      hidden
+    >
+      <div class="rs-grab"></div>
+      <div class="rs-sheet-head">
+        <h3 id="rs-income-title">¿Cuánto entró?</h3>
+        <button
+          type="button"
+          class="rs-icon-btn"
+          data-rs-close
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <label class="rs-amount-field" for="rs-income-amount">
+        <span>$</span>
+        <input
+          id="rs-income-amount"
+          inputmode="decimal"
+          placeholder="0"
+          autocomplete="off"
+        />
+      </label>
+      <p class="rs-sheet-note" id="rs-income-note"></p>
+      <button type="submit" class="rs-btn rs-btn-main" id="rs-income-submit">
+        Guardar
+      </button>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/resumen.js"></script>
+  </body>
+</html>

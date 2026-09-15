@@ -39,15 +39,9 @@ export const SCOPES = {
   personal: {
     key: "personal",
     label: "Personal",
-    navKeys: [
-      "dashboard",
-      "movements",
-      "income",
-      "expenses",
-      "financeSettings",
-    ],
-    navLabels: { income: "Ingresos" },
-    homeKey: "expenses",
+    navKeys: ["resumen", "financeSettings"],
+    navLabels: { financeSettings: "Ajustes" },
+    homeKey: "resumen",
     expenseCategories: [
       "Britania",
       "Supermercado",
@@ -68,18 +62,18 @@ export const SCOPES = {
     ],
     incomeSourceLabel: "Fuente de ingreso",
     showInvoice: false,
+    // Quién pagó el gasto; lo que paga papá no se descuenta de "Me queda".
+    payers: [
+      { value: "Pago mío", label: "Yo" },
+      { value: "Pago papá", label: "Papá" },
+    ],
   },
   casa: {
     key: "casa",
     label: "Casa",
-    navKeys: [
-      "dashboard",
-      "movements",
-      "income",
-      "expenses",
-      "financeSettings",
-    ],
-    homeKey: "dashboard",
+    navKeys: ["resumen", "financeSettings"],
+    navLabels: { financeSettings: "Ajustes" },
+    homeKey: "resumen",
     expenseCategories: [
       "Renta / Hipoteca",
       "Luz",

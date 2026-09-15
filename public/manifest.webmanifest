@@ -12,12 +12,12 @@
     {
       "name": "Registrar gasto personal",
       "short_name": "Gasto personal",
-      "url": "/movements.html?scope=personal"
+      "url": "/resumen.html?scope=personal&nuevo=1"
     },
     {
       "name": "Registrar gasto de Casa",
       "short_name": "Gasto Casa",
-      "url": "/movements.html?scope=casa"
+      "url": "/resumen.html?scope=casa&nuevo=1"
     },
     {
       "name": "Registrar movimiento de Morfo",

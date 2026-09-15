@@ -13,7 +13,7 @@ import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
-import { SCOPES, getActiveScope } from "../scopes.js";
+import { SCOPES, getActiveScope, getScopeConfig } from "../scopes.js";
 import {
   askConfirm,
   formatCurrency,
@@ -312,8 +312,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
-    document.getElementById("finance-settings-subtitle").textContent =
-      `Configuración de ${SCOPES[scope].label}. Define dónde está el dinero y qué movimientos esperas; nada se marcará como pagado automáticamente.`;
+    // Personal y Casa sólo configuran cuentas; presupuesto y reglas son de Morfo.
+    const isSimpleScope = getScopeConfig(scope).homeKey === "resumen";
+    document.querySelectorAll("[data-morfo-only]").forEach((element) => {
+      element.hidden = isSimpleScope;
+    });
+    if (isSimpleScope) {
+      document.getElementById("finance-settings-title").textContent =
+        `Ajustes de ${SCOPES[scope].label}`;
+      document.title = "Morfo Hub | Ajustes";
+      const headerTitle = document.querySelector(".header-title");
+      if (headerTitle) headerTitle.textContent = "Ajustes";
+      document.getElementById("finance-settings-subtitle").textContent =
+        "Tus cuentas y tarjetas aparecen como opciones en “Pagado con” al agregar un gasto.";
+    } else {
+      document.getElementById("finance-settings-subtitle").textContent =
+        `Configuración de ${SCOPES[scope].label}. Define dónde está el dinero y qué movimientos esperas; nada se marcará como pagado automáticamente.`;
+    }
     [settings, accounts, rules] = await Promise.all([
       getSettingsRecord(),
       getAccountsCollection(scope),
