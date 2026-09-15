@@ -3047,15 +3047,6 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
-.rs-tag {
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  background: rgba(251, 146, 60, 0.14);
-  color: var(--peach);
-}
-
 .rs-empty {
   padding: 26px 10px;
   text-align: center;
@@ -3105,8 +3096,7 @@ img {
 
 .rs-sheet[hidden],
 .rs-backdrop[hidden],
-.rs-filter-note[hidden],
-.rs-field[hidden] {
+.rs-filter-note[hidden] {
   display: none;
 }
 

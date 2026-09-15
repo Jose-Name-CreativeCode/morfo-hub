@@ -137,10 +137,6 @@ export function isPeriodIncome(income) {
   return income?.kind === PERIOD_INCOME_KIND;
 }
 
-export function isOtherPayer(expense) {
-  return normalizeText(expense?.payer).includes("papa");
-}
-
 export function isCreditExpense(expense, accounts = []) {
   const account = accounts.find(
     (item) => String(item.id) === String(expense?.accountId || ""),
@@ -187,11 +183,9 @@ function resolveIncome(explicit, key) {
     : { amount: 0, copied: false };
 }
 
-/** Gasto que cuenta para "Me queda": en Personal no cuenta lo que pagó papá. */
-function countedSpent(scope, expenses, period) {
+function spentInPeriod(expenses, period) {
   return expenses
     .filter((expense) => isDateInPeriod(expense.date, period))
-    .filter((expense) => scope !== "personal" || !isOtherPayer(expense))
     .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 }
 
@@ -213,8 +207,7 @@ function carryInto(scope, period, income, expenses) {
     const key = periodKey(cursor);
     if (key >= targetKey) break;
     carry +=
-      resolveIncome(explicit, key).amount -
-      countedSpent(scope, expenses, cursor);
+      resolveIncome(explicit, key).amount - spentInPeriod(expenses, cursor);
     cursor = shiftPeriod(cursor, 1);
   }
 
@@ -235,18 +228,11 @@ export function buildPeriodSummary({
     isDateInPeriod(expense.date, period),
   );
 
-  const total = periodExpenses.reduce(
-    (sum, expense) => sum + Number(expense.amount || 0),
-    0,
-  );
-  const other = periodExpenses
-    .filter(isOtherPayer)
-    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const spent = spentInPeriod(periodExpenses, period);
   const credit = periodExpenses
     .filter((expense) => isCreditExpense(expense, accounts))
     .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
-  const spent = scope === "personal" ? total - other : total;
   const carryIn = carryInto(scope, period, incomeByKey, expenses);
   const available = income.amount + carryIn;
 
@@ -258,10 +244,8 @@ export function buildPeriodSummary({
     carryIn,
     available,
     spent,
-    total,
-    paidByOther: other,
     credit,
-    cashAndTransfer: total - credit,
+    cashAndTransfer: spent - credit,
     left: available - spent,
     percent: available > 0 ? Math.round((spent / available) * 100) : 0,
     expenses: periodExpenses,

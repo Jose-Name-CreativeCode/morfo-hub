@@ -20,7 +20,6 @@ import {
   PERIOD_INCOME_KIND,
   buildPeriodSummary,
   carriesLeftover,
-  isOtherPayer,
   periodForDate,
   periodIncomeId,
   periodKey,
@@ -108,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     accounts: [],
     editingId: null,
     detailId: null,
-    form: { category: "", method: null, payer: "" },
+    form: { category: "", method: null },
   };
 
   const $ = (id) => document.getElementById(id);
@@ -211,13 +210,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
 
-    if (scope === "personal") {
-      addChip("Pagaste tú", money(summary.spent));
-      addChip("Pagó papá", money(summary.paidByOther));
-    } else {
-      addChip("Efectivo y transferencia", money(summary.cashAndTransfer));
-      addChip("Tarjeta", money(summary.credit));
-    }
+    addChip("Efectivo y transferencia", money(summary.cashAndTransfer));
+    addChip(scopeConfig.creditLabel || "Tarjeta", money(summary.credit));
   }
 
   function renderCategories(expenses) {
@@ -327,9 +321,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         "",
         `${expense.category || "Sin categoría"} · ${expenseMethodLabel(expense)}`,
       );
-      if (scope === "personal" && isOtherPayer(expense)) {
-        meta.appendChild(el("span", "rs-tag", "Papá"));
-      }
       text.appendChild(meta);
 
       const amount = el("span", "rs-move-amount", `−${money(expense.amount)}`);
@@ -430,18 +421,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       form.method = option;
       renderExpenseChips();
     });
-
-    const payers = scopeConfig.payers || [];
-    $("rs-payer-field").hidden = !payers.length;
-    renderChips(
-      $("rs-payer-chips"),
-      payers.map((payer) => ({ key: payer.value, label: payer.label })),
-      form.payer,
-      (option) => {
-        form.payer = option.key;
-        renderExpenseChips();
-      },
-    );
   }
 
   function methodOptionFor(expense) {
@@ -469,11 +448,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.form = {
       category: expense?.category || "",
       method: expense ? methodOptionFor(expense) : null,
-      payer: expense
-        ? isOtherPayer(expense)
-          ? "Pago papá"
-          : "Pago mío"
-        : "Pago mío",
     };
 
     $("rs-expense-title").textContent = expense
@@ -514,9 +488,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       ["Categoría", expense.category || "Sin categoría"],
       ["Pagado con", expenseMethodLabel(expense)],
     ];
-    if (scope === "personal") {
-      rows.push(["Quién pagó", isOtherPayer(expense) ? "Papá" : "Yo"]);
-    }
     if (expense.notes) rows.push(["Nota", expense.notes]);
 
     rows.forEach(([label, value]) => {
@@ -594,7 +565,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         amount,
         paymentMethod: form.method.paymentMethod,
         accountId: form.method.accountId || "",
-        payer: scope === "personal" ? form.payer : existing.payer || "",
         invoice: existing.invoice || "No",
         notes: existing.notes || "",
       });

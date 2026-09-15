@@ -62,11 +62,6 @@ export const SCOPES = {
     ],
     incomeSourceLabel: "Fuente de ingreso",
     showInvoice: false,
-    // Quién pagó el gasto; lo que paga papá no se descuenta de "Me queda".
-    payers: [
-      { value: "Pago mío", label: "Yo" },
-      { value: "Pago papá", label: "Papá" },
-    ],
   },
   casa: {
     key: "casa",
@@ -86,10 +81,15 @@ export const SCOPES = {
       "Seguro",
       "Colegiatura",
       "Gasolina",
+      "Transporte",
       "Comida",
+      "Salud",
+      "Suscripciones",
       "Limpieza",
       "Otro",
     ],
+    // Los pagos con la Nu de Jose se los repone papá.
+    creditLabel: "Con tu Nu (te lo repone papá)",
     paymentMethods: ["Nu", ...BASE_METHODS],
     incomeSources: ["Quincena", "Aportación", "Reembolso", "Otro"],
     incomeSourceLabel: "Origen",
