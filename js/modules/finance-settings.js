@@ -28,6 +28,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let scope = getActiveScope();
   if (scope === "resumen") scope = "personal";
+  // Personal y Casa sólo configuran cuentas; presupuesto y reglas son de Morfo.
+  const isSimpleScope = getScopeConfig(scope).homeKey === "resumen";
   let accounts = [];
   let rules = [];
   let settings = null;
@@ -98,16 +100,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function handleArchive(account) {
     const confirmed = await askConfirm({
-      title: "Archivar cuenta",
-      message: `¿Quieres ocultar ${account.name}? Sus movimientos se conservarán.`,
-      confirmText: "Archivar",
+      title: isSimpleScope ? "Eliminar cuenta" : "Archivar cuenta",
+      message: isSimpleScope
+        ? `¿Quitar ${account.name} de la lista? Tus gastos ya registrados con ella se conservan.`
+        : `¿Quieres ocultar ${account.name}? Sus movimientos se conservarán.`,
+      confirmText: isSimpleScope ? "Eliminar" : "Archivar",
     });
     if (!confirmed) return;
     await archiveAccount(account.id);
     await reloadAccounts();
-    showToast("Cuenta archivada; los movimientos se conservaron.", {
-      type: "success",
-    });
+    showToast(
+      isSimpleScope
+        ? "Cuenta eliminada; tus gastos se conservaron."
+        : "Cuenta archivada; los movimientos se conservaron.",
+      { type: "success" },
+    );
   }
 
   function renderAccounts() {
@@ -122,7 +129,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     visible.forEach((account) => {
       const card = document.createElement("article");
       card.className = "account-settings-card";
-      card.innerHTML = `<span class="account-color account-color-lg" style="--account-color:${account.color}"></span><div><strong>${account.name}</strong><small>${accountTypeLabel(account.type)}${account.institution ? ` · ${account.institution}` : ""}</small><span>Saldo inicial: ${formatCurrency(account.startingBalance)}</span>${account.type === "credit" ? `<span>Corte: día ${account.statementDay || "-"} · Pago: día ${account.paymentDay || "-"}</span>` : ""}</div><div class="row-button-group"><button type="button" class="btn-ghost" data-edit>Editar</button><button type="button" class="delete-btn" data-archive>Archivar</button></div>`;
+      card.innerHTML = `<span class="account-color account-color-lg" style="--account-color:${account.color}"></span><div><strong>${account.name}</strong><small>${accountTypeLabel(account.type)}${account.institution ? ` · ${account.institution}` : ""}</small><span>Saldo inicial: ${formatCurrency(account.startingBalance)}</span>${account.type === "credit" ? `<span>Corte: día ${account.statementDay || "-"} · Pago: día ${account.paymentDay || "-"}</span>` : ""}</div><div class="row-button-group"><button type="button" class="btn-ghost" data-edit>Editar</button><button type="button" class="delete-btn" data-archive>${isSimpleScope ? "Eliminar" : "Archivar"}</button></div>`;
       card
         .querySelector("[data-edit]")
         .addEventListener("click", () => fillAccountForm(account));
@@ -312,8 +319,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
-    // Personal y Casa sólo configuran cuentas; presupuesto y reglas son de Morfo.
-    const isSimpleScope = getScopeConfig(scope).homeKey === "resumen";
     document.querySelectorAll("[data-morfo-only]").forEach((element) => {
       element.hidden = isSimpleScope;
     });

@@ -46,6 +46,7 @@ import {
 import {
   askConfirm,
   getTodayISO,
+  normalizeText,
   setButtonLoading,
   setPageLoading,
   showToast,
@@ -161,22 +162,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.accounts = accounts.filter((account) => account.isActive !== false);
   }
 
-  /** Opciones de "Pagado con": las cuentas del espacio o, si no hay, los métodos base. */
+  /** Opciones de "Pagado con": las cuentas guardadas más los métodos base. */
   function paymentOptions() {
-    if (state.accounts.length) {
-      return state.accounts.map((account) => ({
-        key: `account:${account.id}`,
-        label: account.name,
-        accountId: account.id,
-        paymentMethod: account.name,
-      }));
-    }
-    return scopeConfig.paymentMethods.map((method) => ({
-      key: `method:${method}`,
-      label: method,
-      accountId: "",
-      paymentMethod: method,
+    const fromAccounts = state.accounts.map((account) => ({
+      key: `account:${account.id}`,
+      label: account.name,
+      accountId: account.id,
+      paymentMethod: account.name,
     }));
+    const taken = fromAccounts.map((option) => normalizeText(option.label));
+    const fromMethods = scopeConfig.paymentMethods
+      .filter((method) => !taken.includes(normalizeText(method)))
+      .map((method) => ({
+        key: `method:${method}`,
+        label: method,
+        accountId: "",
+        paymentMethod: method,
+      }));
+
+    return [...fromAccounts, ...fromMethods];
   }
 
   function expenseMethodLabel(expense) {
