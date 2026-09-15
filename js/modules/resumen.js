@@ -5,6 +5,7 @@ import {
   saveExpenseRecord,
 } from "../services/expenses-service.js";
 import {
+  deleteIncomeRecord,
   getIncomeCollection,
   saveIncomeRecord,
 } from "../services/income-service.js";
@@ -28,6 +29,19 @@ import {
   periodRange,
   shiftPeriod,
 } from "../finance-periods.js";
+import {
+  CARD_PAYMENT_KIND,
+  FUNDED_BY_ME,
+  FUNDED_BY_PAPA,
+  REIMBURSEMENT_KIND,
+  buildNuStatus,
+  buildPapaDebt,
+  fundedBy,
+  isCardPayment,
+  isNuExpense,
+  isReimbursement,
+  shortDate,
+} from "../card-ledger.js";
 import {
   askConfirm,
   getTodayISO,
@@ -107,7 +121,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     accounts: [],
     editingId: null,
     detailId: null,
-    form: { category: "", method: null },
+    form: { category: "", method: null, fundedBy: "", fundedTouched: false },
+    moneyMode: "",
+    moneyMethod: "",
   };
 
   const $ = (id) => document.getElementById(id);
@@ -115,7 +131,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const expenseSheet = $("rs-expense-sheet");
   const detailSheet = $("rs-detail-sheet");
   const incomeSheet = $("rs-income-sheet");
-  const sheets = [expenseSheet, detailSheet, incomeSheet];
+  const moneySheet = $("rs-money-sheet");
+  const sheets = [expenseSheet, detailSheet, incomeSheet, moneySheet];
+  // En Casa se lleva lo que Jose pone por papá; en Personal, su tarjeta Nu.
+  const tracksPapaDebt = scope === "casa";
+  const tracksNuCard = scope === "personal";
 
   document.title = `Morfo Hub | ${scopeConfig.label}`;
 
@@ -321,6 +341,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         "",
         `${expense.category || "Sin categoría"} · ${expenseMethodLabel(expense)}`,
       );
+      if (
+        tracksPapaDebt &&
+        fundedBy(expense, state.accounts) === FUNDED_BY_ME
+      ) {
+        meta.appendChild(el("span", "rs-tag", "Te lo repone papá"));
+      }
       text.appendChild(meta);
 
       const amount = el("span", "rs-move-amount", `−${money(expense.amount)}`);
@@ -341,10 +367,103 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function renderLedgerList(container, records, emptyText) {
+    container.replaceChildren();
+    const recent = [...records]
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+      .slice(0, 5);
+
+    if (!recent.length) {
+      container.appendChild(el("p", "rs-ledger-empty", emptyText));
+      return;
+    }
+
+    recent.forEach((record) => {
+      const row = el("div", "rs-ledger-row");
+      const text = el("span", "", shortDate(record.date));
+      if (record.paymentMethod) {
+        text.appendChild(el("small", "", ` · ${record.paymentMethod}`));
+      }
+      const remove = el("button", "rs-ledger-remove", "×");
+      remove.type = "button";
+      remove.setAttribute(
+        "aria-label",
+        `Eliminar ${money(record.paidAmount)} del ${shortDate(record.date)}`,
+      );
+      remove.addEventListener("click", () => removeMoneyRecord(record));
+      row.append(text, el("strong", "", money(record.paidAmount)), remove);
+      container.appendChild(row);
+    });
+  }
+
+  function renderNuCard() {
+    const section = $("rs-nu");
+    section.hidden = !tracksNuCard;
+    if (!tracksNuCard) return;
+
+    const payments = state.incomes.filter(isCardPayment);
+    const status = buildNuStatus({
+      expenses: state.expenses,
+      payments,
+      accounts: state.accounts,
+      today,
+    });
+    const statusNode = $("rs-nu-status");
+
+    $("rs-nu-label").textContent =
+      `Del corte del ${shortDate(status.statement)} te falta pagar`;
+    $("rs-nu-value").textContent = money(status.statementPending);
+    statusNode.classList.toggle("is-overdue", status.isOverdue);
+    statusNode.classList.toggle(
+      "is-ok",
+      status.statementPending === 0 && status.chargedToStatement > 0,
+    );
+    statusNode.textContent =
+      status.statementPending > 0
+        ? status.isOverdue
+          ? `Venció el ${shortDate(status.due)}`
+          : `Paga antes del ${shortDate(status.due)}`
+        : status.chargedToStatement > 0
+          ? "Pagado"
+          : "";
+    $("rs-nu-current").textContent =
+      `Periodo actual (${shortDate(status.currentStart)} al ${shortDate(status.nextStatement)}): llevas ${money(status.currentPending)} en tu Nu.`;
+    renderLedgerList($("rs-nu-list"), payments, "Aún no registras abonos.");
+  }
+
+  function renderPapaDebt() {
+    const section = $("rs-debt");
+    section.hidden = !tracksPapaDebt;
+    if (!tracksPapaDebt) return;
+
+    const reimbursements = state.incomes.filter(isReimbursement);
+    const debt = buildPapaDebt({
+      expenses: state.expenses,
+      reimbursements,
+      accounts: state.accounts,
+    });
+
+    $("rs-debt-label").textContent =
+      debt.balance >= 0 ? "Papá te debe" : "Papá te adelantó";
+    $("rs-debt-value").textContent = money(Math.abs(debt.balance));
+    $("rs-debt-status").textContent =
+      debt.balance === 0
+        ? "Están a mano"
+        : `Pusiste ${money(debt.frontedTotal)} · te ha dado ${money(debt.repaid)}`;
+    $("rs-debt-status").classList.toggle("is-ok", debt.balance === 0);
+    renderLedgerList(
+      $("rs-debt-list"),
+      reimbursements,
+      "Aún no registras pagos de papá.",
+    );
+  }
+
   function render() {
     const summary = currentSummary();
     renderPeriod();
     renderSummary(summary);
+    renderNuCard();
+    renderPapaDebt();
     renderCategories(summary.expenses);
     renderMovements(summary.expenses);
   }
@@ -419,8 +538,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     renderChips($("rs-method-chips"), methods, form.method?.key, (option) => {
       form.method = option;
+      // Mientras no lo cambien a mano: con la Nu el dinero es de Jose.
+      if (!form.fundedTouched) form.fundedBy = defaultFundedBy(option);
       renderExpenseChips();
     });
+
+    $("rs-funded-field").hidden = !tracksPapaDebt;
+    renderChips(
+      $("rs-funded-chips"),
+      [
+        { key: FUNDED_BY_PAPA, label: "Papá" },
+        { key: FUNDED_BY_ME, label: "Mío (me lo repone)" },
+      ],
+      form.fundedBy,
+      (option) => {
+        form.fundedBy = option.key;
+        form.fundedTouched = true;
+        renderExpenseChips();
+      },
+    );
+  }
+
+  function defaultFundedBy(methodOption) {
+    if (!methodOption) return FUNDED_BY_PAPA;
+    return isNuExpense(
+      {
+        paymentMethod: methodOption.paymentMethod,
+        accountId: methodOption.accountId,
+      },
+      state.accounts,
+    )
+      ? FUNDED_BY_ME
+      : FUNDED_BY_PAPA;
   }
 
   function methodOptionFor(expense) {
@@ -448,6 +597,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.form = {
       category: expense?.category || "",
       method: expense ? methodOptionFor(expense) : null,
+      fundedBy: expense ? fundedBy(expense, state.accounts) : FUNDED_BY_PAPA,
+      fundedTouched: Boolean(expense?.fundedBy),
     };
 
     $("rs-expense-title").textContent = expense
@@ -488,6 +639,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       ["Categoría", expense.category || "Sin categoría"],
       ["Pagado con", expenseMethodLabel(expense)],
     ];
+    if (tracksPapaDebt) {
+      rows.push([
+        "Dinero de",
+        fundedBy(expense, state.accounts) === FUNDED_BY_ME
+          ? "Tuyo (te lo repone papá)"
+          : "Papá",
+      ]);
+    }
     if (expense.notes) rows.push(["Nota", expense.notes]);
 
     rows.forEach(([label, value]) => {
@@ -521,7 +680,131 @@ document.addEventListener("DOMContentLoaded", async () => {
     openSheet(incomeSheet, $("rs-income-amount"));
   }
 
+  const MONEY_METHODS = ["Efectivo", "Transferencia"];
+
+  function renderMoneyMethodChips() {
+    renderChips(
+      $("rs-money-method-chips"),
+      MONEY_METHODS.map((method) => ({ key: method, label: method })),
+      state.moneyMethod,
+      (option) => {
+        state.moneyMethod = option.key;
+        renderMoneyMethodChips();
+      },
+    );
+  }
+
+  /** Abono a la Nu (Personal) o dinero que papá devolvió (Casa). */
+  function openMoneyForm(mode) {
+    state.moneyMode = mode;
+    const isAbono = mode === CARD_PAYMENT_KIND;
+    let suggested = 0;
+
+    if (isAbono) {
+      $("rs-money-title").textContent = "Abono a tu Nu";
+      $("rs-money-note").textContent =
+        "Baja lo que debes en tu tarjeta. No cambia “Me queda” porque tus compras ya se contaron.";
+      state.moneyMethod = "";
+    } else {
+      suggested = Math.max(
+        0,
+        buildPapaDebt({
+          expenses: state.expenses,
+          reimbursements: state.incomes.filter(isReimbursement),
+          accounts: state.accounts,
+        }).balance,
+      );
+      $("rs-money-title").textContent = "Papá me pagó";
+      $("rs-money-note").textContent =
+        "Baja lo que papá te debe. No cambia los gastos de Casa, que ya están contados.";
+      state.moneyMethod = "Efectivo";
+    }
+
+    $("rs-money-method-field").hidden = isAbono;
+    renderMoneyMethodChips();
+    $("rs-money-amount").value = suggested
+      ? String(Math.round(suggested * 100) / 100)
+      : "";
+    fitAmountInput($("rs-money-amount"));
+    $("rs-money-date").value = today;
+    $("rs-money-error").textContent = "";
+    openSheet(moneySheet, $("rs-money-amount"));
+  }
+
+  async function removeMoneyRecord(record) {
+    const confirmed = await askConfirm({
+      title: isCardPayment(record) ? "Eliminar abono" : "Eliminar pago de papá",
+      message: `¿Eliminar ${money(record.paidAmount)} del ${shortDate(record.date)}?`,
+      confirmText: "Eliminar",
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteIncomeRecord(record.id);
+      await loadData();
+      render();
+      showToast("Eliminado.", { type: "success" });
+    } catch (deleteError) {
+      console.error("No se pudo eliminar el registro:", deleteError);
+      showToast(deleteError?.message || "No se pudo eliminar.", {
+        type: "error",
+      });
+    }
+  }
+
   /* ---------- Acciones ---------- */
+
+  moneySheet.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const isAbono = state.moneyMode === CARD_PAYMENT_KIND;
+    const amount = parseAmount($("rs-money-amount").value);
+    const date = $("rs-money-date").value;
+    const errorBox = $("rs-money-error");
+
+    errorBox.textContent = !amount
+      ? "Escribe el monto."
+      : !date
+        ? "Elige la fecha."
+        : "";
+    if (errorBox.textContent) return;
+
+    const button = $("rs-money-submit");
+    setButtonLoading(button, true, "Guardando...");
+
+    try {
+      await saveIncomeRecord({
+        id: createId(),
+        kind: state.moneyMode,
+        scope,
+        date,
+        concept: isAbono ? "Abono a Nu" : "Papá me pagó",
+        paymentMethod: isAbono ? "Nu" : state.moneyMethod,
+        paymentStatus: "Pagado",
+        totalAmount: amount,
+        paidAmount: amount,
+        remainingAmount: 0,
+      });
+      await loadData();
+      closeSheets();
+      render();
+      showToast(isAbono ? "Abono guardado." : "Pago de papá guardado.", {
+        type: "success",
+      });
+    } catch (saveError) {
+      console.error("No se pudo guardar:", saveError);
+      errorBox.textContent =
+        saveError?.message || "No se pudo guardar. Intenta de nuevo.";
+    } finally {
+      setButtonLoading(button, false);
+    }
+  });
+
+  $("rs-nu-add").addEventListener("click", () =>
+    openMoneyForm(CARD_PAYMENT_KIND),
+  );
+  $("rs-debt-add").addEventListener("click", () =>
+    openMoneyForm(REIMBURSEMENT_KIND),
+  );
 
   expenseSheet.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -565,6 +848,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         amount,
         paymentMethod: form.method.paymentMethod,
         accountId: form.method.accountId || "",
+        ...(tracksPapaDebt
+          ? { fundedBy: form.fundedBy || FUNDED_BY_PAPA }
+          : {}),
         invoice: existing.invoice || "No",
         notes: existing.notes || "",
       });
@@ -665,7 +951,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (event.key === "Escape" && !backdrop.hidden) closeSheets();
   });
 
-  ["rs-amount", "rs-income-amount"].forEach((id) => {
+  ["rs-amount", "rs-income-amount", "rs-money-amount"].forEach((id) => {
     $(id).addEventListener("input", (event) => fitAmountInput(event.target));
   });
 

@@ -159,7 +159,8 @@ function explicitIncomeByKey(scope, incomes) {
   const legacy = new Map();
 
   incomes.forEach((income) => {
-    if (!income?.date) return;
+    // Abonos a la tarjeta y reembolsos de papá tienen su propio `kind` y no son ingreso.
+    if (!income?.date || (income.kind && !isPeriodIncome(income))) return;
     const key = periodKey(periodForDate(scope, income.date));
     const target = isPeriodIncome(income) ? written : legacy;
     target.set(key, (target.get(key) || 0) + incomeAmount(income));

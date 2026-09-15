@@ -3047,6 +3047,149 @@ img {
   font-variant-numeric: tabular-nums;
 }
 
+.rs-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  background: rgba(251, 146, 60, 0.14);
+  color: var(--peach);
+}
+
+.rs-ledger {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+}
+
+.rs-ledger[hidden],
+.rs-field[hidden] {
+  display: none;
+}
+
+.rs-ledger-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rs-ledger-head h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rs-ledger-head small {
+  display: block;
+  margin-top: 2px;
+  max-width: 46ch;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.rs-btn-sm {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-size: 0.85rem;
+  flex: none;
+}
+
+.rs-ledger-main {
+  display: grid;
+  gap: 2px;
+}
+
+.rs-ledger-main > span:first-child {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.rs-ledger-main strong {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-ledger-status {
+  justify-self: start;
+  font-size: 0.8rem;
+  color: var(--peach);
+}
+
+.rs-ledger-status:empty {
+  display: none;
+}
+
+.rs-ledger-status.is-overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.rs-ledger-status.is-ok {
+  color: var(--success);
+}
+
+.rs-ledger-note {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.rs-ledger-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.rs-ledger-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.rs-ledger-row:last-child {
+  border-bottom: none;
+}
+
+.rs-ledger-row small {
+  color: var(--muted);
+}
+
+.rs-ledger-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-ledger-remove {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.rs-ledger-remove:hover {
+  background: var(--panel-2);
+  color: var(--danger);
+}
+
+.rs-ledger-empty {
+  padding-top: 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .rs-empty {
   padding: 26px 10px;
   text-align: center;

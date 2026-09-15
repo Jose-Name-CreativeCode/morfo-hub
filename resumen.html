@@ -72,6 +72,67 @@
             <div class="rs-split" id="rs-split"></div>
           </section>
 
+          <section
+            class="rs-ledger"
+            id="rs-nu"
+            aria-labelledby="rs-nu-title"
+            hidden
+          >
+            <div class="rs-ledger-head">
+              <div>
+                <h2 id="rs-nu-title">Tu tarjeta Nu</h2>
+                <small
+                  >Sólo tus gastos de Personal. Tus abonos no cambian “Me
+                  queda”.</small
+                >
+              </div>
+              <button
+                type="button"
+                class="rs-btn rs-btn-soft rs-btn-sm"
+                id="rs-nu-add"
+              >
+                Registrar abono
+              </button>
+            </div>
+            <div class="rs-ledger-main">
+              <span id="rs-nu-label"></span>
+              <strong id="rs-nu-value"></strong>
+              <span class="rs-ledger-status" id="rs-nu-status"></span>
+            </div>
+            <p class="rs-ledger-note" id="rs-nu-current"></p>
+            <div class="rs-ledger-list" id="rs-nu-list"></div>
+          </section>
+
+          <section
+            class="rs-ledger"
+            id="rs-debt"
+            aria-labelledby="rs-debt-title"
+            hidden
+          >
+            <div class="rs-ledger-head">
+              <div>
+                <h2 id="rs-debt-title">Lo que pones tú</h2>
+                <small
+                  >Gastos de Casa pagados con tu Nu o tu efectivo, menos lo que
+                  papá ya te dio.</small
+                >
+              </div>
+              <button
+                type="button"
+                class="rs-btn rs-btn-soft rs-btn-sm"
+                id="rs-debt-add"
+              >
+                Papá me pagó
+              </button>
+            </div>
+            <div class="rs-ledger-main">
+              <span id="rs-debt-label"></span>
+              <strong id="rs-debt-value"></strong>
+              <span class="rs-ledger-status" id="rs-debt-status"></span>
+            </div>
+            <div class="rs-ledger-list" id="rs-debt-list"></div>
+          </section>
+
           <div class="rs-cols">
             <section aria-labelledby="rs-cats-title">
               <div class="rs-block-title">
@@ -159,6 +220,10 @@
         <span>Pagado con</span>
         <div class="rs-chips" id="rs-method-chips"></div>
       </div>
+      <div class="rs-field" id="rs-funded-field" hidden>
+        <span>¿De quién fue el dinero?</span>
+        <div class="rs-chips" id="rs-funded-chips"></div>
+      </div>
       <div class="rs-field">
         <label for="rs-date">Fecha</label>
         <input type="date" id="rs-date" />
@@ -241,6 +306,53 @@
       </label>
       <p class="rs-sheet-note" id="rs-income-note"></p>
       <button type="submit" class="rs-btn rs-btn-main" id="rs-income-submit">
+        Guardar
+      </button>
+    </form>
+
+    <form
+      class="rs-sheet"
+      id="rs-money-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rs-money-title"
+      novalidate
+      hidden
+    >
+      <div class="rs-grab"></div>
+      <div class="rs-sheet-head">
+        <h3 id="rs-money-title"></h3>
+        <button
+          type="button"
+          class="rs-icon-btn"
+          data-rs-close
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <label class="rs-amount-field" for="rs-money-amount">
+        <span>$</span>
+        <input
+          id="rs-money-amount"
+          inputmode="decimal"
+          placeholder="0"
+          autocomplete="off"
+        />
+      </label>
+      <div class="rs-field" id="rs-money-method-field">
+        <span>¿Cómo te lo dio?</span>
+        <div class="rs-chips" id="rs-money-method-chips"></div>
+      </div>
+      <div class="rs-field">
+        <label for="rs-money-date">Fecha</label>
+        <input type="date" id="rs-money-date" />
+      </div>
+      <p class="rs-sheet-note" id="rs-money-note"></p>
+      <p class="rs-error" id="rs-money-error" role="alert"></p>
+      <button type="submit" class="rs-btn rs-btn-main" id="rs-money-submit">
         Guardar
       </button>
     </form>
