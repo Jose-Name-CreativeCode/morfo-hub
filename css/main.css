@@ -2776,6 +2776,62 @@ img {
   color: var(--danger);
 }
 
+.rs-left-value.is-positive,
+.rs-paid strong,
+.rs-move-amount.is-payment,
+.rs-detail-amount.is-payment {
+  color: var(--success);
+}
+
+.rs-spent strong,
+.rs-move-amount.is-expense,
+.rs-detail-amount.is-expense {
+  color: var(--danger);
+}
+
+.rs-income-btn[hidden],
+.rs-spent[hidden] {
+  display: none;
+}
+
+.rs-dot.is-payment {
+  color: var(--success);
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.rs-bar i.is-good {
+  background: var(--success);
+}
+
+.rs-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.rs-type-toggle[hidden] {
+  display: none;
+}
+
+.rs-type-toggle button {
+  padding: 9px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.rs-type-toggle button.is-active {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
 .rs-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;

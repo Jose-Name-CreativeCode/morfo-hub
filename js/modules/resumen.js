@@ -34,9 +34,10 @@ import {
   FUNDED_BY_ME,
   FUNDED_BY_PAPA,
   REIMBURSEMENT_KIND,
-  buildNuStatus,
+  buildDebtSummary,
   buildPapaDebt,
   fundedBy,
+  isCardExpense,
   isCardPayment,
   isNuExpense,
   isReimbursement,
@@ -121,7 +122,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     accounts: [],
     editingId: null,
     detailId: null,
-    form: { category: "", method: null, fundedBy: "", fundedTouched: false },
+    form: {
+      type: "gasto",
+      category: "",
+      method: null,
+      fundedBy: "",
+      fundedTouched: false,
+    },
+    detailKind: "gasto",
     moneyMode: "",
     moneyMethod: "",
   };
@@ -135,7 +143,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sheets = [expenseSheet, detailSheet, incomeSheet, moneySheet];
   // En Casa se lleva lo que Jose pone por papá; en Personal, su tarjeta Nu.
   const tracksPapaDebt = scope === "casa";
-  const tracksNuCard = scope === "personal";
+  // En Personal el número grande es la deuda: gastos con tarjeta menos pagos.
+  const tracksDebt = scope === "personal";
 
   document.title = `Morfo Hub | ${scopeConfig.label}`;
 
@@ -187,7 +196,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("rs-excel").textContent = `Descargar Excel de ${periodNoun(period)}`;
   }
 
+  function setSplitChips(chips) {
+    const split = $("rs-split");
+    split.replaceChildren();
+    chips.forEach(([label, amount]) => {
+      const chip = el("span", "rs-split-chip", `${label} `);
+      chip.appendChild(el("b", "", amount));
+      split.appendChild(chip);
+    });
+  }
+
+  function currentDebt() {
+    return buildDebtSummary({
+      expenses: state.expenses,
+      payments: state.incomes.filter(isCardPayment),
+      period: state.period,
+      accounts: state.accounts,
+    });
+  }
+
+  function renderDebtSummary() {
+    const debt = currentDebt();
+    const owes = debt.debt > 0.005;
+    const leftValue = $("rs-left-value");
+
+    $("rs-left-label").textContent = owes
+      ? "Debes"
+      : debt.debt < -0.005
+        ? "Tienes a favor"
+        : "No debes nada";
+    leftValue.textContent = money(Math.abs(debt.debt));
+    leftValue.classList.toggle("is-negative", owes);
+    leftValue.classList.toggle("is-positive", !owes);
+
+    $("rs-spent-label").textContent = "Gastaste";
+    $("rs-spent-value").textContent = `−${money(debt.spentInPeriod)}`;
+    $("rs-paid-value").textContent = `+${money(debt.paidInPeriod)}`;
+
+    const fill = $("rs-bar-fill");
+    fill.style.width = `${debt.percentPaid}%`;
+    fill.classList.remove("is-hot");
+    fill.classList.add("is-good");
+    $("rs-bar-note").textContent =
+      debt.charged > 0
+        ? `Has pagado ${money(debt.paid)} de ${money(debt.charged)} que gastaste con tarjeta`
+        : "Aún no tienes gastos con tarjeta";
+
+    setSplitChips([
+      ["Efectivo y transferencia", money(debt.cashInPeriod)],
+      ["Con tarjeta", money(debt.cardInPeriod)],
+    ]);
+  }
+
   function renderSummary(summary) {
+    if (tracksDebt) {
+      renderDebtSummary();
+      return;
+    }
+
     const noun = periodNoun(state.period);
     const leftValue = $("rs-left-value");
 
@@ -204,7 +270,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       summary.hasIncome || summary.income ? money(summary.income) : "Escribir";
     $("rs-spent-label").textContent =
       scope === "personal" ? "Gasté" : "Gastamos";
-    $("rs-spent-value").textContent = money(summary.spent);
+    $("rs-spent-value").textContent = `−${money(summary.spent)}`;
 
     const fill = $("rs-bar-fill");
     fill.style.width = `${Math.min(summary.percent, 100)}%`;
@@ -215,23 +281,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? `Llevas gastado el ${summary.percent}% de lo que tienes ${noun}`
         : `Toca “Entró” para escribir cuánto tienes ${noun}`;
 
-    const split = $("rs-split");
-    split.replaceChildren();
-    const addChip = (label, amount) => {
-      const chip = el("span", "rs-split-chip", `${label} `);
-      chip.appendChild(el("b", "", amount));
-      split.appendChild(chip);
-    };
-
+    const chips = [];
     if (carriesLeftover(scope) && summary.carryIn !== 0) {
-      addChip(
+      chips.push([
         summary.carryIn > 0 ? "Sobró de antes" : "Faltó de antes",
         `${summary.carryIn > 0 ? "+" : "−"}${money(Math.abs(summary.carryIn))}`,
-      );
+      ]);
     }
-
-    addChip("Efectivo y transferencia", money(summary.cashAndTransfer));
-    addChip(scopeConfig.creditLabel || "Tarjeta", money(summary.credit));
+    chips.push(["Efectivo y transferencia", money(summary.cashAndTransfer)]);
+    chips.push([scopeConfig.creditLabel || "Tarjeta", money(summary.credit)]);
+    setSplitChips(chips);
   }
 
   function renderCategories(expenses) {
@@ -302,12 +361,30 @@ document.addEventListener("DOMContentLoaded", async () => {
           Number(b.updatedAtMs || 0) - Number(a.updatedAtMs || 0),
       );
 
-    $("rs-moves-count").textContent =
-      `${visible.length} ${visible.length === 1 ? "gasto" : "gastos"}`;
+    // Los pagos de tarjeta van en la lista en verde; no tienen categoría.
+    const payments =
+      tracksDebt && !state.category ? currentDebt().payments : [];
+    const items = [
+      ...visible.map((record) => ({ kind: "gasto", record })),
+      ...payments.map((record) => ({ kind: "pago", record })),
+    ].sort(
+      (a, b) =>
+        String(b.record.date).localeCompare(String(a.record.date)) ||
+        Number(b.record.updatedAtMs || 0) - Number(a.record.updatedAtMs || 0),
+    );
+
+    $("rs-moves-count").textContent = [
+      `${visible.length} ${visible.length === 1 ? "gasto" : "gastos"}`,
+      payments.length
+        ? `${payments.length} ${payments.length === 1 ? "pago" : "pagos"}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
     $("rs-filter-note").hidden = !state.category;
     $("rs-filter-name").textContent = state.category;
 
-    if (!visible.length) {
+    if (!items.length) {
       container.appendChild(
         el(
           "p",
@@ -321,7 +398,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     let currentDay = "";
-    visible.forEach((expense) => {
+    items.forEach(({ kind, record: expense }) => {
       const date = String(expense.date || "").slice(0, 10);
       if (date !== currentDay) {
         currentDay = date;
@@ -330,6 +407,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const button = el("button", "rs-move");
       button.type = "button";
+
+      if (kind === "pago") {
+        const dot = el("span", "rs-dot is-payment", "+");
+        dot.setAttribute("aria-hidden", "true");
+        const text = el("span", "rs-move-text");
+        text.appendChild(el("strong", "", expense.concept || "Pago"));
+        text.appendChild(
+          el("small", "", `Pago · ${expense.paymentMethod || "Tarjeta"}`),
+        );
+        button.append(
+          dot,
+          text,
+          el(
+            "span",
+            "rs-move-amount is-payment",
+            `+${money(expense.paidAmount)}`,
+          ),
+        );
+        button.addEventListener("click", () => openDetail(expense.id, "pago"));
+        container.appendChild(button);
+        return;
+      }
 
       const dot = el("span", "rs-dot", (expense.category || "?").charAt(0));
       dot.setAttribute("aria-hidden", "true");
@@ -349,7 +448,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       text.appendChild(meta);
 
-      const amount = el("span", "rs-move-amount", `−${money(expense.amount)}`);
+      const amount = el(
+        "span",
+        "rs-move-amount is-expense",
+        `−${money(expense.amount)}`,
+      );
 
       button.append(dot, text, amount);
       button.addEventListener("click", () => openDetail(expense.id));
@@ -396,41 +499,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function renderNuCard() {
-    const section = $("rs-nu");
-    section.hidden = !tracksNuCard;
-    if (!tracksNuCard) return;
-
-    const payments = state.incomes.filter(isCardPayment);
-    const status = buildNuStatus({
-      expenses: state.expenses,
-      payments,
-      accounts: state.accounts,
-      today,
-    });
-    const statusNode = $("rs-nu-status");
-
-    $("rs-nu-label").textContent =
-      `Del corte del ${shortDate(status.statement)} te falta pagar`;
-    $("rs-nu-value").textContent = money(status.statementPending);
-    statusNode.classList.toggle("is-overdue", status.isOverdue);
-    statusNode.classList.toggle(
-      "is-ok",
-      status.statementPending === 0 && status.chargedToStatement > 0,
-    );
-    statusNode.textContent =
-      status.statementPending > 0
-        ? status.isOverdue
-          ? `Venció el ${shortDate(status.due)}`
-          : `Paga antes del ${shortDate(status.due)}`
-        : status.chargedToStatement > 0
-          ? "Pagado"
-          : "";
-    $("rs-nu-current").textContent =
-      `Periodo actual (${shortDate(status.currentStart)} al ${shortDate(status.nextStatement)}): llevas ${money(status.currentPending)} en tu Nu.`;
-    renderLedgerList($("rs-nu-list"), payments, "Aún no registras abonos.");
-  }
-
   function renderPapaDebt() {
     const section = $("rs-debt");
     section.hidden = !tracksPapaDebt;
@@ -462,7 +530,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const summary = currentSummary();
     renderPeriod();
     renderSummary(summary);
-    renderNuCard();
     renderPapaDebt();
     renderCategories(summary.expenses);
     renderMovements(summary.expenses);
@@ -529,7 +596,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
     );
 
-    const methods = paymentOptions();
+    const isPago = form.type === "pago";
+    $("rs-category-field").hidden = isPago;
+    const methods = isPago ? cardOptions() : paymentOptions();
     if (
       form.method &&
       !methods.some((option) => option.key === form.method.key)
@@ -543,7 +612,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderExpenseChips();
     });
 
-    $("rs-funded-field").hidden = !tracksPapaDebt;
+    $("rs-funded-field").hidden = !tracksPapaDebt || isPago;
     renderChips(
       $("rs-funded-chips"),
       [
@@ -557,6 +626,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderExpenseChips();
       },
     );
+  }
+
+  /** Tarjetas a las que se les puede pagar. */
+  function cardOptions() {
+    return paymentOptions().filter((option) =>
+      isCardExpense(
+        { paymentMethod: option.paymentMethod, accountId: option.accountId },
+        state.accounts,
+      ),
+    );
+  }
+
+  function applyFormType() {
+    const { form } = state;
+    const isPago = form.type === "pago";
+    const isEditing = Boolean(state.editingId);
+
+    document.querySelectorAll("[data-rs-type]").forEach((button) => {
+      const isOn = button.dataset.rsType === form.type;
+      button.classList.toggle("is-active", isOn);
+      button.setAttribute("aria-pressed", String(isOn));
+    });
+    $("rs-expense-title").textContent = `${isEditing ? "Editar" : "Nuevo"} ${
+      isPago ? "pago" : "gasto"
+    }`;
+    $("rs-expense-submit").textContent = isEditing
+      ? "Guardar cambios"
+      : isPago
+        ? "Guardar pago"
+        : "Guardar gasto";
+    $("rs-method-label").textContent = isPago
+      ? "¿A qué tarjeta?"
+      : "Pagado con";
+    $("rs-concept-label").textContent = isPago ? "Nota (opcional)" : "Qué fue";
+    $("rs-concept").placeholder = isPago ? "Ej. Pago a Nu" : "Ej. Walmart";
+    renderExpenseChips();
   }
 
   function defaultFundedBy(methodOption) {
@@ -592,27 +697,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  function openExpenseForm(expense = null) {
+  function openExpenseForm(expense = null, type = "gasto") {
+    const isPago = type === "pago";
     state.editingId = expense?.id || null;
     state.form = {
-      category: expense?.category || "",
+      type,
+      category: isPago ? "" : expense?.category || "",
       method: expense ? methodOptionFor(expense) : null,
       fundedBy: expense ? fundedBy(expense, state.accounts) : FUNDED_BY_PAPA,
       fundedTouched: Boolean(expense?.fundedBy),
     };
 
-    $("rs-expense-title").textContent = expense
-      ? "Editar gasto"
-      : "Nuevo gasto";
-    $("rs-expense-submit").textContent = expense
-      ? "Guardar cambios"
-      : "Guardar gasto";
-    $("rs-amount").value = expense ? String(expense.amount ?? "") : "";
+    const amount = isPago ? expense?.paidAmount : expense?.amount;
+    $("rs-type-toggle").hidden = !tracksDebt || Boolean(expense);
+    $("rs-amount").value = expense ? String(amount ?? "") : "";
     fitAmountInput($("rs-amount"));
     $("rs-concept").value = expense?.concept || "";
     $("rs-date").value = expense?.date || defaultDateForPeriod();
     $("rs-expense-error").textContent = "";
-    renderExpenseChips();
+    applyFormType();
     openSheet(expenseSheet, $("rs-amount"));
   }
 
@@ -622,24 +725,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     return today >= start && today <= end ? today : start;
   }
 
-  function openDetail(expenseId) {
-    const expense = state.expenses.find(
-      (item) => String(item.id) === String(expenseId),
-    );
-    if (!expense) return;
-    state.detailId = expense.id;
+  function detailRecord() {
+    const source = state.detailKind === "pago" ? state.incomes : state.expenses;
+    return source.find((item) => String(item.id) === String(state.detailId));
+  }
 
-    $("rs-detail-title").textContent = expense.concept || "Gasto";
-    $("rs-detail-amount").textContent = `−${money(expense.amount)}`;
+  function openDetail(recordId, kind = "gasto") {
+    state.detailId = recordId;
+    state.detailKind = kind;
+    const expense = detailRecord();
+    if (!expense) return;
+
+    const isPago = kind === "pago";
+    const amountNode = $("rs-detail-amount");
+    amountNode.textContent = isPago
+      ? `+${money(expense.paidAmount)}`
+      : `−${money(expense.amount)}`;
+    amountNode.classList.toggle("is-payment", isPago);
+    amountNode.classList.toggle("is-expense", !isPago);
+    $("rs-detail-title").textContent =
+      expense.concept || (isPago ? "Pago" : "Gasto");
 
     const list = $("rs-detail-list");
     list.replaceChildren();
-    const rows = [
-      ["Fecha", dayLabel(String(expense.date || "").slice(0, 10))],
-      ["Categoría", expense.category || "Sin categoría"],
-      ["Pagado con", expenseMethodLabel(expense)],
-    ];
-    if (tracksPapaDebt) {
+    const rows = isPago
+      ? [
+          ["Fecha", dayLabel(String(expense.date || "").slice(0, 10))],
+          ["Pagado a", expense.paymentMethod || "Tarjeta"],
+          ["Tipo", "Pago de tarjeta"],
+        ]
+      : [
+          ["Fecha", dayLabel(String(expense.date || "").slice(0, 10))],
+          ["Categoría", expense.category || "Sin categoría"],
+          ["Pagado con", expenseMethodLabel(expense)],
+        ];
+    if (tracksPapaDebt && !isPago) {
       rows.push([
         "Dinero de",
         fundedBy(expense, state.accounts) === FUNDED_BY_ME
@@ -694,33 +814,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  /** Abono a la Nu (Personal) o dinero que papá devolvió (Casa). */
-  function openMoneyForm(mode) {
-    state.moneyMode = mode;
-    const isAbono = mode === CARD_PAYMENT_KIND;
-    let suggested = 0;
-
-    if (isAbono) {
-      $("rs-money-title").textContent = "Abono a tu Nu";
-      $("rs-money-note").textContent =
-        "Baja lo que debes en tu tarjeta. No cambia “Me queda” porque tus compras ya se contaron.";
-      state.moneyMethod = "";
-    } else {
-      suggested = Math.max(
-        0,
-        buildPapaDebt({
-          expenses: state.expenses,
-          reimbursements: state.incomes.filter(isReimbursement),
-          accounts: state.accounts,
-        }).balance,
-      );
-      $("rs-money-title").textContent = "Papá me pagó";
-      $("rs-money-note").textContent =
-        "Baja lo que papá te debe. No cambia los gastos de Casa, que ya están contados.";
-      state.moneyMethod = "Efectivo";
-    }
-
-    $("rs-money-method-field").hidden = isAbono;
+  /** Dinero que papá le devolvió a Jose (Casa). */
+  function openMoneyForm() {
+    const suggested = Math.max(
+      0,
+      buildPapaDebt({
+        expenses: state.expenses,
+        reimbursements: state.incomes.filter(isReimbursement),
+        accounts: state.accounts,
+      }).balance,
+    );
+    $("rs-money-title").textContent = "Papá me pagó";
+    $("rs-money-note").textContent =
+      "Baja lo que papá te debe. No cambia los gastos de Casa, que ya están contados.";
+    state.moneyMethod = "Efectivo";
     renderMoneyMethodChips();
     $("rs-money-amount").value = suggested
       ? String(Math.round(suggested * 100) / 100)
@@ -733,7 +840,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function removeMoneyRecord(record) {
     const confirmed = await askConfirm({
-      title: isCardPayment(record) ? "Eliminar abono" : "Eliminar pago de papá",
+      title: "Eliminar pago de papá",
       message: `¿Eliminar ${money(record.paidAmount)} del ${shortDate(record.date)}?`,
       confirmText: "Eliminar",
     });
@@ -756,7 +863,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   moneySheet.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const isAbono = state.moneyMode === CARD_PAYMENT_KIND;
     const amount = parseAmount($("rs-money-amount").value);
     const date = $("rs-money-date").value;
     const errorBox = $("rs-money-error");
@@ -774,11 +880,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       await saveIncomeRecord({
         id: createId(),
-        kind: state.moneyMode,
+        kind: REIMBURSEMENT_KIND,
         scope,
         date,
-        concept: isAbono ? "Abono a Nu" : "Papá me pagó",
-        paymentMethod: isAbono ? "Nu" : state.moneyMethod,
+        concept: "Papá me pagó",
+        paymentMethod: state.moneyMethod,
         paymentStatus: "Pagado",
         totalAmount: amount,
         paidAmount: amount,
@@ -787,9 +893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await loadData();
       closeSheets();
       render();
-      showToast(isAbono ? "Abono guardado." : "Pago de papá guardado.", {
-        type: "success",
-      });
+      showToast("Pago de papá guardado.", { type: "success" });
     } catch (saveError) {
       console.error("No se pudo guardar:", saveError);
       errorBox.textContent =
@@ -799,16 +903,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  $("rs-nu-add").addEventListener("click", () =>
-    openMoneyForm(CARD_PAYMENT_KIND),
-  );
-  $("rs-debt-add").addEventListener("click", () =>
-    openMoneyForm(REIMBURSEMENT_KIND),
-  );
+  $("rs-debt-add").addEventListener("click", () => openMoneyForm());
+
+  document.querySelectorAll("[data-rs-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const { form } = state;
+      form.type = button.dataset.rsType;
+      // Un pago sólo puede ir a una tarjeta: si lo elegido no lo es, se usa la primera.
+      if (
+        form.type === "pago" &&
+        !cardOptions().some((option) => option.key === form.method?.key)
+      ) {
+        form.method = cardOptions()[0] || null;
+      }
+      applyFormType();
+    });
+  });
+
+  async function savePayment() {
+    const { form } = state;
+    const amount = parseAmount($("rs-amount").value);
+    const date = $("rs-date").value;
+    const errorBox = $("rs-expense-error");
+
+    errorBox.textContent = !amount
+      ? "Escribe el monto."
+      : !form.method
+        ? "Elige a qué tarjeta pagaste."
+        : !date
+          ? "Elige la fecha."
+          : "";
+    if (errorBox.textContent) return;
+
+    const button = $("rs-expense-submit");
+    const existing =
+      state.incomes.find(
+        (item) => String(item.id) === String(state.editingId),
+      ) || {};
+    const wasEditing = Boolean(state.editingId);
+    setButtonLoading(button, true, "Guardando...");
+
+    try {
+      await saveIncomeRecord({
+        ...existing,
+        id: existing.id || createId(),
+        kind: CARD_PAYMENT_KIND,
+        scope,
+        date,
+        concept: $("rs-concept").value.trim() || `Pago a ${form.method.label}`,
+        paymentMethod: form.method.paymentMethod,
+        accountId: form.method.accountId || "",
+        paymentStatus: "Pagado",
+        totalAmount: amount,
+        paidAmount: amount,
+        remainingAmount: 0,
+      });
+      await loadData();
+      state.period = periodForDate(scope, date);
+      state.category = "";
+      closeSheets();
+      render();
+      showToast(wasEditing ? "Cambios guardados." : "Pago guardado.", {
+        type: "success",
+      });
+    } catch (saveError) {
+      console.error("No se pudo guardar el pago:", saveError);
+      errorBox.textContent =
+        saveError?.message || "No se pudo guardar. Intenta de nuevo.";
+    } finally {
+      setButtonLoading(button, false);
+    }
+  }
 
   expenseSheet.addEventListener("submit", async (event) => {
     event.preventDefault();
     const { form } = state;
+    if (form.type === "pago") {
+      await savePayment();
+      return;
+    }
     const amount = parseAmount($("rs-amount").value);
     const concept = $("rs-concept").value.trim();
     const date = $("rs-date").value;
@@ -907,31 +1080,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("rs-detail-edit").addEventListener("click", () => {
-    const expense = state.expenses.find(
-      (item) => String(item.id) === String(state.detailId),
-    );
-    if (expense) openExpenseForm(expense);
+    const record = detailRecord();
+    if (record) openExpenseForm(record, state.detailKind);
   });
 
   $("rs-detail-delete").addEventListener("click", async () => {
-    const expense = state.expenses.find(
-      (item) => String(item.id) === String(state.detailId),
-    );
+    const expense = detailRecord();
     if (!expense) return;
+    const isPago = state.detailKind === "pago";
 
     const confirmed = await askConfirm({
-      title: "Eliminar gasto",
-      message: `¿Eliminar “${expense.concept || "este gasto"}” por ${money(expense.amount)}?`,
+      title: isPago ? "Eliminar pago" : "Eliminar gasto",
+      message: `¿Eliminar “${expense.concept || (isPago ? "este pago" : "este gasto")}” por ${money(isPago ? expense.paidAmount : expense.amount)}?`,
       confirmText: "Eliminar",
     });
     if (!confirmed) return;
 
     try {
-      await deleteExpenseRecord(expense.id);
+      if (isPago) {
+        await deleteIncomeRecord(expense.id);
+      } else {
+        await deleteExpenseRecord(expense.id);
+      }
       await loadData();
       closeSheets();
       render();
-      showToast("Gasto eliminado.", { type: "success" });
+      showToast(isPago ? "Pago eliminado." : "Gasto eliminado.", {
+        type: "success",
+      });
     } catch (deleteError) {
       console.error("No se pudo eliminar el gasto:", deleteError);
       showToast(deleteError?.message || "No se pudo eliminar el gasto.", {
@@ -956,6 +1132,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("rs-income-btn").addEventListener("click", openIncomeForm);
+  $("rs-income-btn").hidden = tracksDebt;
+  $("rs-paid").hidden = !tracksDebt;
+  if (tracksDebt) {
+    document.querySelectorAll("[data-rs-add]").forEach((button) => {
+      button.textContent = "+ Agregar";
+    });
+  }
   $("rs-prev").addEventListener("click", () => {
     state.period = shiftPeriod(state.period, -1);
     state.category = "";

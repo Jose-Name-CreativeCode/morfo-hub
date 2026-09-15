@@ -64,43 +64,16 @@
                 <span id="rs-spent-label">Gasté</span>
                 <strong id="rs-spent-value">$0</strong>
               </div>
+              <div class="rs-spent rs-paid" id="rs-paid" hidden>
+                <span>Pagaste</span>
+                <strong id="rs-paid-value">$0</strong>
+              </div>
             </div>
             <div class="rs-bar-wrap">
               <div class="rs-bar"><i id="rs-bar-fill"></i></div>
               <p class="rs-bar-note" id="rs-bar-note"></p>
             </div>
             <div class="rs-split" id="rs-split"></div>
-          </section>
-
-          <section
-            class="rs-ledger"
-            id="rs-nu"
-            aria-labelledby="rs-nu-title"
-            hidden
-          >
-            <div class="rs-ledger-head">
-              <div>
-                <h2 id="rs-nu-title">Tu tarjeta Nu</h2>
-                <small
-                  >Sólo tus gastos de Personal. Tus abonos no cambian “Me
-                  queda”.</small
-                >
-              </div>
-              <button
-                type="button"
-                class="rs-btn rs-btn-soft rs-btn-sm"
-                id="rs-nu-add"
-              >
-                Registrar abono
-              </button>
-            </div>
-            <div class="rs-ledger-main">
-              <span id="rs-nu-label"></span>
-              <strong id="rs-nu-value"></strong>
-              <span class="rs-ledger-status" id="rs-nu-status"></span>
-            </div>
-            <p class="rs-ledger-note" id="rs-nu-current"></p>
-            <div class="rs-ledger-list" id="rs-nu-list"></div>
           </section>
 
           <section
@@ -194,6 +167,10 @@
           </svg>
         </button>
       </div>
+      <div class="rs-type-toggle" id="rs-type-toggle" hidden>
+        <button type="button" data-rs-type="gasto">Gasto</button>
+        <button type="button" data-rs-type="pago">Pago</button>
+      </div>
       <label class="rs-amount-field" for="rs-amount">
         <span>$</span>
         <input
@@ -204,7 +181,7 @@
         />
       </label>
       <div class="rs-field">
-        <label for="rs-concept">Qué fue</label>
+        <label for="rs-concept" id="rs-concept-label">Qué fue</label>
         <input
           type="text"
           id="rs-concept"
@@ -212,12 +189,12 @@
           autocomplete="off"
         />
       </div>
-      <div class="rs-field">
+      <div class="rs-field" id="rs-category-field">
         <span>Categoría</span>
         <div class="rs-chips" id="rs-category-chips"></div>
       </div>
       <div class="rs-field">
-        <span>Pagado con</span>
+        <span id="rs-method-label">Pagado con</span>
         <div class="rs-chips" id="rs-method-chips"></div>
       </div>
       <div class="rs-field" id="rs-funded-field" hidden>
