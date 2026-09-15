@@ -2776,17 +2776,18 @@ img {
   color: var(--danger);
 }
 
-.rs-left-value.is-positive,
-.rs-paid strong,
-.rs-move-amount.is-payment,
-.rs-detail-amount.is-payment {
-  color: var(--success);
-}
-
 .rs-spent strong,
 .rs-move-amount.is-expense,
 .rs-detail-amount.is-expense {
   color: var(--danger);
+}
+
+/* Va después del rojo: en Personal, los pagos siempre en verde. */
+.rs-left-value.is-positive,
+.rs-spent.rs-paid strong,
+.rs-move-amount.is-payment,
+.rs-detail-amount.is-payment {
+  color: var(--success);
 }
 
 .rs-income-btn[hidden],
