@@ -246,7 +246,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Los chips sí son del periodo que se está viendo.
     setSplitChips([
       [`Gastaste ${periodNoun(state.period)}`, money(debt.spentInPeriod)],
-      ["De eso, con tarjeta", money(debt.cardInPeriod)],
+      ["Con tarjeta", money(debt.cardInPeriod)],
+      ["En efectivo", money(debt.cashInPeriod)],
     ]);
   }
 
