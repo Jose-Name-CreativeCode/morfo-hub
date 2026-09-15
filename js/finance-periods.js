@@ -24,13 +24,7 @@ const MONTHS = [
   "diciembre",
 ];
 
-const CREDIT_METHODS = [
-  "nu",
-  "tarjeta",
-  "tarjeta de credito",
-  "credito",
-  "amex",
-];
+const CARD_METHODS = ["nu", "tarjeta", "tarjeta de credito", "credito", "amex"];
 
 // Evita recorrer historiales absurdamente largos al calcular lo que sobró.
 const MAX_CARRY_STEPS = 600;
@@ -137,12 +131,17 @@ export function isPeriodIncome(income) {
   return income?.kind === PERIOD_INCOME_KIND;
 }
 
-export function isCreditExpense(expense, accounts = []) {
-  const account = accounts.find(
-    (item) => String(item.id) === String(expense?.accountId || ""),
+/**
+ * Gasto con tarjeta: deja deuda hasta que se paga. Se decide por la forma de
+ * pago configurada; si no está en la lista, se usan los nombres conocidos.
+ */
+export function isCardExpense(expense, paymentMethods = []) {
+  const name = normalizeText(expense?.paymentMethod);
+  const method = paymentMethods.find(
+    (item) => normalizeText(item.name) === name,
   );
-  if (account) return account.type === "credit";
-  return CREDIT_METHODS.includes(normalizeText(expense?.paymentMethod));
+  if (method) return method.type === "tarjeta";
+  return CARD_METHODS.includes(name);
 }
 
 function incomeAmount(income) {
@@ -220,7 +219,7 @@ export function buildPeriodSummary({
   period,
   incomes,
   expenses,
-  accounts = [],
+  paymentMethods = [],
 }) {
   const incomeByKey = explicitIncomeByKey(scope, incomes);
   const key = periodKey(period);
@@ -231,7 +230,7 @@ export function buildPeriodSummary({
 
   const spent = spentInPeriod(periodExpenses, period);
   const credit = periodExpenses
-    .filter((expense) => isCreditExpense(expense, accounts))
+    .filter((expense) => isCardExpense(expense, paymentMethods))
     .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
   const carryIn = carryInto(scope, period, incomeByKey, expenses);

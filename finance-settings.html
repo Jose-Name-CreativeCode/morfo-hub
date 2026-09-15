@@ -57,7 +57,7 @@
               </form>
             </article>
 
-            <article class="card form-shell">
+            <article class="card form-shell" data-morfo-only>
               <h2 class="section-title section-title-sm">
                 Nueva cuenta o tarjeta
               </h2>
@@ -134,9 +134,62 @@
             </article>
           </section>
 
-          <section class="card dashboard-panel section-spacing">
+          <section class="card dashboard-panel section-spacing" data-morfo-only>
             <h2 class="section-title section-title-sm">Tus cuentas</h2>
             <div class="settings-card-grid" id="account-settings-list"></div>
+          </section>
+
+          <section class="dashboard-split-grid" data-simple-only hidden>
+            <article class="card form-shell">
+              <h2 class="section-title section-title-sm">Formas de pago</h2>
+              <p class="section-subtitle section-subtitle-compact">
+                Son los botones de “Pagado con” al registrar un gasto. Las
+                tarjetas dejan deuda hasta que registras el pago.
+              </p>
+              <div class="settings-chip-list" id="method-list"></div>
+              <form id="method-form" class="entry-form-grid">
+                <div class="form-group">
+                  <label for="method-name">Nombre</label>
+                  <input id="method-name" type="text" placeholder="Ej. Nu" />
+                </div>
+                <div class="form-group">
+                  <label for="method-type">Tipo</label>
+                  <select id="method-type">
+                    <option value="tarjeta">Tarjeta (se paga después)</option>
+                    <option value="cuenta">Efectivo o transferencia</option>
+                  </select>
+                </div>
+                <div class="form-group form-group-full form-group-tight">
+                  <button type="submit" class="btn-primary">
+                    Agregar forma de pago
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card form-shell">
+              <h2 class="section-title section-title-sm">Categorías</h2>
+              <p class="section-subtitle section-subtitle-compact">
+                Son los botones de “Categoría”. Quita las que no uses y agrega
+                las tuyas.
+              </p>
+              <div class="settings-chip-list" id="category-list"></div>
+              <form id="category-form" class="entry-form-grid">
+                <div class="form-group form-group-full">
+                  <label for="category-name">Nombre</label>
+                  <input
+                    id="category-name"
+                    type="text"
+                    placeholder="Ej. Psicólogo"
+                  />
+                </div>
+                <div class="form-group form-group-full form-group-tight">
+                  <button type="submit" class="btn-primary">
+                    Agregar categoría
+                  </button>
+                </div>
+              </form>
+            </article>
           </section>
 
           <section class="dashboard-split-grid" data-morfo-only>

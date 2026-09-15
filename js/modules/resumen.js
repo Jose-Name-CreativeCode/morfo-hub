@@ -9,10 +9,11 @@ import {
   getIncomeCollection,
   saveIncomeRecord,
 } from "../services/income-service.js";
-import { getAccountsCollection } from "../services/accounts-service.js";
+import { getSettingsRecord } from "../services/settings-service.js";
 import { exportExpensesToExcel } from "../services/expenses-excel.js";
 import {
   getActiveScope,
+  getFinanceConfig,
   getScopeConfig,
   recordMatchesScope,
   withScopeParam,
@@ -21,6 +22,7 @@ import {
   PERIOD_INCOME_KIND,
   buildPeriodSummary,
   carriesLeftover,
+  isCardExpense,
   periodForDate,
   periodIncomeId,
   periodKey,
@@ -37,7 +39,6 @@ import {
   buildDebtSummary,
   buildPapaDebt,
   fundedBy,
-  isCardExpense,
   isCardPayment,
   isNuExpense,
   isReimbursement,
@@ -46,7 +47,6 @@ import {
 import {
   askConfirm,
   getTodayISO,
-  normalizeText,
   setButtonLoading,
   setPageLoading,
   showToast,
@@ -120,7 +120,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     category: "",
     expenses: [],
     incomes: [],
-    accounts: [],
+    paymentMethods: [],
+    categories: [],
     editingId: null,
     detailId: null,
     form: {
@@ -152,42 +153,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ---------- Datos ---------- */
 
   async function loadData() {
-    const [expenses, incomes, accounts] = await Promise.all([
+    const [expenses, incomes, settings] = await Promise.all([
       getExpensesCollection(),
       getIncomeCollection(),
-      getAccountsCollection(scope),
+      getSettingsRecord(),
     ]);
+    const finance = getFinanceConfig(settings, scope);
     state.expenses = expenses.filter((item) => recordMatchesScope(item, scope));
     state.incomes = incomes.filter((item) => recordMatchesScope(item, scope));
-    state.accounts = accounts.filter((account) => account.isActive !== false);
+    state.paymentMethods = finance.paymentMethods;
+    state.categories = finance.categories;
   }
 
-  /** Opciones de "Pagado con": las cuentas guardadas más los métodos base. */
+  /** Opciones de "Pagado con": las formas de pago configuradas en Ajustes. */
   function paymentOptions() {
-    const fromAccounts = state.accounts.map((account) => ({
-      key: `account:${account.id}`,
-      label: account.name,
-      accountId: account.id,
-      paymentMethod: account.name,
+    return state.paymentMethods.map((method) => ({
+      key: `method:${method.name}`,
+      label: method.name,
+      accountId: "",
+      paymentMethod: method.name,
     }));
-    const taken = fromAccounts.map((option) => normalizeText(option.label));
-    const fromMethods = scopeConfig.paymentMethods
-      .filter((method) => !taken.includes(normalizeText(method)))
-      .map((method) => ({
-        key: `method:${method}`,
-        label: method,
-        accountId: "",
-        paymentMethod: method,
-      }));
-
-    return [...fromAccounts, ...fromMethods];
   }
 
   function expenseMethodLabel(expense) {
-    const account = state.accounts.find(
-      (item) => String(item.id) === String(expense.accountId || ""),
-    );
-    return account?.name || expense.paymentMethod || "Sin método";
+    return expense.paymentMethod || "Sin método";
   }
 
   /* ---------- Render ---------- */
@@ -215,7 +204,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       expenses: state.expenses,
       payments: state.incomes.filter(isCardPayment),
       period: state.period,
-      accounts: state.accounts,
+      paymentMethods: state.paymentMethods,
     });
   }
 
@@ -447,10 +436,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         "",
         `${expense.category || "Sin categoría"} · ${expenseMethodLabel(expense)}`,
       );
-      if (
-        tracksPapaDebt &&
-        fundedBy(expense, state.accounts) === FUNDED_BY_ME
-      ) {
+      if (tracksPapaDebt && fundedBy(expense) === FUNDED_BY_ME) {
         meta.appendChild(el("span", "rs-tag", "Te lo repone papá"));
       }
       text.appendChild(meta);
@@ -473,7 +459,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       period: state.period,
       incomes: state.incomes,
       expenses: state.expenses,
-      accounts: state.accounts,
+      paymentMethods: state.paymentMethods,
     });
   }
 
@@ -515,7 +501,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const debt = buildPapaDebt({
       expenses: state.expenses,
       reimbursements,
-      accounts: state.accounts,
+      paymentMethods: state.paymentMethods,
     });
 
     $("rs-debt-label").textContent =
@@ -589,7 +575,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderExpenseChips() {
     const { form } = state;
 
-    const categories = [...scopeConfig.expenseCategories];
+    const categories = [...state.categories];
     if (form.category && !categories.includes(form.category)) {
       categories.unshift(form.category);
     }
@@ -639,8 +625,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   function cardOptions() {
     return paymentOptions().filter((option) =>
       isCardExpense(
-        { paymentMethod: option.paymentMethod, accountId: option.accountId },
-        state.accounts,
+        { paymentMethod: option.paymentMethod },
+        state.paymentMethods,
       ),
     );
   }
@@ -673,13 +659,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function defaultFundedBy(methodOption) {
     if (!methodOption) return FUNDED_BY_PAPA;
-    return isNuExpense(
-      {
-        paymentMethod: methodOption.paymentMethod,
-        accountId: methodOption.accountId,
-      },
-      state.accounts,
-    )
+    return isNuExpense({ paymentMethod: methodOption.paymentMethod })
       ? FUNDED_BY_ME
       : FUNDED_BY_PAPA;
   }
@@ -711,7 +691,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       type,
       category: isPago ? "" : expense?.category || "",
       method: expense ? methodOptionFor(expense) : null,
-      fundedBy: expense ? fundedBy(expense, state.accounts) : FUNDED_BY_PAPA,
+      fundedBy: expense ? fundedBy(expense) : FUNDED_BY_PAPA,
       fundedTouched: Boolean(expense?.fundedBy),
     };
 
@@ -769,7 +749,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (tracksPapaDebt && !isPago) {
       rows.push([
         "Dinero de",
-        fundedBy(expense, state.accounts) === FUNDED_BY_ME
+        fundedBy(expense) === FUNDED_BY_ME
           ? "Tuyo (te lo repone papá)"
           : "Papá",
       ]);
@@ -828,7 +808,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       buildPapaDebt({
         expenses: state.expenses,
         reimbursements: state.incomes.filter(isReimbursement),
-        accounts: state.accounts,
       }).balance,
     );
     $("rs-money-title").textContent = "Papá me pagó";

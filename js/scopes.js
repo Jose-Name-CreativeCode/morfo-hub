@@ -97,6 +97,45 @@ export const SCOPES = {
   },
 };
 
+// Nombres que por defecto se tratan como tarjeta: dejan deuda que se paga después.
+const CARD_METHOD_NAMES = ["nu", "amex", "tarjeta"];
+
+export const PAYMENT_TYPES = { CARD: "tarjeta", CASH: "cuenta" };
+
+function normalizeName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Formas de pago y categorías de un espacio. Personal y Casa las editan en
+ * Ajustes; mientras no las toquen se usan las de esta configuración.
+ */
+export function getFinanceConfig(settings, scope) {
+  const saved = settings?.finance?.[scope] || {};
+  const config = getScopeConfig(scope);
+
+  const paymentMethods =
+    Array.isArray(saved.paymentMethods) && saved.paymentMethods.length
+      ? saved.paymentMethods
+      : config.paymentMethods.map((name) => ({
+          name,
+          type: CARD_METHOD_NAMES.includes(normalizeName(name))
+            ? PAYMENT_TYPES.CARD
+            : PAYMENT_TYPES.CASH,
+        }));
+
+  const categories =
+    Array.isArray(saved.categories) && saved.categories.length
+      ? saved.categories
+      : config.expenseCategories;
+
+  return { paymentMethods, categories };
+}
+
 export function isValidScope(scope) {
   return Object.prototype.hasOwnProperty.call(SCOPES, String(scope || ""));
 }

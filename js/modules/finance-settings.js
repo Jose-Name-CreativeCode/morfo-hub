@@ -13,7 +13,13 @@ import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
-import { SCOPES, getActiveScope, getScopeConfig } from "../scopes.js";
+import {
+  PAYMENT_TYPES,
+  SCOPES,
+  getActiveScope,
+  getFinanceConfig,
+  getScopeConfig,
+} from "../scopes.js";
 import {
   askConfirm,
   formatCurrency,
@@ -230,6 +236,178 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderRules();
   }
 
+  /* ---------- Formas de pago y categorías (Personal y Casa) ---------- */
+
+  function renderFinanceChips(containerId, values, onRemove, emptyText) {
+    const container = document.getElementById(containerId);
+    container.replaceChildren();
+
+    if (!values.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-message";
+      empty.textContent = emptyText;
+      container.appendChild(empty);
+      return;
+    }
+
+    values.forEach((value, index) => {
+      const chip = document.createElement("span");
+      chip.className = "settings-chip";
+      chip.append(value.label);
+
+      if (value.hint) {
+        const hint = document.createElement("small");
+        hint.textContent = value.hint;
+        chip.appendChild(hint);
+      }
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "settings-chip-remove";
+      remove.setAttribute("aria-label", `Quitar ${value.label}`);
+      remove.textContent = "×";
+      remove.addEventListener("click", () => onRemove(index, value.label));
+      chip.appendChild(remove);
+      container.appendChild(chip);
+    });
+  }
+
+  function renderFinanceLists() {
+    if (!isSimpleScope) return;
+    const finance = getFinanceConfig(settings, scope);
+
+    renderFinanceChips(
+      "method-list",
+      finance.paymentMethods.map((method) => ({
+        label: method.name,
+        hint: method.type === PAYMENT_TYPES.CARD ? "Tarjeta" : "Sin deuda",
+      })),
+      (index, label) => removeFinanceItem("paymentMethods", index, label),
+      "Agrega al menos una forma de pago.",
+    );
+
+    renderFinanceChips(
+      "category-list",
+      finance.categories.map((category) => ({ label: category })),
+      (index, label) => removeFinanceItem("categories", index, label),
+      "Agrega al menos una categoría.",
+    );
+  }
+
+  async function saveFinanceConfig(changes, message) {
+    const finance = getFinanceConfig(settings, scope);
+    settings = await saveSettingsRecord({
+      ...settings,
+      finance: {
+        ...(settings.finance || {}),
+        [scope]: {
+          ...(settings.finance?.[scope] || {}),
+          paymentMethods: finance.paymentMethods,
+          categories: finance.categories,
+          ...changes,
+        },
+      },
+    });
+    renderFinanceLists();
+    showToast(message, { type: "success" });
+  }
+
+  async function removeFinanceItem(key, index, label) {
+    const finance = getFinanceConfig(settings, scope);
+    const next = finance[key].filter((_, position) => position !== index);
+
+    if (!next.length) {
+      showToast("Deja al menos una opción en la lista.", { type: "error" });
+      return;
+    }
+
+    const confirmed = await askConfirm({
+      title: "Quitar de la lista",
+      message: `¿Quitar “${label}”? Tus registros anteriores lo conservan; sólo deja de aparecer al registrar algo nuevo.`,
+      confirmText: "Quitar",
+    });
+    if (!confirmed) return;
+
+    await saveFinanceConfig({ [key]: next }, `“${label}” ya no aparecerá.`);
+  }
+
+  if (isSimpleScope) {
+    document
+      .getElementById("method-form")
+      .addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const input = document.getElementById("method-name");
+        const name = input.value.trim();
+        const type = document.getElementById("method-type").value;
+        const finance = getFinanceConfig(settings, scope);
+
+        if (!name) {
+          showToast("Escribe el nombre de la forma de pago.", {
+            type: "error",
+          });
+          return;
+        }
+        if (
+          finance.paymentMethods.some(
+            (method) => method.name.toLowerCase() === name.toLowerCase(),
+          )
+        ) {
+          showToast("Ya tienes una forma de pago con ese nombre.", {
+            type: "error",
+          });
+          return;
+        }
+
+        const button = event.currentTarget.querySelector("button[type=submit]");
+        setButtonLoading(button, true, "Guardando...");
+        try {
+          await saveFinanceConfig(
+            { paymentMethods: [...finance.paymentMethods, { name, type }] },
+            "Forma de pago agregada.",
+          );
+          input.value = "";
+        } finally {
+          setButtonLoading(button, false);
+        }
+      });
+
+    document
+      .getElementById("category-form")
+      .addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const input = document.getElementById("category-name");
+        const name = input.value.trim();
+        const finance = getFinanceConfig(settings, scope);
+
+        if (!name) {
+          showToast("Escribe el nombre de la categoría.", { type: "error" });
+          return;
+        }
+        if (
+          finance.categories.some(
+            (category) => category.toLowerCase() === name.toLowerCase(),
+          )
+        ) {
+          showToast("Ya tienes una categoría con ese nombre.", {
+            type: "error",
+          });
+          return;
+        }
+
+        const button = event.currentTarget.querySelector("button[type=submit]");
+        setButtonLoading(button, true, "Guardando...");
+        try {
+          await saveFinanceConfig(
+            { categories: [...finance.categories, name] },
+            "Categoría agregada.",
+          );
+          input.value = "";
+        } finally {
+          setButtonLoading(button, false);
+        }
+      });
+  }
+
   document
     .getElementById("account-type")
     .addEventListener("change", syncCreditFields);
@@ -322,6 +500,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll("[data-morfo-only]").forEach((element) => {
       element.hidden = isSimpleScope;
     });
+    document.querySelectorAll("[data-simple-only]").forEach((element) => {
+      element.hidden = !isSimpleScope;
+    });
     if (isSimpleScope) {
       document.getElementById("finance-settings-title").textContent =
         `Ajustes de ${SCOPES[scope].label}`;
@@ -329,7 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const headerTitle = document.querySelector(".header-title");
       if (headerTitle) headerTitle.textContent = "Ajustes";
       document.getElementById("finance-settings-subtitle").textContent =
-        "Tus cuentas y tarjetas aparecen como opciones en “Pagado con” al agregar un gasto.";
+        "Aquí eliges los botones que ves al registrar un gasto: con qué pagas y en qué categoría entra.";
     } else {
       document.getElementById("finance-settings-subtitle").textContent =
         `Configuración de ${SCOPES[scope].label}. Define dónde está el dinero y qué movimientos esperas; nada se marcará como pagado automáticamente.`;
@@ -343,6 +524,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       settings.finance?.[scope]?.monthlyBudget || "";
     resetAccountForm();
     resetRuleForm();
+    renderFinanceLists();
     renderAccounts();
     renderAccountOptions();
     renderRules();

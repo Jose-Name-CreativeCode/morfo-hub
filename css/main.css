@@ -3566,3 +3566,47 @@ body.rs-sheet-open {
 .dashboard-split-grid:has(> [data-morfo-only][hidden]) {
   grid-template-columns: minmax(0, 1fr);
 }
+
+.settings-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.settings-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  font-size: 0.9rem;
+}
+
+.settings-chip small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.settings-chip-remove {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-chip-remove:hover {
+  background: rgba(248, 113, 113, 0.14);
+  color: var(--danger);
+}
+
+[data-simple-only][hidden] {
+  display: none;
+}
