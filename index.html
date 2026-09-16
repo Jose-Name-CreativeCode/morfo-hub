@@ -11,19 +11,20 @@
     <link rel="stylesheet" href="css/main.css" />
   </head>
   <body>
-    <main class="login-page home-page">
-      <section class="login-card home-card">
-        <p class="home-kicker">Morfo Hub</p>
-        <h1>Personal, Casa y Morfo en orden</h1>
-        <p>
-          Un solo lugar para registrar movimientos, cuidar presupuestos y
-          entender cada espacio financiero sin mezclarlo.
-        </p>
-
-        <a href="login.html" class="btn-primary home-login-link"
-          >Entrar al hub</a
-        >
-      </section>
+    <main class="splash-page">
+      <img
+        class="splash-logo"
+        src="assets/logos/logo-morfo.png"
+        alt="Morfo Hub"
+      />
+      <div class="splash-bar" role="progressbar" aria-label="Cargando">
+        <i></i>
+      </div>
+      <p class="splash-note" id="splash-note">Cargando tu información...</p>
+      <a class="splash-link" id="splash-link" href="login.html" hidden>
+        Entrar al hub
+      </a>
     </main>
+    <script type="module" src="js/modules/splash.js"></script>
   </body>
 </html>
