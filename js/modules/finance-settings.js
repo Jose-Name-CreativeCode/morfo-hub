@@ -273,6 +273,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  let editingReminderId = "";
+
+  function resetReminderForm() {
+    editingReminderId = "";
+    const form = document.getElementById("reminder-form");
+    form.reset();
+    document.getElementById("reminder-day").value = "1";
+    form.querySelector("button[type=submit]").textContent =
+      "Agregar recordatorio";
+    syncReminderFields();
+  }
+
+  function fillReminderForm(reminder) {
+    editingReminderId = reminder.id;
+    document.getElementById("reminder-name").value = reminder.name;
+    document.getElementById("reminder-kind").value = reminder.kind;
+    document.getElementById("reminder-frequency").value = reminder.frequency;
+    document.getElementById("reminder-day").value = reminder.day;
+    document.getElementById("reminder-month").value = String(
+      reminder.month ?? 0,
+    );
+    document.getElementById("reminder-amount").value = reminder.amount || "";
+    document.getElementById("reminder-method").value = reminder.method || "";
+    if (reminder.category) {
+      document.getElementById("reminder-category").value = reminder.category;
+    }
+    if (reminder.fundedBy) {
+      document.getElementById("reminder-funded").value = reminder.fundedBy;
+    }
+    document
+      .getElementById("reminder-form")
+      .querySelector("button[type=submit]").textContent = "Guardar cambios";
+    syncReminderFields();
+    document
+      .getElementById("reminder-form")
+      .scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   function syncReminderFields() {
     const kind = document.getElementById("reminder-kind").value;
     const frequency = document.getElementById("reminder-frequency").value;
@@ -347,13 +385,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       small.textContent = detail;
       text.append(name, small);
 
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "btn-ghost";
+      edit.textContent = "Editar";
+      edit.addEventListener("click", () => fillReminderForm(reminder));
+
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "delete-btn";
       remove.textContent = "Eliminar";
       remove.addEventListener("click", () => removeReminder(reminder));
 
-      row.append(text, remove);
+      const actions = document.createElement("div");
+      actions.className = "row-button-group";
+      actions.append(edit, remove);
+
+      row.append(text, actions);
       container.appendChild(row);
     });
   }
@@ -367,6 +415,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!confirmed) return;
 
     const finance = getFinanceConfig(settings, scope);
+    if (String(editingReminderId) === String(reminder.id)) resetReminderForm();
     await saveFinanceConfig(
       {
         reminders: finance.reminders.filter(
@@ -404,8 +453,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const frequency = document.getElementById("reminder-frequency").value;
         const isTask = kind === REMINDER_KINDS.TASK;
         const finance = getFinanceConfig(settings, scope);
+        const existing = finance.reminders.find(
+          (item) => String(item.id) === String(editingReminderId),
+        );
         const reminder = {
-          id: `rec-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+          id:
+            existing?.id ||
+            `rec-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
           name,
           kind,
           frequency,
@@ -428,19 +482,24 @@ document.addEventListener("DOMContentLoaded", async () => {
             scope === "casa" && kind === REMINDER_KINDS.EXPENSE
               ? document.getElementById("reminder-funded").value
               : "",
-          done: {},
+          // Al editar se conserva lo que ya se marcó como hecho.
+          done: existing?.done || {},
         };
 
         const button = event.currentTarget.querySelector("button[type=submit]");
         setButtonLoading(button, true, "Guardando...");
         try {
           await saveFinanceConfig(
-            { reminders: [...finance.reminders, reminder] },
-            "Recordatorio agregado.",
+            {
+              reminders: existing
+                ? finance.reminders.map((item) =>
+                    String(item.id) === String(existing.id) ? reminder : item,
+                  )
+                : [...finance.reminders, reminder],
+            },
+            existing ? "Recordatorio actualizado." : "Recordatorio agregado.",
           );
-          document.getElementById("reminder-form").reset();
-          document.getElementById("reminder-day").value = "1";
-          syncReminderFields();
+          resetReminderForm();
         } finally {
           setButtonLoading(button, false);
         }
