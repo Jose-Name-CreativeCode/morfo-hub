@@ -281,8 +281,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         `${summary.carryIn > 0 ? "+" : "−"}${money(Math.abs(summary.carryIn))}`,
       ]);
     }
-    chips.push(["Efectivo y transferencia", money(summary.cashAndTransfer)]);
-    chips.push([scopeConfig.creditLabel || "Tarjeta", money(summary.credit)]);
+    // En Casa importa quién puso el dinero, no con qué se pagó.
+    const fronted = summary.expenses
+      .filter((expense) => fundedBy(expense) === FUNDED_BY_ME)
+      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    chips.push(["Pusiste tú", money(fronted)]);
+    chips.push(["Dinero de papá", money(summary.spent - fronted)]);
     setSplitChips(chips);
   }
 

@@ -88,8 +88,6 @@ export const SCOPES = {
       "Limpieza",
       "Otro",
     ],
-    // Los pagos con la Nu de Jose se los repone papá.
-    creditLabel: "Con tu Nu (te lo repone papá)",
     paymentMethods: ["Nu", ...BASE_METHODS],
     incomeSources: ["Quincena", "Aportación", "Reembolso", "Otro"],
     incomeSourceLabel: "Origen",
