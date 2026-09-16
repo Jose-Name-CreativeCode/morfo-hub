@@ -14,6 +14,11 @@ import {
   saveSettingsRecord,
 } from "../services/settings-service.js";
 import {
+  REMINDER_FREQUENCIES,
+  REMINDER_KINDS,
+  reminderScheduleLabel,
+} from "../reminders.js";
+import {
   PAYMENT_TYPES,
   SCOPES,
   getActiveScope,
@@ -236,6 +241,212 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderRules();
   }
 
+  /* ---------- Recordatorios ---------- */
+
+  const MONTH_NAMES = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+
+  function fillSelect(id, values) {
+    const select = document.getElementById(id);
+    const previous = select.value;
+    select.replaceChildren();
+    values.forEach(({ value, label }) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    });
+    if (values.some((item) => String(item.value) === previous)) {
+      select.value = previous;
+    }
+  }
+
+  function syncReminderFields() {
+    const kind = document.getElementById("reminder-kind").value;
+    const frequency = document.getElementById("reminder-frequency").value;
+
+    document.getElementById("reminder-month-group").hidden =
+      frequency === REMINDER_FREQUENCIES.MONTHLY;
+    document.querySelectorAll(".reminder-money").forEach((element) => {
+      element.hidden = kind === REMINDER_KINDS.TASK;
+    });
+    document.getElementById("reminder-category-group").hidden =
+      kind !== REMINDER_KINDS.EXPENSE;
+    document.getElementById("reminder-funded-group").hidden =
+      scope !== "casa" || kind !== REMINDER_KINDS.EXPENSE;
+  }
+
+  function renderReminderOptions() {
+    const finance = getFinanceConfig(settings, scope);
+    fillSelect(
+      "reminder-month",
+      MONTH_NAMES.map((label, index) => ({ value: index, label })),
+    );
+    fillSelect("reminder-method", [
+      { value: "", label: "Preguntar al registrar" },
+      ...finance.paymentMethods.map((method) => ({
+        value: method.name,
+        label: method.name,
+      })),
+    ]);
+    fillSelect(
+      "reminder-category",
+      finance.categories.map((category) => ({
+        value: category,
+        label: category,
+      })),
+    );
+  }
+
+  function renderReminders() {
+    if (!isSimpleScope) return;
+    const container = document.getElementById("reminder-list");
+    const finance = getFinanceConfig(settings, scope);
+    container.replaceChildren();
+
+    if (!finance.reminders.length) {
+      container.innerHTML =
+        '<p class="empty-message">Todavía no tienes recordatorios.</p>';
+      return;
+    }
+
+    finance.reminders.forEach((reminder) => {
+      const row = document.createElement("article");
+      row.className = "reminder-settings-row";
+      const kindLabel =
+        reminder.kind === REMINDER_KINDS.TASK
+          ? "Trámite"
+          : reminder.kind === REMINDER_KINDS.CARD_PAYMENT
+            ? "Pago de tarjeta"
+            : "Gasto";
+      const detail = [
+        reminderScheduleLabel(reminder),
+        kindLabel,
+        reminder.method || "",
+        Number(reminder.amount) ? formatCurrency(reminder.amount) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      const text = document.createElement("div");
+      const name = document.createElement("strong");
+      name.textContent = reminder.name;
+      const small = document.createElement("small");
+      small.textContent = detail;
+      text.append(name, small);
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "delete-btn";
+      remove.textContent = "Eliminar";
+      remove.addEventListener("click", () => removeReminder(reminder));
+
+      row.append(text, remove);
+      container.appendChild(row);
+    });
+  }
+
+  async function removeReminder(reminder) {
+    const confirmed = await askConfirm({
+      title: "Eliminar recordatorio",
+      message: `¿Eliminar “${reminder.name}”? Lo que ya registraste se conserva.`,
+      confirmText: "Eliminar",
+    });
+    if (!confirmed) return;
+
+    const finance = getFinanceConfig(settings, scope);
+    await saveFinanceConfig(
+      {
+        reminders: finance.reminders.filter(
+          (item) => String(item.id) !== String(reminder.id),
+        ),
+      },
+      "Recordatorio eliminado.",
+    );
+  }
+
+  if (isSimpleScope) {
+    ["reminder-kind", "reminder-frequency"].forEach((id) => {
+      document
+        .getElementById(id)
+        .addEventListener("change", syncReminderFields);
+    });
+
+    document
+      .getElementById("reminder-form")
+      .addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const name = document.getElementById("reminder-name").value.trim();
+        const day = Number(document.getElementById("reminder-day").value || 0);
+
+        if (!name) {
+          showToast("Escribe el nombre del recordatorio.", { type: "error" });
+          return;
+        }
+        if (day < 1 || day > 31) {
+          showToast("El día debe estar entre 1 y 31.", { type: "error" });
+          return;
+        }
+
+        const kind = document.getElementById("reminder-kind").value;
+        const frequency = document.getElementById("reminder-frequency").value;
+        const isTask = kind === REMINDER_KINDS.TASK;
+        const finance = getFinanceConfig(settings, scope);
+        const reminder = {
+          id: `rec-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+          name,
+          kind,
+          frequency,
+          day,
+          month:
+            frequency === REMINDER_FREQUENCIES.MONTHLY
+              ? 0
+              : Number(document.getElementById("reminder-month").value || 0),
+          amount: isTask
+            ? 0
+            : Number(document.getElementById("reminder-amount").value || 0),
+          method: isTask
+            ? ""
+            : document.getElementById("reminder-method").value,
+          category:
+            kind === REMINDER_KINDS.EXPENSE
+              ? document.getElementById("reminder-category").value
+              : "",
+          fundedBy:
+            scope === "casa" && kind === REMINDER_KINDS.EXPENSE
+              ? document.getElementById("reminder-funded").value
+              : "",
+          done: {},
+        };
+
+        const button = event.currentTarget.querySelector("button[type=submit]");
+        setButtonLoading(button, true, "Guardando...");
+        try {
+          await saveFinanceConfig(
+            { reminders: [...finance.reminders, reminder] },
+            "Recordatorio agregado.",
+          );
+          document.getElementById("reminder-form").reset();
+          document.getElementById("reminder-day").value = "1";
+          syncReminderFields();
+        } finally {
+          setButtonLoading(button, false);
+        }
+      });
+  }
+
   /* ---------- Formas de pago y categorías (Personal y Casa) ---------- */
 
   function renderFinanceChips(containerId, values, onRemove, emptyText) {
@@ -304,11 +515,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           ...(settings.finance?.[scope] || {}),
           paymentMethods: finance.paymentMethods,
           categories: finance.categories,
+          reminders: finance.reminders,
           ...changes,
         },
       },
     });
     renderFinanceLists();
+    renderReminders();
+    renderReminderOptions();
     showToast(message, { type: "success" });
   }
 
@@ -525,6 +739,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     resetAccountForm();
     resetRuleForm();
     renderFinanceLists();
+    if (isSimpleScope) {
+      renderReminderOptions();
+      renderReminders();
+      syncReminderFields();
+    }
     renderAccounts();
     renderAccountOptions();
     renderRules();

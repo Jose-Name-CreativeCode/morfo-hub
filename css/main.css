@@ -3610,3 +3610,68 @@ body.rs-sheet-open {
 [data-simple-only][hidden] {
   display: none;
 }
+
+.rs-reminders .rs-ledger-head {
+  margin-bottom: 4px;
+}
+
+.rs-reminder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.rs-reminder-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rs-reminder-text small {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.rs-reminder-when.is-vencido {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.rs-reminder-when.is-hoy {
+  color: var(--peach);
+  font-weight: 600;
+}
+
+.rs-reminder-when.is-proximo {
+  color: var(--primary-dark);
+}
+
+.reminder-settings-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.reminder-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.reminder-settings-row strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.reminder-settings-row small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}

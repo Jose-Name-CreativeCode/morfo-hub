@@ -131,7 +131,9 @@ export function getFinanceConfig(settings, scope) {
       ? saved.categories
       : config.expenseCategories;
 
-  return { paymentMethods, categories };
+  const reminders = Array.isArray(saved.reminders) ? saved.reminders : [];
+
+  return { paymentMethods, categories, reminders };
 }
 
 export function isValidScope(scope) {

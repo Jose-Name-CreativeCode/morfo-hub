@@ -139,6 +139,96 @@
             <div class="settings-card-grid" id="account-settings-list"></div>
           </section>
 
+          <section
+            class="card form-shell section-spacing"
+            data-simple-only
+            hidden
+          >
+            <h2 class="section-title section-title-sm">Recordatorios</h2>
+            <p class="section-subtitle section-subtitle-compact">
+              Lo que se repite cada mes o cada año: pagos de tarjeta, servicios
+              y trámites. Aparecen en el Resumen cuando se acerca la fecha.
+            </p>
+            <div class="reminder-settings-list" id="reminder-list"></div>
+            <form id="reminder-form" class="entry-form-grid">
+              <div class="form-group form-group-full">
+                <label for="reminder-name">Nombre</label>
+                <input
+                  id="reminder-name"
+                  type="text"
+                  placeholder="Ej. Pago tarjeta Nu"
+                />
+              </div>
+              <div class="form-group">
+                <label for="reminder-kind">Tipo</label>
+                <select id="reminder-kind">
+                  <option value="gasto">Gasto</option>
+                  <option value="pago">Pago de tarjeta</option>
+                  <option value="tramite">Trámite (sin dinero)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="reminder-frequency">Cada cuándo</label>
+                <select id="reminder-frequency">
+                  <option value="mensual">Cada mes</option>
+                  <option value="semestral">Cada 6 meses</option>
+                  <option value="anual">Cada año</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="reminder-day">Día</label>
+                <input
+                  id="reminder-day"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value="1"
+                />
+              </div>
+              <div class="form-group" id="reminder-month-group" hidden>
+                <label for="reminder-month">Primer mes</label>
+                <select id="reminder-month"></select>
+              </div>
+              <div class="form-group reminder-money">
+                <label for="reminder-amount">Monto (opcional)</label>
+                <input
+                  id="reminder-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+              </div>
+              <div class="form-group reminder-money">
+                <label for="reminder-method">Pagado con</label>
+                <select id="reminder-method"></select>
+              </div>
+              <div
+                class="form-group reminder-money"
+                id="reminder-category-group"
+              >
+                <label for="reminder-category">Categoría</label>
+                <select id="reminder-category"></select>
+              </div>
+              <div
+                class="form-group reminder-money"
+                id="reminder-funded-group"
+                hidden
+              >
+                <label for="reminder-funded">¿De quién es el dinero?</label>
+                <select id="reminder-funded">
+                  <option value="papa">Papá</option>
+                  <option value="mio">Manolo</option>
+                </select>
+              </div>
+              <div class="form-group form-group-full form-group-tight">
+                <button type="submit" class="btn-primary">
+                  Agregar recordatorio
+                </button>
+              </div>
+            </form>
+          </section>
+
           <section class="dashboard-split-grid" data-simple-only hidden>
             <article class="card form-shell">
               <h2 class="section-title section-title-sm">Formas de pago</h2>

@@ -9,7 +9,10 @@ import {
   getIncomeCollection,
   saveIncomeRecord,
 } from "../services/income-service.js";
-import { getSettingsRecord } from "../services/settings-service.js";
+import {
+  getSettingsRecord,
+  saveSettingsRecord,
+} from "../services/settings-service.js";
 import { exportExpensesToExcel } from "../services/expenses-excel.js";
 import {
   getActiveScope,
@@ -44,6 +47,12 @@ import {
   isNuExpense,
   isReimbursement,
 } from "../card-ledger.js";
+import {
+  REMINDER_KINDS,
+  buildUpcomingReminders,
+  markReminderDone,
+  reminderWhenLabel,
+} from "../reminders.js";
 import {
   askConfirm,
   getTodayISO,
@@ -122,6 +131,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     incomes: [],
     paymentMethods: [],
     categories: [],
+    reminders: [],
+    pendingReminder: null,
     editingId: null,
     detailId: null,
     form: {
@@ -160,6 +171,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.incomes = incomes.filter((item) => recordMatchesScope(item, scope));
     state.paymentMethods = finance.paymentMethods;
     state.categories = finance.categories;
+    state.reminders = finance.reminders;
+    state.settings = settings;
   }
 
   /** Opciones de "Pagado con": las formas de pago configuradas en Ajustes. */
@@ -497,8 +510,142 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("rs-debt-status").classList.toggle("is-ok", debt.balance === 0);
   }
 
+  function methodOptionByName(name) {
+    return (
+      paymentOptions().find(
+        (option) =>
+          option.paymentMethod.toLowerCase() ===
+          String(name || "").toLowerCase(),
+      ) || null
+    );
+  }
+
+  /** Guarda que un recordatorio ya se cumplió este periodo. */
+  async function completeReminder(reminderId, date) {
+    const reminders = markReminderDone(state.reminders, reminderId, date);
+    state.settings = await saveSettingsRecord({
+      ...state.settings,
+      finance: {
+        ...(state.settings.finance || {}),
+        [scope]: { ...(state.settings.finance?.[scope] || {}), reminders },
+      },
+    });
+    state.reminders = reminders;
+  }
+
+  async function handleReminder(row) {
+    const { reminder, date } = row;
+
+    if (reminder.kind === REMINDER_KINDS.TASK) {
+      await completeReminder(reminder.id, date);
+      render();
+      showToast(`“${reminder.name}” marcado como hecho.`, { type: "success" });
+      return;
+    }
+
+    const isPago = reminder.kind === REMINDER_KINDS.CARD_PAYMENT;
+    const method = methodOptionByName(reminder.method);
+
+    // Sin monto o sin forma de pago se abre el formulario para completarlo.
+    if (!Number(reminder.amount) || !method) {
+      state.pendingReminder = { id: reminder.id, date };
+      openExpenseForm(null, isPago ? "pago" : "gasto");
+      $("rs-amount").value = reminder.amount ? String(reminder.amount) : "";
+      fitAmountInput($("rs-amount"));
+      $("rs-concept").value = reminder.name;
+      $("rs-date").value = date;
+      if (method) state.form.method = method;
+      if (reminder.category) state.form.category = reminder.category;
+      applyFormType();
+      return;
+    }
+
+    try {
+      if (isPago) {
+        await saveIncomeRecord({
+          id: createId(),
+          kind: CARD_PAYMENT_KIND,
+          scope,
+          date,
+          concept: reminder.name,
+          paymentMethod: method.paymentMethod,
+          paymentStatus: "Pagado",
+          totalAmount: Number(reminder.amount),
+          paidAmount: Number(reminder.amount),
+          remainingAmount: 0,
+        });
+      } else {
+        await saveExpenseRecord({
+          id: createId(),
+          scope,
+          date,
+          concept: reminder.name,
+          category: reminder.category || "Otro",
+          amount: Number(reminder.amount),
+          paymentMethod: method.paymentMethod,
+          accountId: "",
+          ...(tracksPapaDebt
+            ? { fundedBy: reminder.fundedBy || FUNDED_BY_PAPA }
+            : {}),
+          invoice: "No",
+          notes: "",
+        });
+      }
+
+      await completeReminder(reminder.id, date);
+      await loadData();
+      state.period = periodForDate(scope, date);
+      render();
+      showToast(`“${reminder.name}” registrado.`, { type: "success" });
+    } catch (error) {
+      console.error("No se pudo registrar el recordatorio:", error);
+      showToast(error?.message || "No se pudo registrar.", { type: "error" });
+    }
+  }
+
+  function renderReminders() {
+    const section = $("rs-reminders");
+    const container = $("rs-reminder-list");
+    const rows = buildUpcomingReminders(state.reminders, today);
+
+    section.hidden = !rows.length;
+    container.replaceChildren();
+
+    rows.forEach((row) => {
+      const item = el("div", "rs-reminder");
+      const text = el("div", "rs-reminder-text");
+      text.appendChild(el("strong", "", row.reminder.name));
+
+      const when = el("small", "", `${dayLabel(row.date)} · `);
+      const status = el(
+        "span",
+        `rs-reminder-when is-${row.status}`,
+        reminderWhenLabel(row.days),
+      );
+      when.appendChild(status);
+      if (Number(row.reminder.amount)) {
+        when.appendChild(el("span", "", ` · ${money(row.reminder.amount)}`));
+      }
+      text.appendChild(when);
+
+      const action = el(
+        "button",
+        "rs-btn rs-btn-soft rs-btn-sm",
+        row.reminder.kind === REMINDER_KINDS.TASK
+          ? "Ya lo hice"
+          : "Ya lo pagué",
+      );
+      action.type = "button";
+      action.addEventListener("click", () => handleReminder(row));
+
+      item.append(text, action);
+      container.appendChild(item);
+    });
+  }
+
   function render() {
     const summary = currentSummary();
+    renderReminders();
     renderPeriod();
     renderSummary(summary);
     renderPapaDebt();
@@ -534,6 +681,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.classList.remove("rs-sheet-open");
     state.editingId = null;
     state.detailId = null;
+    state.pendingReminder = null;
     lastFocus?.focus?.();
   }
 
@@ -850,6 +998,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         paidAmount: amount,
         remainingAmount: 0,
       });
+      if (state.pendingReminder) {
+        await completeReminder(
+          state.pendingReminder.id,
+          state.pendingReminder.date,
+        );
+        state.pendingReminder = null;
+      }
       await loadData();
       state.period = periodForDate(scope, date);
       state.category = "";
@@ -919,6 +1074,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         invoice: existing.invoice || "No",
         notes: existing.notes || "",
       });
+      if (state.pendingReminder) {
+        await completeReminder(
+          state.pendingReminder.id,
+          state.pendingReminder.date,
+        );
+        state.pendingReminder = null;
+      }
       await loadData();
       state.period = periodForDate(scope, date);
       state.category = "";
