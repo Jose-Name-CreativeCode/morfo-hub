@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fronted = summary.expenses
       .filter((expense) => fundedBy(expense) === FUNDED_BY_ME)
       .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    chips.push(["Pusiste tú", money(fronted)]);
+    chips.push(["Pago de tarjeta Manolo", money(fronted)]);
     chips.push(["Dinero de papá", money(summary.spent - fronted)]);
     setSplitChips(chips);
   }
