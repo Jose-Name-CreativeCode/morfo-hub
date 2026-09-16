@@ -488,12 +488,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     $("rs-debt-label").textContent =
-      debt.balance >= 0 ? "Papá te debe" : "Papá te adelantó";
+      debt.balance >= 0 ? "Pendiente de cobrar" : "Papá te adelantó";
     $("rs-debt-value").textContent = money(Math.abs(debt.balance));
     $("rs-debt-status").textContent =
       debt.balance === 0
         ? "Están a mano"
-        : `Pusiste ${money(debt.frontedTotal)} · te ha dado ${money(debt.repaid)}`;
+        : `Gasto Nu Casa ${money(debt.frontedTotal)} · Abono a tarjeta Nu Casa ${money(debt.repaid)}`;
     $("rs-debt-status").classList.toggle("is-ok", debt.balance === 0);
   }
 
