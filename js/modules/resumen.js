@@ -449,7 +449,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         `${expense.category || "Sin categoría"} · ${expenseMethodLabel(expense)}`,
       );
       if (tracksPapaDebt && fundedBy(expense) === FUNDED_BY_ME) {
-        meta.appendChild(el("span", "rs-tag", "Te lo repone papá"));
+        meta.appendChild(el("span", "rs-tag", "Pago Manolo"));
       }
       text.appendChild(meta);
 
@@ -588,7 +588,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("rs-funded-chips"),
       [
         { key: FUNDED_BY_PAPA, label: "Papá" },
-        { key: FUNDED_BY_ME, label: "Mío (me lo repone)" },
+        { key: FUNDED_BY_ME, label: "Manolo" },
       ],
       form.fundedBy,
       (option) => {
@@ -754,9 +754,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (tracksPapaDebt && !isPago) {
       rows.push([
         "Dinero de",
-        fundedBy(expense) === FUNDED_BY_ME
-          ? "Tuyo (te lo repone papá)"
-          : "Papá",
+        fundedBy(expense) === FUNDED_BY_ME ? "Manolo" : "Papá",
       ]);
     }
     if (expense.notes) rows.push(["Nota", expense.notes]);
