@@ -366,7 +366,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   function ensureIncomeIds() {
     const incomes = getIncomes();
     let changed = false;
-    let counter = 1;
+
+    // Primero el folio más alto que ya existe: si no, se repetiría uno usado
+    // y la base rechazaría el cobro.
+    let counter =
+      incomes.reduce(
+        (max, income) =>
+          Math.max(max, extractNumericId(income.publicId, "ING")),
+        0,
+      ) + 1;
 
     const updated = incomes.map((income) => {
       const nextIncome = { ...income };
@@ -374,11 +382,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!nextIncome.publicId) {
         nextIncome.publicId = `ING-${String(counter++).padStart(4, "0")}`;
         changed = true;
-      } else {
-        counter = Math.max(
-          counter,
-          extractNumericId(nextIncome.publicId, "ING") + 1,
-        );
       }
 
       return nextIncome;

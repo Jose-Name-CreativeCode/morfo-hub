@@ -51,6 +51,25 @@ function mapIncomePayload(body = {}, userId, existing = null) {
   };
 }
 
+/**
+ * Evita que un folio repetido tumbe el guardado: si ya lo usa otro cobro, el
+ * registro se guarda sin folio y la app le asigna el siguiente libre.
+ */
+async function withFreePublicId(payload) {
+  if (!payload.publicId) return payload;
+
+  const owner = await prisma.incomeRecord.findUnique({
+    where: { publicId: payload.publicId },
+    select: { id: true },
+  });
+
+  if (owner && owner.id !== payload.id) {
+    return { ...payload, publicId: null };
+  }
+
+  return payload;
+}
+
 function mapIncomeRecord(record) {
   const data = parseJsonRecord(record.rawJson, {});
   return {
@@ -97,10 +116,11 @@ incomeRouter.post("/", async (request, response) => {
     return;
   }
 
+  const safeCreatePayload = await withFreePublicId(payload);
   const saved = await prisma.incomeRecord.upsert({
     where: { id: payload.id },
-    update: payload,
-    create: payload,
+    update: safeCreatePayload,
+    create: safeCreatePayload,
   });
 
   response.status(201).json(mapIncomeRecord(saved));
@@ -128,10 +148,11 @@ incomeRouter.put("/:id", async (request, response) => {
     existing,
   );
 
+  const safePayload = await withFreePublicId(payload);
   const updated = await prisma.incomeRecord.upsert({
     where: { id: request.params.id },
-    update: payload,
-    create: payload,
+    update: safePayload,
+    create: safePayload,
   });
 
   response.json(mapIncomeRecord(updated));
