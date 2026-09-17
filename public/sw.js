@@ -1,4 +1,4 @@
-const CACHE_NAME = "morfo-hub-shell-v5";
+const CACHE_NAME = "morfo-hub-shell-v6";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "/dashboard.html",
   "/resumen.html",
   "/comercial.html",
+  "/dinero.html",
   "/movements.html",
   "/finance-settings.html",
   "/css/main.css",

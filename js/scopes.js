@@ -12,6 +12,7 @@ export const SCOPES = {
     navKeys: [
       "comercial",
       "quotes",
+      "dinero",
       "clients",
       "income",
       "expenses",

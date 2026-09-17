@@ -4130,3 +4130,34 @@ body.rs-sheet-open {
     left: 16px;
   }
 }
+
+.dn-cols {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr 1.1fr;
+  align-items: start;
+}
+
+.dn-taxes {
+  gap: 14px;
+}
+
+.dn-taxes .rs-detail-list div {
+  flex-wrap: wrap;
+}
+
+.dn-taxes .rs-detail-list dt {
+  flex: 1 1 60%;
+}
+
+.dn-taxes .rs-detail-list dd {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .dn-cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+}

@@ -24,6 +24,7 @@ export default defineConfig({
         dashboard: resolve(__dirname, "dashboard.html"),
         resumen: resolve(__dirname, "resumen.html"),
         comercial: resolve(__dirname, "comercial.html"),
+        dinero: resolve(__dirname, "dinero.html"),
         movements: resolve(__dirname, "movements.html"),
         financeSettings: resolve(__dirname, "finance-settings.html"),
         clients: resolve(__dirname, "clients.html"),

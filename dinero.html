@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Morfo Hub | Dinero</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Dinero" data-nav-key="dinero" class="cm-page">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+
+        <main class="page-content cm-content">
+          <section class="rs-period-row">
+            <div class="rs-period-nav">
+              <button
+                type="button"
+                class="rs-icon-btn"
+                id="dn-prev"
+                aria-label="Mes anterior"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <div class="rs-period-text">
+                <span class="rs-period-kicker">Morfo · dinero</span>
+                <h1 class="rs-period-title" id="dn-month">&nbsp;</h1>
+              </div>
+              <button
+                type="button"
+                class="rs-icon-btn"
+                id="dn-next"
+                aria-label="Mes siguiente"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          </section>
+
+          <section class="cm-kpis" aria-label="Resumen del mes">
+            <article class="cm-kpi cm-kpi-lead">
+              <span>Cobrado en el mes</span>
+              <strong id="dn-collected">$0</strong>
+              <small id="dn-collected-note"></small>
+            </article>
+            <article class="cm-kpi">
+              <span>Gastos</span>
+              <strong id="dn-expenses">$0</strong>
+              <small id="dn-expenses-note"></small>
+            </article>
+            <article class="cm-kpi">
+              <span>Queda para repartir</span>
+              <strong id="dn-profit" class="cm-good">$0</strong>
+              <small>Cobrado menos IVA, gastos e ISR</small>
+            </article>
+          </section>
+
+          <div class="dn-cols">
+            <section class="cm-block" aria-labelledby="dn-tax-title">
+              <div class="cm-block-head">
+                <h2 id="dn-tax-title">Impuestos del mes</h2>
+                <small id="dn-tax-due"></small>
+              </div>
+              <div class="rs-summary dn-taxes">
+                <div class="rs-left">
+                  <span class="rs-left-label">Aparta para impuestos</span>
+                  <strong class="rs-left-value" id="dn-taxes-total">$0</strong>
+                </div>
+                <dl class="rs-detail-list" id="dn-tax-list"></dl>
+                <p class="rs-bar-note" id="dn-tax-note"></p>
+              </div>
+            </section>
+
+            <section class="cm-block" aria-labelledby="dn-split-title">
+              <div class="cm-block-head">
+                <h2 id="dn-split-title">Reparto</h2>
+                <small>Según el porcentaje de cada cobro</small>
+              </div>
+              <div id="dn-partners"></div>
+
+              <div class="cm-block-head" style="margin-top: 14px">
+                <h2>Cobros del mes</h2>
+                <small id="dn-income-count"></small>
+              </div>
+              <div id="dn-incomes"></div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="rs-backdrop" id="dn-backdrop" hidden></div>
+    <form
+      class="rs-sheet"
+      id="dn-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dn-sheet-title"
+      novalidate
+      hidden
+    >
+      <div class="rs-grab"></div>
+      <div class="rs-sheet-head">
+        <div>
+          <h3 id="dn-sheet-title"></h3>
+          <small id="dn-sheet-meta"></small>
+        </div>
+        <button
+          type="button"
+          class="rs-icon-btn"
+          id="dn-sheet-close"
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <strong class="rs-detail-amount" id="dn-sheet-amount"></strong>
+      <div class="rs-field">
+        <span>¿Se facturó?</span>
+        <div class="rs-chips" id="dn-invoiced-chips"></div>
+      </div>
+      <div class="rs-field" id="dn-withheld-field">
+        <label for="dn-withheld">ISR retenido por el cliente</label>
+        <input
+          type="text"
+          id="dn-withheld"
+          inputmode="decimal"
+          placeholder="0.00"
+        />
+      </div>
+      <div class="rs-field">
+        <span>Reparto</span>
+        <div class="rs-chips" id="dn-split-chips"></div>
+      </div>
+      <p class="rs-sheet-note" id="dn-split-note"></p>
+      <p class="rs-error" id="dn-sheet-error" role="alert"></p>
+      <button type="submit" class="cm-btn cm-btn-main" id="dn-sheet-submit">
+        Guardar
+      </button>
+    </form>
+
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/dinero.js"></script>
+  </body>
+</html>
