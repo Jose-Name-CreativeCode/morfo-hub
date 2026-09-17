@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Morfo Hub | Comercial</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Comercial" data-nav-key="comercial" class="cm-page">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+
+        <main class="page-content cm-content">
+          <section class="cm-kpis" aria-label="Resumen comercial">
+            <article class="cm-kpi cm-kpi-lead">
+              <span>Por cobrar</span>
+              <strong id="cm-pending">$0</strong>
+              <small id="cm-pending-note"></small>
+            </article>
+            <article class="cm-kpi">
+              <span>Cobrado este mes</span>
+              <strong id="cm-collected" class="cm-good">$0</strong>
+              <small id="cm-collected-note"></small>
+            </article>
+            <article class="cm-kpi">
+              <span>En el embudo</span>
+              <strong id="cm-pipeline">$0</strong>
+              <small id="cm-pipeline-note"></small>
+            </article>
+          </section>
+
+          <section class="cm-block" aria-labelledby="cm-funnel-title">
+            <div class="cm-block-head">
+              <h2 id="cm-funnel-title">Embudo</h2>
+              <small>Toca una cotización para moverla</small>
+            </div>
+            <div class="cm-funnel" id="cm-funnel"></div>
+          </section>
+
+          <section class="cm-block" aria-labelledby="cm-charges-title">
+            <div class="cm-block-head">
+              <h2 id="cm-charges-title">Cobros</h2>
+              <a class="text-link" href="income.html?scope=morfo">Ver todos</a>
+            </div>
+            <div id="cm-charges"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="cm-bottom-bar">
+      <a class="cm-btn cm-btn-soft" href="movements.html?scope=morfo"
+        >+ Movimiento</a
+      >
+      <a class="cm-btn cm-btn-main" href="quotes.html?scope=morfo"
+        >+ Cotización</a
+      >
+    </div>
+
+    <div class="rs-backdrop" id="cm-backdrop" hidden></div>
+    <div
+      class="rs-sheet"
+      id="cm-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cm-sheet-title"
+      hidden
+    >
+      <div class="rs-grab"></div>
+      <div class="rs-sheet-head">
+        <div>
+          <h3 id="cm-sheet-title"></h3>
+          <small id="cm-sheet-meta"></small>
+        </div>
+        <button
+          type="button"
+          class="rs-icon-btn"
+          id="cm-sheet-close"
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <strong class="rs-detail-amount" id="cm-sheet-amount"></strong>
+      <dl class="rs-detail-list" id="cm-sheet-list"></dl>
+      <div class="cm-stage-picker" id="cm-stage-picker"></div>
+      <a
+        class="cm-btn cm-btn-main"
+        id="cm-sheet-open"
+        href="quotes.html?scope=morfo"
+      >
+        Abrir cotización y PDF
+      </a>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/comercial.js"></script>
+  </body>
+</html>

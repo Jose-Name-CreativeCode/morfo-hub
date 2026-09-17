@@ -1,4 +1,5 @@
 import { protectPage } from "../services/auth.js";
+import { getQuoteFunnelStage } from "../quote-stages.js";
 import { getClientsCollection } from "../services/clients-service.js";
 import {
   getIncomeCollection,
@@ -587,55 +588,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "Cotización guardada correctamente.";
   }
 
-  function getQuoteFunnelStage(quote) {
-    const paymentStatus = normalizeStatus(quote.paymentStatus, "no pagada");
-    const status = normalizeStatus(quote.status, "borrador");
-
-    if (status === "archivada") {
-      return {
-        key: "archived",
-        label: "Archivada",
-        className: "funnel-archived",
-      };
-    }
-
-    if (paymentStatus === "pagada total") {
-      return {
-        key: "paid",
-        label: "Pagado total",
-        className: "funnel-paid",
-      };
-    }
-
-    if (paymentStatus === "anticipo pagado") {
-      return {
-        key: "advance",
-        label: "Anticipo recibido",
-        className: "funnel-advance",
-      };
-    }
-
-    if (status === "aprobada") {
-      return {
-        key: "advance",
-        label: "Esperando anticipo",
-        className: "funnel-advance",
-      };
-    }
-
-    if (status === "enviada") {
-      return {
-        key: "sent",
-        label: "Cotización enviada",
-        className: "funnel-sent",
-      };
-    }
-
-    return {
-      key: "prospect",
-      label: "Prospecto",
-      className: "funnel-prospect",
-    };
+  /** Abre la ficha de una cotización si viene en la dirección (?quote=id). */
+  function openQuoteFromUrl() {
+    const quoteId = new URLSearchParams(window.location.search).get("quote");
+    if (quoteId && getQuoteById(quoteId)) openManageModal(quoteId);
   }
 
   function normalizeIncomePaymentStatus(value) {
@@ -2763,7 +2719,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let quotes = getQuotes();
     const wasEditing = Boolean(editingQuoteId);
-    setButtonLoading(submitButton, true, wasEditing ? "Actualizando..." : "Guardando...");
+    setButtonLoading(
+      submitButton,
+      true,
+      wasEditing ? "Actualizando..." : "Guardando...",
+    );
 
     try {
       if (editingQuoteId) {
@@ -2901,6 +2861,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderQuotes();
     resetForm();
     applyClientFromUrl();
+    openQuoteFromUrl();
   } catch (error) {
     console.error("No se pudo inicializar cotizaciones:", error);
     showToast(

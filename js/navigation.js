@@ -7,6 +7,7 @@ import {
 
 const NAV_ITEMS = [
   { key: "resumen", label: "Resumen", href: "resumen.html" },
+  { key: "comercial", label: "Comercial", href: "comercial.html" },
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
   { key: "movements", label: "Movimientos", href: "movements.html" },
   { key: "clients", label: "Clientes", href: "clients.html" },
