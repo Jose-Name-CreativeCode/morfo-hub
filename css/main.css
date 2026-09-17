@@ -4161,3 +4161,14 @@ body.rs-sheet-open {
     gap: 18px;
   }
 }
+
+.settings-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-tools .btn-ghost {
+  text-decoration: none;
+  text-align: center;
+}

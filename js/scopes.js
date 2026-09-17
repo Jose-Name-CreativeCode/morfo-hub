@@ -9,19 +9,8 @@ export const SCOPES = {
   morfo: {
     key: "morfo",
     label: "Morfo",
-    navKeys: [
-      "comercial",
-      "quotes",
-      "dinero",
-      "clients",
-      "income",
-      "expenses",
-      "dashboard",
-      "movements",
-      "reports",
-      "maintenance",
-      "settings",
-    ],
+    navKeys: ["comercial", "quotes", "dinero", "settings"],
+    navLabels: { settings: "Ajustes" },
     homeKey: "comercial",
     expenseCategories: [
       "Publicidad",

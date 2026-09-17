@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
-    <title>Morfo Hub | Configuración</title>
+    <meta
+      name="robots"
+      content="noindex, nofollow, noarchive, nosnippet, noimageindex"
+    />
+    <title>Morfo Hub | Ajustes</title>
     <link rel="stylesheet" href="css/main.css" />
   </head>
-  <body data-page-title="Configuración" data-nav-key="settings">
+  <body data-page-title="Ajustes" data-nav-key="settings">
     <div class="app-layout">
       <aside class="sidebar" data-app-sidebar></aside>
 
@@ -16,12 +19,8 @@
 
         <main class="page-content">
           <section class="hero-panel hero-panel-settings">
-            <div class="dashboard-kicker hero-kicker-settings">
-              Configuración
-            </div>
-            <h1 class="section-title dashboard-title">
-              Configuración general
-            </h1>
+            <div class="dashboard-kicker hero-kicker-settings">Morfo</div>
+            <h1 class="section-title dashboard-title">Ajustes de Morfo</h1>
             <p class="section-subtitle hero-panel-subtitle">
               Administro aquí la información base de la agencia, condiciones
               comerciales y textos por defecto para cotizaciones.
@@ -247,7 +246,9 @@ del servicio de Morfo Studio.</textarea
 
                 <div class="service-template-card">
                   <div class="form-group">
-                    <label for="service-template-name">Nombre del servicio</label>
+                    <label for="service-template-name"
+                      >Nombre del servicio</label
+                    >
                     <input
                       type="text"
                       id="service-template-name"
@@ -276,7 +277,10 @@ del servicio de Morfo Studio.</textarea
 
                   <div class="form-group">
                     <label for="service-template-includes">Incluye</label>
-                    <textarea id="service-template-includes" rows="9"></textarea>
+                    <textarea
+                      id="service-template-includes"
+                      rows="9"
+                    ></textarea>
                   </div>
                 </div>
               </div>
@@ -285,6 +289,71 @@ del servicio de Morfo Studio.</textarea
                 Guardar plantillas de servicios
               </button>
             </form>
+          </section>
+
+          <section class="dashboard-split-grid section-spacing">
+            <article class="card form-shell">
+              <h2 class="section-title section-title-sm">Socios y reparto</h2>
+              <p class="section-subtitle section-subtitle-compact">
+                El reparto por omisión de cada cobro. En cada proyecto se puede
+                cambiar desde Dinero.
+              </p>
+              <form id="partners-form" class="entry-form-grid">
+                <div class="form-group">
+                  <label for="partner-one-name">Socio 1</label>
+                  <input id="partner-one-name" type="text" placeholder="Jose" />
+                </div>
+                <div class="form-group">
+                  <label for="partner-one-share">% por omisión</label>
+                  <input
+                    id="partner-one-share"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="partner-two-name">Socio 2</label>
+                  <input id="partner-two-name" type="text" placeholder="Vero" />
+                </div>
+                <div class="form-group">
+                  <label for="partner-two-share">% por omisión</label>
+                  <input
+                    id="partner-two-share"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                </div>
+                <div class="form-group form-group-full form-group-tight">
+                  <button type="submit" class="btn-primary">
+                    Guardar reparto
+                  </button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card dashboard-panel">
+              <h2 class="section-title section-title-sm">Herramientas</h2>
+              <p class="section-subtitle section-subtitle-compact">
+                Las pantallas de detalle que ya no están en el menú.
+              </p>
+              <div class="settings-tools">
+                <a class="btn-ghost" href="clients.html?scope=morfo"
+                  >Clientes</a
+                >
+                <a class="btn-ghost" href="income.html?scope=morfo">Cobros</a>
+                <a class="btn-ghost" href="expenses.html?scope=morfo">Gastos</a>
+                <a class="btn-ghost" href="movements.html?scope=morfo">
+                  Captura rápida
+                </a>
+                <a class="btn-ghost" href="maintenance.html?scope=morfo">
+                  Revisar mis datos
+                </a>
+              </div>
+            </article>
           </section>
 
           <section class="table-wrapper">

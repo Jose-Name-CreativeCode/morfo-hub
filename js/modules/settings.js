@@ -46,7 +46,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     "delete-service-template",
   );
   const serviceTemplateName = document.getElementById("service-template-name");
-  const serviceTemplateTitle = document.getElementById("service-template-title");
+  const serviceTemplateTitle = document.getElementById(
+    "service-template-title",
+  );
   const serviceTemplateDescription = document.getElementById(
     "service-template-description",
   );
@@ -322,9 +324,80 @@ document.addEventListener("DOMContentLoaded", async () => {
     showToast("Plantilla eliminada.", { type: "success" });
   });
 
+  // ===== SOCIOS Y REPARTO =====
+  const DEFAULT_PARTNERS = [
+    { key: "jose", name: "Jose", share: 50 },
+    { key: "vero", name: "Vero", share: 50 },
+  ];
+
+  function getPartners() {
+    const saved = currentSettings?.finance?.morfo?.partners;
+    return Array.isArray(saved) && saved.length === 2
+      ? saved
+      : DEFAULT_PARTNERS;
+  }
+
+  function renderPartners() {
+    const [first, second] = getPartners();
+    document.getElementById("partner-one-name").value = first.name;
+    document.getElementById("partner-one-share").value = first.share;
+    document.getElementById("partner-two-name").value = second.name;
+    document.getElementById("partner-two-share").value = second.share;
+  }
+
+  document
+    .getElementById("partners-form")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const [first, second] = getPartners();
+      const partners = [
+        {
+          key: first.key || "socio-1",
+          name: document.getElementById("partner-one-name").value.trim(),
+          share: Number(
+            document.getElementById("partner-one-share").value || 0,
+          ),
+        },
+        {
+          key: second.key || "socio-2",
+          name: document.getElementById("partner-two-name").value.trim(),
+          share: Number(
+            document.getElementById("partner-two-share").value || 0,
+          ),
+        },
+      ];
+
+      if (!partners[0].name || !partners[1].name) {
+        showToast("Escribe el nombre de los dos socios.", { type: "error" });
+        return;
+      }
+
+      if (partners[0].share + partners[1].share !== 100) {
+        showToast("Los dos porcentajes deben sumar 100.", { type: "error" });
+        return;
+      }
+
+      const button = event.currentTarget.querySelector("button[type=submit]");
+      setButtonLoading(button, true, "Guardando...");
+      try {
+        currentSettings = await saveSettingsRecord({
+          ...currentSettings,
+          finance: {
+            ...(currentSettings.finance || {}),
+            morfo: { ...(currentSettings.finance?.morfo || {}), partners },
+          },
+        });
+        renderPartners();
+        showToast("Reparto guardado.", { type: "success" });
+      } finally {
+        setButtonLoading(button, false);
+      }
+    });
+
   // ===== INIT =====
   try {
     await loadSettings();
+    renderPartners();
   } finally {
     setPageLoading(false);
   }

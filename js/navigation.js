@@ -232,18 +232,23 @@ const PAGES_REPLACED_BY_RESUMEN = [
   "expenses",
 ];
 
-function redirectToResumenIfNeeded(activeKey) {
+// En Morfo, el antiguo Inicio y los Reportes viven ahora en Comercial y Dinero.
+const MORFO_REPLACEMENTS = { dashboard: "comercial.html", reports: "dinero.html" };
+
+function redirectIfNeeded(activeKey) {
   const scope = getActiveScope();
   const scopeConfig = getScopeConfig(scope);
 
-  if (
-    scopeConfig.homeKey !== "resumen" ||
-    !PAGES_REPLACED_BY_RESUMEN.includes(activeKey)
-  ) {
-    return false;
+  if (scopeConfig.homeKey === "resumen") {
+    if (!PAGES_REPLACED_BY_RESUMEN.includes(activeKey)) return false;
+    window.location.replace(withScopeParam("resumen.html", scope));
+    return true;
   }
 
-  window.location.replace(withScopeParam("resumen.html", scope));
+  const replacement = MORFO_REPLACEMENTS[activeKey];
+  if (!replacement) return false;
+
+  window.location.replace(withScopeParam(replacement, scope));
   return true;
 }
 
@@ -256,7 +261,7 @@ function renderAppShell() {
   const pageTitle = document.body.dataset.pageTitle || "Morfo Hub";
   const activeKey = document.body.dataset.navKey || inferNavKey();
 
-  if (redirectToResumenIfNeeded(activeKey)) return;
+  if (redirectIfNeeded(activeKey)) return;
 
   renderSidebar(sidebar, activeKey);
   renderHeader(header, pageTitle);
