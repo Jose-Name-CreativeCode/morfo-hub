@@ -7,7 +7,7 @@ import {
 
 const NAV_ITEMS = [
   { key: "resumen", label: "Resumen", href: "resumen.html" },
-  { key: "comercial", label: "Comercial", href: "comercial.html" },
+  { key: "comercial", label: "Tablero", href: "comercial.html" },
   { key: "dinero", label: "Dinero", href: "dinero.html" },
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
   { key: "movements", label: "Movimientos", href: "movements.html" },
@@ -232,8 +232,11 @@ const PAGES_REPLACED_BY_RESUMEN = [
   "expenses",
 ];
 
-// En Morfo, el antiguo Inicio y los Reportes viven ahora en Comercial y Dinero.
-const MORFO_REPLACEMENTS = { dashboard: "comercial.html", reports: "dinero.html" };
+// En Morfo, el antiguo Inicio y los Reportes viven ahora en Tablero y Dinero.
+const MORFO_REPLACEMENTS = {
+  dashboard: "comercial.html",
+  reports: "dinero.html",
+};
 
 function redirectIfNeeded(activeKey) {
   const scope = getActiveScope();

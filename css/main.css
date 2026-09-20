@@ -4172,3 +4172,699 @@ body.rs-sheet-open {
   text-decoration: none;
   text-align: center;
 }
+
+/* ==========================================================
+   Tablero de Morfo
+   Lenguaje propio: sin tarjetas redondeadas, filetes de un pixel,
+   números monoespaciados y un solo color de señal.
+   ========================================================== */
+
+.tb-page {
+  --bg: #050605;
+  --panel: #10140f;
+  --panel-2: #171d16;
+  --border: #263024;
+  --text: #e9efe6;
+  --muted: #8b9a87;
+  --primary: #4b7c2a;
+  --primary-dark: #7fb84a;
+
+  --tb-signal: #c2f24a;
+  --tb-mint: #6fe3b0;
+  --tb-coral: #ff6b5a;
+  --tb-amber: #f2b33d;
+  --tb-display: "Bricolage Grotesque", "Trebuchet MS", var(--font);
+  --tb-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+.tb-content {
+  display: grid;
+  gap: 28px;
+  align-content: start;
+  max-width: 1180px;
+  width: 100%;
+  padding-bottom: 96px;
+}
+
+/* Etiquetas y títulos ------------------------------------- */
+
+.tb-label,
+.tb-head small {
+  font-family: var(--tb-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tb-label {
+  color: var(--tb-signal);
+}
+
+.tb-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tb-head h2 {
+  font-family: var(--tb-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.tb-note {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tb-note:empty {
+  display: none;
+}
+
+.tb-empty {
+  padding: 16px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tb-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-family: var(--tb-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tb-signal);
+  border-bottom: 1px solid currentColor;
+}
+
+/* 1. La frase de estado ----------------------------------- */
+
+.tb-state {
+  display: grid;
+  gap: 14px;
+}
+
+.tb-headline {
+  font-family: var(--tb-display);
+  font-size: clamp(1.5rem, 4.2vw, 2.15rem);
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.tb-headline b {
+  color: var(--tb-signal);
+  font-weight: 800;
+}
+
+.tb-headline u {
+  color: var(--tb-coral);
+  text-decoration: none;
+}
+
+.tb-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+}
+
+.tb-figure {
+  padding: 12px 12px 12px 0;
+  border-right: 1px solid var(--border);
+}
+
+.tb-figure:last-child {
+  border-right: 0;
+}
+
+.tb-figure span {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--tb-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tb-figure strong {
+  font-family: var(--tb-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-figure.is-in strong {
+  color: var(--tb-mint);
+}
+
+.tb-figure.is-out strong {
+  color: var(--tb-coral);
+}
+
+/* 2. El riel del mes -------------------------------------- */
+
+.tb-rail {
+  position: relative;
+  height: 84px;
+  border: 1px solid var(--border);
+  background: linear-gradient(var(--panel), var(--bg));
+}
+
+.tb-rail-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--border);
+}
+
+.tb-tick {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 0;
+  transform: translateX(-50%);
+}
+
+.tb-tick i {
+  position: absolute;
+  left: 0;
+  width: 2px;
+  background: var(--tb-mint);
+}
+
+.tb-tick.is-in i {
+  bottom: 0;
+}
+
+.tb-tick.is-out i {
+  top: 0;
+  background: var(--muted);
+}
+
+.tb-tick b {
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  transform: translateX(-50%);
+  font-family: var(--tb-mono);
+  font-size: 0.6rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.tb-rail-today,
+.tb-rail-due {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+}
+
+.tb-rail-today {
+  background: var(--tb-signal);
+}
+
+.tb-rail-due {
+  background: var(--tb-coral);
+  opacity: 0.75;
+}
+
+.tb-rail-today::after,
+.tb-rail-due::after {
+  position: absolute;
+  top: -2px;
+  left: 4px;
+  font-family: var(--tb-mono);
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+
+.tb-rail-today::after {
+  content: "hoy";
+  color: var(--tb-signal);
+}
+
+.tb-rail-due::after {
+  content: "17 · SAT";
+  color: var(--tb-coral);
+}
+
+/* Dos columnas en pantalla ancha --------------------------- */
+
+.tb-cols {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 28px 34px;
+  align-items: start;
+}
+
+.tb-col {
+  display: grid;
+  gap: 28px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* 3. Qué sigue -------------------------------------------- */
+
+.tb-tasks {
+  display: grid;
+}
+
+.tb-task {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+
+.tb-task:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.tb-flag {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  font-family: var(--tb-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tb-flag.is-hot {
+  border-color: var(--tb-coral);
+  color: var(--tb-coral);
+}
+
+.tb-flag.is-warm {
+  border-color: var(--tb-amber);
+  color: var(--tb-amber);
+}
+
+.tb-task-text {
+  min-width: 0;
+}
+
+.tb-task-text b {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.tb-task-text span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.tb-task-do {
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-family: var(--tb-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tb-task-do:hover {
+  border-color: var(--tb-signal);
+  color: var(--tb-signal);
+}
+
+/* 4. Embudo ------------------------------------------------ */
+
+.tb-funnel {
+  display: grid;
+  gap: 2px;
+}
+
+.tb-stage {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) 96px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tb-stage > span:first-child {
+  font-family: var(--tb-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tb-stage.is-on > span:first-child {
+  color: var(--tb-signal);
+}
+
+.tb-stage-bar {
+  position: relative;
+  display: block;
+  height: 22px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.tb-stage-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--primary);
+  border-right: 1px solid var(--primary-dark);
+}
+
+.tb-stage:hover .tb-stage-bar i,
+.tb-stage.is-on .tb-stage-bar i {
+  background: var(--tb-signal);
+}
+
+.tb-stage-bar em {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--tb-mono);
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--text);
+}
+
+.tb-stage strong {
+  font-family: var(--tb-mono);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tb-deals {
+  display: grid;
+  margin-top: 12px;
+}
+
+.tb-deal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tb-deals .tb-deal:last-of-type {
+  border-bottom: 1px solid var(--border);
+}
+
+.tb-deal b {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.tb-deal > span > span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tb-deal-right {
+  text-align: right;
+}
+
+.tb-deal-right strong {
+  display: block;
+  font-family: var(--tb-mono);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-deal-right em {
+  display: block;
+  font-family: var(--tb-mono);
+  font-style: normal;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tb-deal-right em.is-cold {
+  color: var(--tb-amber);
+}
+
+/* 5. Impuestos y reparto ----------------------------------- */
+
+.tb-tax {
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.tb-tax div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  background: var(--panel);
+  font-size: 0.85rem;
+}
+
+.tb-tax div.is-total {
+  background: var(--panel-2);
+  font-weight: 600;
+}
+
+.tb-tax span {
+  color: var(--muted);
+}
+
+.tb-tax div.is-total span {
+  color: var(--text);
+}
+
+.tb-tax strong {
+  font-family: var(--tb-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tb-split {
+  display: flex;
+  height: 40px;
+  border: 1px solid var(--border);
+}
+
+.tb-split:empty {
+  display: none;
+}
+
+.tb-split i {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--tb-mono);
+  font-style: normal;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.tb-split i:nth-child(odd) {
+  background: var(--tb-signal);
+  color: #0b0f08;
+}
+
+.tb-split i:nth-child(even) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.tb-split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+
+.tb-split-legend span {
+  display: grid;
+  gap: 2px;
+}
+
+.tb-split-legend b {
+  font-family: var(--tb-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.tb-split-legend strong {
+  font-family: var(--tb-mono);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Botones de abajo ----------------------------------------- */
+
+.tb-dock {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.tb-dock-btn {
+  display: grid;
+  place-items: center;
+  padding: 12px 20px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-family: var(--tb-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tb-dock-btn:hover {
+  border-color: var(--tb-signal);
+  color: var(--tb-signal);
+}
+
+.tb-dock-btn.is-main {
+  background: var(--tb-signal);
+  border-color: var(--tb-signal);
+  color: #0b0f08;
+  font-weight: 600;
+}
+
+.tb-dock-btn.is-main:hover {
+  color: #0b0f08;
+  filter: brightness(1.08);
+}
+
+/* Ficha de la cotización ----------------------------------- */
+
+.tb-stage-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.tb-chip {
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-family: var(--tb-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tb-chip:hover {
+  border-color: var(--tb-signal);
+  color: var(--tb-signal);
+}
+
+.tb-sheet .rs-detail-amount {
+  font-family: var(--tb-mono);
+}
+
+@media (max-width: 900px) {
+  .tb-cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .tb-content {
+    gap: 24px;
+    padding-bottom: 88px;
+  }
+
+  .tb-headline {
+    max-width: none;
+  }
+
+  .tb-stage {
+    grid-template-columns: 80px minmax(0, 1fr) 92px;
+  }
+
+  .tb-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    gap: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--border);
+    background: rgba(5, 6, 5, 0.94);
+    backdrop-filter: blur(8px);
+  }
+
+  .tb-dock-btn {
+    flex: 1;
+    padding: 17px 10px;
+    border: 0;
+  }
+
+  .tb-dock-btn + .tb-dock-btn {
+    border-left: 1px solid var(--border);
+  }
+
+  body.sidebar-open .tb-dock {
+    display: none;
+  }
+
+  .tb-page .toast-container {
+    bottom: 84px;
+    right: 16px;
+    left: 16px;
+  }
+}

@@ -6,7 +6,12 @@ import {
 import { getExpensesCollection } from "../services/expenses-service.js";
 import { getSettingsRecord } from "../services/settings-service.js";
 import { getActiveScope, withScopeParam } from "../scopes.js";
-import { IVA_RATE, buildMonthlyTaxSummary, isInvoiced } from "../tax-mx.js";
+import {
+  IVA_RATE,
+  buildMonthlyTaxSummary,
+  declarationDueDate,
+  isInvoiced,
+} from "../tax-mx.js";
 import {
   formatCurrency,
   getTodayISO,
@@ -75,8 +80,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!user) return;
 
   const today = getTodayISO();
+
+  // El tablero enlaza a un mes concreto con ?month=YYYY-MM.
+  const requestedMonth = new URLSearchParams(window.location.search).get(
+    "month",
+  );
   const state = {
-    month: today.slice(0, 7),
+    month: /^\d{4}-\d{2}$/.test(requestedMonth || "")
+      ? requestedMonth
+      : today.slice(0, 7),
     incomes: [],
     expenses: [],
     partners: DEFAULT_PARTNERS,
@@ -128,8 +140,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderTaxes(data) {
     $("dn-taxes-total").textContent = formatCurrency(data.taxesToPay);
+    const dueMonth = Number(declarationDueDate(state.month).slice(5, 7)) - 1;
     $("dn-tax-due").textContent =
-      `Declara antes del 17 de ${MONTHS[Number(state.month.slice(5, 7)) - 1].toLowerCase()}`;
+      `Declara antes del 17 de ${MONTHS[dueMonth].toLowerCase()}`;
 
     const list = $("dn-tax-list");
     list.replaceChildren();

@@ -14,6 +14,31 @@ export const RESICO_WITHHOLDING_RATE = 0.0125;
 // Día límite para la declaración mensual.
 export const DECLARATION_DAY = 17;
 
+function pad(value) {
+  return String(value).padStart(2, "0");
+}
+
+/**
+ * La declaración de un mes se presenta a más tardar el día 17 del mes
+ * siguiente: lo de septiembre se declara antes del 17 de octubre.
+ */
+export function declarationDueDate(month) {
+  const [year, index] = String(month).split("-").map(Number);
+  const cursor = new Date(year, index, 1);
+  return `${cursor.getFullYear()}-${pad(cursor.getMonth() + 1)}-${DECLARATION_DAY}`;
+}
+
+/**
+ * El mes que hoy falta declarar. Hasta el 17 sigue abierto el mes anterior;
+ * pasado el 17 lo que corre es el mes en curso.
+ */
+export function pendingDeclarationMonth(today) {
+  const [year, month, day] = String(today).split("-").map(Number);
+  const offset = day <= DECLARATION_DAY ? 2 : 1;
+  const cursor = new Date(year, month - offset, 1);
+  return `${cursor.getFullYear()}-${pad(cursor.getMonth() + 1)}`;
+}
+
 /**
  * Tabla mensual de ISR de RESICO para personas físicas: la tasa se aplica
  * sobre los ingresos cobrados y facturados del mes, sin deducciones.
@@ -166,7 +191,7 @@ export function buildMonthlyTaxSummary({
     profit,
     partnerTotals,
     incomes: monthIncomes,
-    dueDate: `${month}-${String(DECLARATION_DAY).padStart(2, "0")}`,
+    dueDate: declarationDueDate(month),
   };
 }
 

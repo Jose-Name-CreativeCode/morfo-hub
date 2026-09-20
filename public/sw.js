@@ -1,4 +1,4 @@
-const CACHE_NAME = "morfo-hub-shell-v6";
+const CACHE_NAME = "morfo-hub-shell-v7";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -38,6 +38,10 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   if (event.request.method !== "GET" || requestUrl.pathname.startsWith("/api/"))
     return;
+
+  // Lo que viene de fuera (las tipografías del tablero) lo resuelve el
+  // navegador: su respuesta es opaca y no se puede guardar en el caché.
+  if (requestUrl.origin !== self.location.origin) return;
 
   event.respondWith(
     fetch(event.request)
