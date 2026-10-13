@@ -6,12 +6,13 @@ import { normalizeText } from "./utils.js";
  * siguiente.
  *
  * Un cargo entra en el estado de cuenta que cierra en el primer día de corte
- * a partir de ese cargo, y ese estado de cuenta se paga en el día de pago.
- * `payNextMonth` dice si ese pago cae en el mes siguiente al corte, que es lo
- * normal cuando el día de pago es anterior o cercano al de corte.
+ * a partir de ese cargo, y ese estado de cuenta se paga en el día de pago. Si
+ * el día de pago es anterior al de corte, ese pago cae en el mes siguiente:
+ * con corte 28 y pago 18, lo que se gastó hasta el 28 de septiembre se paga el
+ * 18 de octubre.
  */
 
-export const DEFAULT_CUT_DAY = 8;
+export const DEFAULT_CUT_DAY = 28;
 export const DEFAULT_PAY_DAY = 18;
 
 const MONTHS = [
@@ -33,6 +34,10 @@ function pad(value) {
   return String(value).padStart(2, "0");
 }
 
+function round(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
 function lastDayOfMonth(year, monthIndex) {
   return new Date(year, monthIndex + 1, 0).getDate();
 }
@@ -44,15 +49,34 @@ function iso(year, monthIndex, day) {
   return `${y}-${pad(m + 1)}-${pad(Math.min(day, lastDayOfMonth(y, m)))}`;
 }
 
-/** Las tarjetas configuradas en Ajustes, con su corte y su día de pago. */
+function clampDay(value, fallback) {
+  const day = Math.trunc(Number(value));
+  return day >= 1 && day <= 31 ? day : fallback;
+}
+
+/** El corte y el día de pago de una tarjeta, como se guardan en Ajustes. */
 export function cardSettings(method) {
+  const cutDay = clampDay(method?.cutDay, DEFAULT_CUT_DAY);
+  const payDay = clampDay(method?.payDay, DEFAULT_PAY_DAY);
   return {
     name: method?.name || "Tarjeta",
-    cutDay: Number(method?.cutDay) || DEFAULT_CUT_DAY,
-    payDay: Number(method?.payDay) || DEFAULT_PAY_DAY,
-    // Por omisión el pago cae en el mes siguiente al corte.
-    payNextMonth: method?.payNextMonth !== false,
+    cutDay,
+    payDay,
+    // Si se paga en un día anterior al corte, ese pago cae el mes siguiente.
+    payNextMonth: payDay <= cutDay,
   };
+}
+
+/** La tarjeta de la lista de formas de pago; la primera si no se pide una. */
+export function findCard(paymentMethods = [], name = "") {
+  const wanted = normalizeText(name);
+  const cards = paymentMethods.filter((method) =>
+    isCardExpense({ paymentMethod: method.name }, paymentMethods),
+  );
+  const method = wanted
+    ? cards.find((card) => normalizeText(card.name) === wanted)
+    : cards[0];
+  return method ? cardSettings(method) : null;
 }
 
 /** Cuándo se paga un cargo hecho en `date`. */
@@ -72,38 +96,41 @@ export function paymentLabel(isoDate) {
 }
 
 /**
- * Los cargos de tarjeta agrupados por la fecha en que se pagan, de la más
- * próxima a la más lejana. `charges` son gastos; `payments` los abonos que ya
- * se hicieron, que bajan primero lo más viejo.
+ * Los cargos agrupados por la fecha en que se pagan, de la más próxima a la
+ * más lejana.
+ *
+ * `charges` son los gastos con la tarjeta; `immediate`, los que no pasaron por
+ * ella (efectivo, transferencia), que se deben desde ya y van primero.
+ * `payments` son los abonos que ya se hicieron, que bajan primero lo más viejo.
  */
-export function groupChargesByPayment({
-  expenses = [],
+export function groupByPaymentDate({
+  charges = [],
+  immediate = [],
   payments = [],
-  paymentMethods = [],
   card = cardSettings(),
 }) {
-  const name = normalizeText(card.name);
-  const isThisCard = (record) =>
-    isCardExpense(record, paymentMethods) &&
-    (!name || normalizeText(record.paymentMethod) === name);
-
   const groups = new Map();
-  expenses.filter(isThisCard).forEach((expense) => {
-    const date = paymentDateFor(expense.date, card);
-    const group = groups.get(date) || { date, total: 0, charges: [] };
+  const add = (date, label, expense) => {
+    const group = groups.get(date) || { date, label, total: 0, charges: [] };
     group.total += Number(expense.amount || 0);
     group.charges.push(expense);
     groups.set(date, group);
+  };
+
+  // Sin fecha de pago: ese dinero ya salió, así que ordena antes que todo.
+  immediate.forEach((expense) => add("", "Ya salió", expense));
+  charges.forEach((expense) => {
+    const date = paymentDateFor(expense.date, card);
+    add(date, paymentLabel(date), expense);
   });
 
   const rows = [...groups.values()]
     .map((group) => ({
       ...group,
-      total: Math.round(group.total * 100) / 100,
+      total: round(group.total),
       charges: group.charges.sort((a, b) =>
         String(a.date).localeCompare(String(b.date)),
       ),
-      label: paymentLabel(group.date),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -115,9 +142,9 @@ export function groupChargesByPayment({
   rows.forEach((row) => {
     const applied = Math.min(left, row.total);
     left -= applied;
-    row.paid = Math.round(applied * 100) / 100;
-    row.due = Math.round((row.total - applied) * 100) / 100;
+    row.paid = round(applied);
+    row.due = round(row.total - applied);
   });
 
-  return rows.filter((row) => row.due > 0.005 || row.paid > 0);
+  return rows.filter((row) => row.due > 0.005);
 }

@@ -28,6 +28,7 @@ import {
   getScopeConfig,
 } from "../scopes.js";
 import { buildBudget, isFixedExpense } from "../casa-costs.js";
+import { DEFAULT_CUT_DAY, DEFAULT_PAY_DAY } from "../card-cycles.js";
 import {
   askConfirm,
   formatCurrency,
@@ -578,6 +579,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         chip.appendChild(hint);
       }
 
+      (value.days || []).forEach((day) => {
+        const field = document.createElement("label");
+        field.className = "settings-chip-day";
+        field.append(day.label);
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = "1";
+        input.max = "31";
+        input.inputMode = "numeric";
+        input.value = String(day.value);
+        input.setAttribute("aria-label", `${value.label}: día de ${day.label}`);
+        input.addEventListener("change", () => {
+          const next = Number(input.value);
+          if (!(next >= 1 && next <= 31)) {
+            input.value = String(day.value);
+            showToast("El día va del 1 al 31.", { type: "error" });
+            return;
+          }
+          day.onChange(next);
+        });
+        field.appendChild(input);
+        chip.appendChild(field);
+      });
+
       if (value.toggle) {
         const toggle = document.createElement("button");
         toggle.type = "button";
@@ -610,10 +635,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     renderFinanceChips(
       "method-list",
-      finance.paymentMethods.map((method) => ({
-        label: method.name,
-        hint: method.type === PAYMENT_TYPES.CARD ? "Tarjeta" : "Sin deuda",
-      })),
+      finance.paymentMethods.map((method, index) => {
+        const isCard = method.type === PAYMENT_TYPES.CARD;
+        return {
+          label: method.name,
+          hint: isCard ? "Tarjeta" : "Sin deuda",
+          // De la tarjeta se edita cuándo cierra y cuándo se paga: con eso se
+          // sabe qué cae en la próxima fecha y qué se va a la siguiente.
+          days: isCard
+            ? [
+                ["corte", "cutDay", DEFAULT_CUT_DAY],
+                ["pago", "payDay", DEFAULT_PAY_DAY],
+              ].map(([label, key, fallback]) => ({
+                label,
+                value: Number(method[key]) || fallback,
+                onChange: (day) => saveMethodDay(index, key, day),
+              }))
+            : [],
+        };
+      }),
       (index, label) => removeFinanceItem("paymentMethods", index, label),
       "Agrega al menos una forma de pago.",
     );
@@ -635,6 +675,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       })),
       (index, label) => removeFinanceItem("categories", index, label),
       "Agrega al menos una categoría.",
+    );
+  }
+
+  /** Guarda el día de corte o de pago de una tarjeta. */
+  async function saveMethodDay(index, key, day) {
+    const finance = getFinanceConfig(settings, scope);
+    const method = finance.paymentMethods[index];
+    const paymentMethods = finance.paymentMethods.map((item, position) =>
+      position === index ? { ...item, [key]: day } : item,
+    );
+    await saveFinanceConfig(
+      { paymentMethods },
+      `${method.name}: ${key === "cutDay" ? "corte" : "pago"} el día ${day}.`,
     );
   }
 
@@ -696,13 +749,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   if (isSimpleScope) {
+    const methodType = document.getElementById("method-type");
+
+    // El corte y el día de pago sólo aplican a una tarjeta.
+    const syncMethodType = () => {
+      const isCard = methodType.value === PAYMENT_TYPES.CARD;
+      document
+        .querySelectorAll(".method-card-only")
+        .forEach((field) => (field.hidden = !isCard));
+    };
+    methodType.addEventListener("change", syncMethodType);
+    syncMethodType();
+
     document
       .getElementById("method-form")
       .addEventListener("submit", async (event) => {
         event.preventDefault();
         const input = document.getElementById("method-name");
         const name = input.value.trim();
-        const type = document.getElementById("method-type").value;
+        const type = methodType.value;
         const finance = getFinanceConfig(settings, scope);
 
         if (!name) {
@@ -722,14 +787,26 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
+        const method = { name, type };
+        if (type === PAYMENT_TYPES.CARD) {
+          const day = (id, fallback) => {
+            const value = Number(document.getElementById(id).value);
+            return value >= 1 && value <= 31 ? value : fallback;
+          };
+          method.cutDay = day("method-cut-day", DEFAULT_CUT_DAY);
+          method.payDay = day("method-pay-day", DEFAULT_PAY_DAY);
+        }
+
         const button = event.currentTarget.querySelector("button[type=submit]");
         setButtonLoading(button, true, "Guardando...");
         try {
           await saveFinanceConfig(
-            { paymentMethods: [...finance.paymentMethods, { name, type }] },
+            { paymentMethods: [...finance.paymentMethods, method] },
             "Forma de pago agregada.",
           );
           input.value = "";
+          document.getElementById("method-cut-day").value = "";
+          document.getElementById("method-pay-day").value = "";
         } finally {
           setButtonLoading(button, false);
         }

@@ -3172,6 +3172,44 @@ img {
   color: var(--muted);
 }
 
+/* El pendiente partido por fecha de pago de la tarjeta. */
+.rs-debt-dates {
+  display: grid;
+  gap: 2px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-debt-dates:empty {
+  display: none;
+}
+
+.rs-debt-dates li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.rs-debt-dates li:first-child {
+  font-weight: 600;
+}
+
+.rs-debt-dates small {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.rs-debt-dates b {
+  font-variant-numeric: tabular-nums;
+}
+
 .rs-ledger-list {
   display: grid;
   border-top: 1px solid var(--border);
@@ -5024,6 +5062,26 @@ body.rs-sheet-open {
   font-size: 0.78rem;
   font-weight: 400;
   color: var(--muted);
+}
+
+.settings-chip-day {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.settings-chip-day input {
+  width: 42px;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .settings-chip-toggle {

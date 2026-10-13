@@ -55,6 +55,7 @@ import {
   isNuExpense,
   isReimbursement,
 } from "../card-ledger.js";
+import { findCard, groupByPaymentDate } from "../card-cycles.js";
 import {
   REMINDER_KINDS,
   buildUpcomingReminders,
@@ -695,6 +696,49 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? "Están a mano"
         : `Gasto Nu Casa ${money(debt.frontedTotal)} · Abono a tarjeta Nu Casa ${money(debt.repaid)}`;
     $("rs-debt-status").classList.toggle("is-ok", debt.balance === 0);
+
+    renderDebtDates(reimbursements);
+  }
+
+  /**
+   * El pendiente partido por fecha de pago de la tarjeta: lo que entró antes
+   * del corte se paga en la próxima fecha y lo demás en la siguiente.
+   */
+  function renderDebtDates(reimbursements) {
+    const list = $("rs-debt-dates");
+    list.replaceChildren();
+
+    const card = findCard(state.paymentMethods, "Nu");
+    if (!card) return;
+
+    const fronted = state.expenses.filter(
+      (expense) => fundedBy(expense) === FUNDED_BY_ME,
+    );
+    const isCard = (expense) => isCardExpense(expense, state.paymentMethods);
+    const rows = groupByPaymentDate({
+      charges: fronted.filter(isCard),
+      immediate: fronted.filter((expense) => !isCard(expense)),
+      payments: reimbursements,
+      card,
+    });
+    if (rows.length < 2) return;
+
+    const today = getTodayISO();
+    rows.forEach((row, index) => {
+      const item = el("li");
+      const when = el("span", "", row.label);
+      if (index === 0) {
+        when.appendChild(
+          el(
+            "small",
+            "",
+            row.date && row.date >= today ? "lo próximo" : "ya venció",
+          ),
+        );
+      }
+      item.append(when, el("b", "", money(row.due)));
+      list.appendChild(item);
+    });
   }
 
   function methodOptionByName(name) {

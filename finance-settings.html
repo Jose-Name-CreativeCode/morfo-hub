@@ -260,6 +260,28 @@
                     <option value="cuenta">Efectivo o transferencia</option>
                   </select>
                 </div>
+                <div class="form-group method-card-only">
+                  <label for="method-cut-day">Día de corte</label>
+                  <input
+                    id="method-cut-day"
+                    type="number"
+                    min="1"
+                    max="31"
+                    inputmode="numeric"
+                    placeholder="28"
+                  />
+                </div>
+                <div class="form-group method-card-only">
+                  <label for="method-pay-day">Día de pago</label>
+                  <input
+                    id="method-pay-day"
+                    type="number"
+                    min="1"
+                    max="31"
+                    inputmode="numeric"
+                    placeholder="18"
+                  />
+                </div>
                 <div class="form-group form-group-full form-group-tight">
                   <button type="submit" class="btn-primary">
                     Agregar forma de pago
