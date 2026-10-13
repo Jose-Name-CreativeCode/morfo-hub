@@ -2,9 +2,11 @@ import { normalizeText } from "./utils.js";
 
 /**
  * Periodos del Resumen de Personal y Casa.
- * Personal se lleva por mes; Casa por quincena (1-15 y 16-fin de mes).
- * "Entró" es un monto que el usuario escribe por periodo y se guarda como un
- * ingreso con id determinista (`kind: "period-income"`).
+ * Los dos se llevan por mes: los gastos fijos de la casa se pagan cada mes y
+ * por quincena se amontonaban en la primera mitad. Las quincenas siguen
+ * soportadas aquí por si algún espacio las vuelve a necesitar.
+ * "Entró" es un monto por periodo que se guarda como un ingreso con id
+ * determinista (`kind: "period-income"`).
  */
 
 export const PERIOD_INCOME_KIND = "period-income";
@@ -29,13 +31,13 @@ const CARD_METHODS = ["nu", "tarjeta", "tarjeta de credito", "credito", "amex"];
 // Evita recorrer historiales absurdamente largos al calcular lo que sobró.
 const MAX_CARRY_STEPS = 600;
 
-export function usesQuincenas(scope) {
-  return scope === "casa";
+export function usesQuincenas() {
+  return false;
 }
 
-/** Lo que sobra (o falta) de un periodo pasa al siguiente sólo en Casa. */
-export function carriesLeftover(scope) {
-  return scope === "casa";
+/** Ningún espacio arrastra hoy lo que sobra de un periodo al siguiente. */
+export function carriesLeftover() {
+  return false;
 }
 
 function pad(value) {

@@ -2790,8 +2790,7 @@ img {
   color: var(--success);
 }
 
-.rs-income-btn[hidden],
-.rs-spent[hidden] {
+.rs-pair[hidden] {
   display: none;
 }
 
@@ -2839,29 +2838,12 @@ img {
   gap: 12px;
 }
 
-.rs-income-btn,
 .rs-spent {
   display: grid;
   gap: 3px;
   text-align: left;
 }
 
-.rs-income-btn {
-  margin: -8px;
-  padding: 8px;
-  border: none;
-  border-radius: 12px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.rs-income-btn:hover {
-  background: var(--panel-2);
-}
-
-.rs-income-btn span,
 .rs-spent span {
   font-size: 0.75rem;
   color: var(--muted);
@@ -2869,23 +2851,10 @@ img {
   text-transform: uppercase;
 }
 
-.rs-income-btn em {
-  font-style: normal;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--primary-dark);
-  margin-left: 6px;
-}
-
-.rs-income-btn strong,
 .rs-spent strong {
   font-size: 1.2rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-.rs-income-btn strong {
-  color: var(--success);
 }
 
 .rs-bar {
@@ -3112,6 +3081,11 @@ img {
   white-space: nowrap;
   background: rgba(251, 146, 60, 0.14);
   color: var(--peach);
+}
+
+.rs-tag.is-fixed {
+  background: rgba(124, 92, 255, 0.18);
+  color: var(--primary-dark);
 }
 
 .rs-ledger {
@@ -3464,7 +3438,7 @@ img {
 .rs-chip:focus-visible,
 .rs-cat:focus-visible,
 .rs-move:focus-visible,
-.rs-income-btn:focus-visible,
+.rs-cost-col:focus-visible,
 .rs-excel:focus-visible,
 .rs-filter-note button:focus-visible {
   outline: 2px solid var(--primary-dark);
@@ -4867,4 +4841,174 @@ body.rs-sheet-open {
     right: 16px;
     left: 16px;
   }
+}
+
+/* ==========================================================
+   Costo de la casa: fijo contra variable y promedio mensual
+   ========================================================== */
+
+.rs-split-group {
+  display: grid;
+  gap: 8px;
+}
+
+.rs-split-title {
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rs-split-title:empty {
+  display: none;
+}
+
+/* La barra se parte en dos: lo fijo lleno y lo variable más claro. */
+.rs-bar.is-split {
+  background: rgba(124, 92, 255, 0.28);
+}
+
+.rs-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-legend::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.rs-legend.is-fixed::before,
+.rs-cost-stack i.is-fixed {
+  background: var(--primary);
+}
+
+.rs-legend.is-variable::before,
+.rs-cost-stack i.is-variable {
+  background: rgba(124, 92, 255, 0.28);
+}
+
+.rs-cost-chart {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  margin-top: 6px;
+}
+
+.rs-cost-col {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 8px 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rs-cost-col:hover {
+  background: var(--panel-2);
+}
+
+.rs-cost-col.is-current {
+  border-color: var(--border);
+  background: var(--panel-2);
+}
+
+.rs-cost-value {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rs-cost-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 44px;
+  height: 110px;
+}
+
+.rs-cost-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 8px 8px 3px 3px;
+  overflow: hidden;
+}
+
+.rs-cost-stack i {
+  display: block;
+  min-height: 0;
+}
+
+/* El mes en curso todavía no termina. */
+.rs-cost-col.is-running .rs-cost-stack {
+  outline: 1px dashed var(--muted);
+  outline-offset: 2px;
+}
+
+.rs-cost-month {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.rs-cost-col.is-current .rs-cost-value,
+.rs-cost-col.is-current .rs-cost-month {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rs-cost-avg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+
+.rs-cost-avg div {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.rs-cost-avg dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rs-cost-avg dd {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-chip-toggle {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.settings-chip-toggle.is-on {
+  border-color: transparent;
+  background: rgba(124, 92, 255, 0.18);
+  color: var(--primary-dark);
 }

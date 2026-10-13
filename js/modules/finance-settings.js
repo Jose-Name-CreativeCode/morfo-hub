@@ -25,9 +25,11 @@ import {
   getFinanceConfig,
   getScopeConfig,
 } from "../scopes.js";
+import { isFixedExpense } from "../casa-costs.js";
 import {
   askConfirm,
   formatCurrency,
+  normalizeText,
   setButtonLoading,
   setPageLoading,
   showToast,
@@ -288,7 +290,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function fillReminderForm(reminder) {
     editingReminderId = reminder.id;
     document.getElementById("reminder-name").value = reminder.name;
-    document.getElementById("reminder-kind").value = reminder.kind;
+    document.getElementById("reminder-kind").value =
+      scope === "casa" && reminder.kind === REMINDER_KINDS.CARD_PAYMENT
+        ? REMINDER_KINDS.EXPENSE
+        : reminder.kind;
     document.getElementById("reminder-frequency").value = reminder.frequency;
     document.getElementById("reminder-day").value = reminder.day;
     document.getElementById("reminder-month").value = String(
@@ -366,7 +371,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const kindLabel =
         reminder.kind === REMINDER_KINDS.TASK
           ? "Trámite"
-          : reminder.kind === REMINDER_KINDS.CARD_PAYMENT
+          : reminder.kind === REMINDER_KINDS.CARD_PAYMENT && scope !== "casa"
             ? "Pago de tarjeta"
             : "Gasto";
       const detail = [
@@ -531,6 +536,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         chip.appendChild(hint);
       }
 
+      if (value.toggle) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "settings-chip-toggle";
+        toggle.classList.toggle("is-on", value.toggle.on);
+        toggle.setAttribute("aria-pressed", String(value.toggle.on));
+        toggle.setAttribute(
+          "aria-label",
+          `${value.label}: ${value.toggle.on ? "fijo" : "variable"}. Toca para cambiar.`,
+        );
+        toggle.textContent = value.toggle.on ? "Fijo" : "Variable";
+        toggle.addEventListener("click", value.toggle.onToggle);
+        chip.appendChild(toggle);
+      }
+
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "settings-chip-remove";
@@ -556,11 +576,40 @@ document.addEventListener("DOMContentLoaded", async () => {
       "Agrega al menos una forma de pago.",
     );
 
+    // Sólo Casa separa lo fijo de lo variable para su costo mensual.
+    const tracksFixed = scope === "casa";
     renderFinanceChips(
       "category-list",
-      finance.categories.map((category) => ({ label: category })),
+      finance.categories.map((category) => ({
+        label: category,
+        ...(tracksFixed
+          ? {
+              toggle: {
+                on: isFixedExpense({ category }, finance.fixedCategories),
+                onToggle: () => toggleFixedCategory(category),
+              },
+            }
+          : {}),
+      })),
       (index, label) => removeFinanceItem("categories", index, label),
       "Agrega al menos una categoría.",
+    );
+  }
+
+  /** Cambia una categoría de Casa entre fija (se paga cada mes) y variable. */
+  async function toggleFixedCategory(category) {
+    const finance = getFinanceConfig(settings, scope);
+    const isFixed = isFixedExpense({ category }, finance.fixedCategories);
+    const key = normalizeText(category);
+    const fixedCategories = isFixed
+      ? finance.fixedCategories.filter((item) => normalizeText(item) !== key)
+      : [...finance.fixedCategories, category];
+
+    await saveFinanceConfig(
+      { fixedCategories },
+      isFixed
+        ? `“${category}” ahora cuenta como variable.`
+        : `“${category}” ahora cuenta como fijo.`,
     );
   }
 
@@ -784,6 +833,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (headerTitle) headerTitle.textContent = "Ajustes";
       document.getElementById("finance-settings-subtitle").textContent =
         "Aquí eliges los botones que ves al registrar un gasto: con qué pagas y en qué categoría entra.";
+      if (scope === "casa") {
+        document.getElementById("category-hint").textContent =
+          "Son los botones de “Categoría”. Marca como Fijo lo que se paga cada mes: cuenta aparte en “¿Cuánto cuesta la casa al mes?”.";
+        // En Casa no hay pagos de tarjeta: lo que se paga es un gasto de la casa.
+        document.querySelector('#reminder-kind option[value="pago"]')?.remove();
+      }
     } else {
       document.getElementById("finance-settings-subtitle").textContent =
         `Configuración de ${SCOPES[scope].label}. Define dónde está el dinero y qué movimientos esperas; nada se marcará como pagado automáticamente.`;

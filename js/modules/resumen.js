@@ -22,19 +22,24 @@ import {
   withScopeParam,
 } from "../scopes.js";
 import {
-  PERIOD_INCOME_KIND,
   buildPeriodSummary,
-  carriesLeftover,
   isCardExpense,
   isDateInPeriod,
   periodForDate,
-  periodIncomeId,
   periodKey,
   periodLabel,
   periodNoun,
   periodRange,
   shiftPeriod,
 } from "../finance-periods.js";
+import {
+  HISTORY_MONTHS,
+  averageMonthlyCost,
+  buildCostHistory,
+  buildMonthCost,
+  isFixedExpense,
+  shiftMonth,
+} from "../casa-costs.js";
 import {
   CARD_PAYMENT_KIND,
   FUNDED_BY_ME,
@@ -86,6 +91,15 @@ function money(amount) {
   });
 }
 
+/** Monto corto para etiquetas chicas: $44k, $5.5k, $369. */
+function compactMoney(amount) {
+  const value = Number(amount || 0);
+  if (value >= 1000) {
+    return `$${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
+  }
+  return `$${Math.round(value)}`;
+}
+
 function parseAmount(text) {
   const value = Number(String(text || "").replace(/[^0-9.]/g, ""));
   return Number.isFinite(value) ? value : 0;
@@ -131,6 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     incomes: [],
     paymentMethods: [],
     categories: [],
+    fixedCategories: [],
     reminders: [],
     pendingReminder: null,
     editingId: null,
@@ -149,8 +164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const backdrop = $("rs-backdrop");
   const expenseSheet = $("rs-expense-sheet");
   const detailSheet = $("rs-detail-sheet");
-  const incomeSheet = $("rs-income-sheet");
-  const sheets = [expenseSheet, detailSheet, incomeSheet];
+  const sheets = [expenseSheet, detailSheet];
   // En Casa se lleva lo que Jose pone por papá; en Personal, su tarjeta Nu.
   const tracksPapaDebt = scope === "casa";
   // En Personal el número grande es la deuda: gastos con tarjeta menos pagos.
@@ -171,6 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.incomes = incomes.filter((item) => recordMatchesScope(item, scope));
     state.paymentMethods = finance.paymentMethods;
     state.categories = finance.categories;
+    state.fixedCategories = finance.fixedCategories;
     state.reminders = finance.reminders;
     state.settings = settings;
   }
@@ -193,13 +208,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderPeriod() {
     const { period } = state;
-    $("rs-period-kicker").textContent =
-      `${scopeConfig.label} · ${period.half ? "quincena" : "mes"} · ${period.year}`;
+    $("rs-period-kicker").textContent = `${scopeConfig.label} · ${period.year}`;
     $("rs-period-title").textContent = periodLabel(period);
     $("rs-excel").textContent = `Descargar Excel de ${periodNoun(period)}`;
   }
 
-  function setSplitChips(chips) {
+  function setSplitChips(title, chips) {
+    $("rs-split-title").textContent = title;
     const split = $("rs-split");
     split.replaceChildren();
     chips.forEach(([label, amount]) => {
@@ -218,89 +233,188 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  /** Nombre del mes que se está viendo, en minúsculas: "octubre". */
+  function monthWord() {
+    return periodLabel(state.period).toLowerCase();
+  }
+
+  /**
+   * Personal: arriba lo que debes en la tarjeta sumando todo lo registrado;
+   * abajo, con su título, lo que gastaste en el mes que estás viendo.
+   */
   function renderDebtSummary() {
     const debt = currentDebt();
     const owes = debt.debt > 0.005;
     const leftValue = $("rs-left-value");
 
     $("rs-left-label").textContent = owes
-      ? "Debes"
+      ? "Debes en tu tarjeta"
       : debt.debt < -0.005
-        ? "Tienes a favor"
-        : "No debes nada";
+        ? "Tienes a favor en tu tarjeta"
+        : "No debes nada en tu tarjeta";
     leftValue.textContent = money(Math.abs(debt.debt));
     leftValue.classList.toggle("is-negative", owes);
     leftValue.classList.toggle("is-positive", !owes);
 
     // Totales de todo lo registrado, para que la resta cuadre con la deuda.
-    $("rs-spent-label").textContent = "Gastado con tarjeta";
+    $("rs-pair").hidden = false;
     $("rs-spent-value").textContent = `−${money(debt.charged)}`;
     $("rs-paid-value").textContent = `+${money(debt.paid)}`;
 
+    $("rs-bar").classList.remove("is-split");
     const fill = $("rs-bar-fill");
     fill.style.width = `${debt.percentPaid}%`;
-    fill.classList.remove("is-hot");
     fill.classList.add("is-good");
     $("rs-bar-note").textContent =
       debt.charged > 0
-        ? `Llevas pagado el ${debt.percentPaid}% de lo que has gastado con tarjeta`
+        ? `Llevas pagado el ${debt.percentPaid}% de todo lo que has gastado con tarjeta`
         : "Aún no tienes gastos con tarjeta";
 
-    // Los chips sí son del periodo que se está viendo.
-    setSplitChips([
-      [`Gastaste ${periodNoun(state.period)}`, money(debt.spentInPeriod)],
+    setSplitChips(`En ${monthWord()}`, [
+      ["Gastaste", money(debt.spentInPeriod)],
       ["Con tarjeta", money(debt.cardInPeriod)],
       ["En efectivo", money(debt.cashInPeriod)],
     ]);
   }
 
-  function renderSummary(summary) {
-    if (tracksDebt) {
-      renderDebtSummary();
-      return;
-    }
-
-    const noun = periodNoun(state.period);
-    const leftValue = $("rs-left-value");
-
-    $("rs-left-label").textContent = `Me queda ${noun}`;
-    // Sin ningún monto escrito todavía, un saldo negativo sólo confundiría.
-    const waitingForIncome = !summary.hasIncome && summary.carryIn === 0;
-    leftValue.textContent = waitingForIncome ? "—" : money(summary.left);
-    leftValue.classList.toggle(
-      "is-negative",
-      !waitingForIncome && summary.left < 0,
+  function currentMonthCost() {
+    return buildMonthCost(
+      state.expenses,
+      periodKey(state.period),
+      state.fixedCategories,
     );
+  }
 
-    $("rs-income-value").textContent =
-      summary.hasIncome || summary.income ? money(summary.income) : "Escribir";
-    $("rs-spent-label").textContent =
-      scope === "personal" ? "Gasté" : "Gastamos";
-    $("rs-spent-value").textContent = `−${money(summary.spent)}`;
+  /** Casa: cuánto gastó la casa en el mes, lo fijo contra lo variable. */
+  function renderCasaSummary() {
+    const cost = currentMonthCost();
+    const short = SHORT_MONTHS[state.period.month];
+    const lastDay = Number(periodRange(state.period).end.slice(8, 10));
 
+    $("rs-left-label").textContent = `La casa gastó en ${monthWord()}`;
+    const leftValue = $("rs-left-value");
+    leftValue.textContent = money(cost.total);
+    leftValue.classList.remove("is-negative", "is-positive");
+    $("rs-pair").hidden = true;
+
+    // La barra se parte en dos: lo fijo lleno y lo variable más claro.
+    $("rs-bar").classList.toggle("is-split", cost.total > 0);
     const fill = $("rs-bar-fill");
-    fill.style.width = `${Math.min(summary.percent, 100)}%`;
-    fill.classList.toggle("is-hot", summary.percent >= 85);
+    fill.classList.remove("is-good", "is-hot");
+    fill.style.width =
+      cost.total > 0 ? `${(cost.fixed / cost.total) * 100}%` : "0%";
 
-    $("rs-bar-note").textContent =
-      summary.available > 0
-        ? `Llevas gastado el ${summary.percent}% de lo que tienes ${noun}`
-        : `Toca “Entró” para escribir cuánto tienes ${noun}`;
-
-    const chips = [];
-    if (carriesLeftover(scope) && summary.carryIn !== 0) {
-      chips.push([
-        summary.carryIn > 0 ? "Sobró de antes" : "Faltó de antes",
-        `${summary.carryIn > 0 ? "+" : "−"}${money(Math.abs(summary.carryIn))}`,
-      ]);
+    const note = $("rs-bar-note");
+    note.replaceChildren();
+    if (cost.total > 0) {
+      note.append(
+        el("span", "rs-legend is-fixed", `Fijos ${money(cost.fixed)}`),
+        el(
+          "span",
+          "rs-legend is-variable",
+          `Variables ${money(cost.variable)}`,
+        ),
+      );
+    } else {
+      note.textContent = `Aún no hay gastos en ${monthWord()}.`;
     }
-    // En Casa importa quién puso el dinero, no con qué se pagó.
-    const fronted = summary.expenses
-      .filter((expense) => fundedBy(expense) === FUNDED_BY_ME)
-      .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    chips.push(["Pago de tarjeta Manolo", money(fronted)]);
-    chips.push(["Dinero de papá", money(summary.spent - fronted)]);
-    setSplitChips(chips);
+
+    setSplitChips("Por quincena", [
+      [`1–15 ${short}`, money(cost.firstHalf)],
+      [`16–${lastDay} ${short}`, money(cost.secondHalf)],
+    ]);
+  }
+
+  function renderSummary() {
+    if (tracksDebt) renderDebtSummary();
+    else renderCasaSummary();
+  }
+
+  /** Nombres de meses en una frase: "julio, agosto y septiembre". */
+  function monthList(months) {
+    const names = months.map((month) => {
+      const [year, index] = month.split("-").map(Number);
+      return periodLabel({ year, month: index - 1, half: 0 }).toLowerCase();
+    });
+    if (names.length < 2) return names.join("");
+    return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+  }
+
+  /**
+   * Casa: los últimos meses en barras y el promedio de los que ya cerraron,
+   * que es el número para saber cuánto cabe un pago nuevo.
+   */
+  function renderCasaCosts() {
+    const section = $("rs-costs");
+    section.hidden = tracksDebt;
+    if (tracksDebt) return;
+
+    const viewed = periodKey(state.period);
+    const running = today.slice(0, 7);
+    // La gráfica se queda quieta en los últimos meses y sólo marca el que se
+    // ve; si se navega fuera de esos meses, se recorre para seguir mostrándolo.
+    const windowStart = shiftMonth(running, 1 - HISTORY_MONTHS);
+    const end = viewed >= windowStart && viewed <= running ? running : viewed;
+    const history = buildCostHistory(
+      state.expenses,
+      end,
+      state.fixedCategories,
+    );
+    const max = Math.max(...history.map((row) => row.total), 1);
+
+    const chart = $("rs-cost-chart");
+    chart.replaceChildren();
+
+    history.forEach((row) => {
+      const [year, month] = row.month.split("-").map(Number);
+      const name = periodLabel({ year, month: month - 1, half: 0 });
+
+      const button = el("button", "rs-cost-col");
+      button.type = "button";
+      button.classList.toggle("is-current", row.month === viewed);
+      // El mes en curso todavía no termina: se dibuja punteado.
+      button.classList.toggle("is-running", row.month === running);
+      button.setAttribute("aria-label", `${name}: ${money(row.total)}`);
+      button.setAttribute("aria-pressed", String(row.month === viewed));
+
+      const stack = el("span", "rs-cost-stack");
+      stack.style.height = `${(row.total / max) * 100}%`;
+      const variable = el("i", "is-variable");
+      variable.style.flexGrow = String(row.variable);
+      const fixed = el("i", "is-fixed");
+      fixed.style.flexGrow = String(row.fixed);
+      stack.append(variable, fixed);
+
+      const track = el("span", "rs-cost-track");
+      track.appendChild(stack);
+
+      button.append(
+        el("span", "rs-cost-value", row.total ? compactMoney(row.total) : "—"),
+        track,
+        el("span", "rs-cost-month", SHORT_MONTHS[month - 1]),
+      );
+      button.addEventListener("click", () => {
+        state.period = { ...state.period, year, month: month - 1, half: 0 };
+        state.category = "";
+        render();
+      });
+      chart.appendChild(button);
+    });
+
+    const average = averageMonthlyCost(
+      state.expenses,
+      today,
+      state.fixedCategories,
+    );
+    $("rs-avg-total").textContent = average.count
+      ? money(average.average)
+      : "—";
+    $("rs-avg-fixed").textContent = average.count
+      ? money(average.fixedAverage)
+      : "—";
+    $("rs-avg-note").textContent = average.count
+      ? `Sale de ${monthList(average.months)}. El mes en curso no cuenta porque aún no termina.`
+      : "Cuando cierre el primer mes con gastos, aquí verás el promedio.";
   }
 
   function renderCategories(expenses) {
@@ -327,8 +441,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.setAttribute("aria-pressed", String(state.category === name));
 
       const row = el("span", "rs-cat-row");
-      row.appendChild(el("span", "", name));
-      row.appendChild(el("strong", "", money(total)));
+      const label = el("span", "", name);
+      if (
+        !tracksDebt &&
+        isFixedExpense({ category: name }, state.fixedCategories)
+      ) {
+        label.appendChild(el("span", "rs-tag is-fixed", "Fijo"));
+      }
+      row.append(label, el("strong", "", money(total)));
 
       const bar = el("span", "rs-bar rs-bar-thin");
       const fill = el("i");
@@ -543,18 +663,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const isPago = reminder.kind === REMINDER_KINDS.CARD_PAYMENT;
+    // En Casa no hay pagos de tarjeta: lo que se paga es un gasto de la casa.
+    const isPago = tracksDebt && reminder.kind === REMINDER_KINDS.CARD_PAYMENT;
     const method = methodOptionByName(reminder.method);
 
-    // Sin monto o sin forma de pago se abre el formulario para completarlo.
-    if (!Number(reminder.amount) || !method) {
+    // Si falta el monto, la forma de pago o la categoría, se abre el
+    // formulario ya lleno para completarlo.
+    if (
+      !Number(reminder.amount) ||
+      !method ||
+      (!isPago && !reminder.category)
+    ) {
       state.pendingReminder = { id: reminder.id, date };
       openExpenseForm(null, isPago ? "pago" : "gasto");
       $("rs-amount").value = reminder.amount ? String(reminder.amount) : "";
       fitAmountInput($("rs-amount"));
       $("rs-concept").value = reminder.name;
       $("rs-date").value = date;
-      if (method) state.form.method = method;
+      if (method) {
+        state.form.method = method;
+        state.form.fundedBy = reminder.fundedBy || defaultFundedBy(method);
+      }
       if (reminder.category) state.form.category = reminder.category;
       applyFormType();
       return;
@@ -585,7 +714,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           paymentMethod: method.paymentMethod,
           accountId: "",
           ...(tracksPapaDebt
-            ? { fundedBy: reminder.fundedBy || FUNDED_BY_PAPA }
+            ? { fundedBy: reminder.fundedBy || defaultFundedBy(method) }
             : {}),
           invoice: "No",
           notes: "",
@@ -645,9 +774,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function render() {
     const summary = currentSummary();
-    renderReminders();
     renderPeriod();
-    renderSummary(summary);
+    renderSummary();
+    renderCasaCosts();
+    renderReminders();
     renderPapaDebt();
     renderCategories(summary.expenses);
     renderMovements(summary.expenses);
@@ -916,28 +1046,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     openSheet(detailSheet, $("rs-detail-edit"));
   }
 
-  function openIncomeForm() {
-    const { period } = state;
-    const summary = currentSummary();
-    const label = periodLabel(period);
-
-    $("rs-income-title").textContent = period.half
-      ? `¿Cuánto entró del ${label}?`
-      : `¿Cuánto entró en ${label.toLowerCase()}?`;
-    $("rs-income-amount").value = summary.income ? String(summary.income) : "";
-    fitAmountInput($("rs-income-amount"));
-    $("rs-income-note").textContent = [
-      `Es el dinero con el que cuentas ${periodNoun(period)} en ${scopeConfig.label}.`,
-      "Si no lo cambias, el siguiente periodo usa este mismo monto.",
-      carriesLeftover(scope)
-        ? "Lo que sobre pasa a la siguiente quincena."
-        : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    openSheet(incomeSheet, $("rs-income-amount"));
-  }
-
   /* ---------- Acciones ---------- */
 
   document.querySelector('[data-rs-type="pago"]').textContent =
@@ -1099,40 +1207,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  incomeSheet.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const { period } = state;
-    const amount = parseAmount($("rs-income-amount").value);
-    const button = $("rs-income-submit");
-    setButtonLoading(button, true, "Guardando...");
-
-    try {
-      await saveIncomeRecord({
-        id: periodIncomeId(scope, period, user.id),
-        kind: PERIOD_INCOME_KIND,
-        period: periodKey(period),
-        scope,
-        date: periodRange(period).start,
-        concept: `Entró · ${periodLabel(period)}`,
-        paymentStatus: "Pagado",
-        totalAmount: amount,
-        paidAmount: amount,
-        remainingAmount: 0,
-      });
-      await loadData();
-      closeSheets();
-      render();
-      showToast("Monto guardado.", { type: "success" });
-    } catch (saveError) {
-      console.error("No se pudo guardar el monto:", saveError);
-      showToast(saveError?.message || "No se pudo guardar el monto.", {
-        type: "error",
-      });
-    } finally {
-      setButtonLoading(button, false);
-    }
-  });
-
   $("rs-detail-edit").addEventListener("click", () => {
     const record = detailRecord();
     if (record) openExpenseForm(record, state.detailKind);
@@ -1181,13 +1255,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (event.key === "Escape" && !backdrop.hidden) closeSheets();
   });
 
-  ["rs-amount", "rs-income-amount"].forEach((id) => {
-    $(id).addEventListener("input", (event) => fitAmountInput(event.target));
-  });
+  $("rs-amount").addEventListener("input", (event) =>
+    fitAmountInput(event.target),
+  );
 
-  $("rs-income-btn").addEventListener("click", openIncomeForm);
-  $("rs-income-btn").hidden = tracksDebt;
-  $("rs-paid").hidden = !tracksDebt;
   // El botón sirve para gastos y para pagos en los dos espacios.
   document.querySelectorAll("[data-rs-add]").forEach((button) => {
     button.textContent = "+ Agregar";

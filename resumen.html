@@ -50,6 +50,57 @@
             </button>
           </section>
 
+          <section class="rs-summary" aria-label="Resumen del mes">
+            <div class="rs-left">
+              <span class="rs-left-label" id="rs-left-label">&nbsp;</span>
+              <strong class="rs-left-value" id="rs-left-value">$0</strong>
+            </div>
+            <div class="rs-pair" id="rs-pair" hidden>
+              <div class="rs-spent">
+                <span>Gastado con tarjeta</span>
+                <strong id="rs-spent-value">$0</strong>
+              </div>
+              <div class="rs-spent rs-paid">
+                <span>Pagaste</span>
+                <strong id="rs-paid-value">$0</strong>
+              </div>
+            </div>
+            <div class="rs-bar-wrap">
+              <div class="rs-bar" id="rs-bar"><i id="rs-bar-fill"></i></div>
+              <p class="rs-bar-note" id="rs-bar-note"></p>
+            </div>
+            <div class="rs-split-group">
+              <span class="rs-split-title" id="rs-split-title"></span>
+              <div class="rs-split" id="rs-split"></div>
+            </div>
+          </section>
+
+          <section
+            class="rs-ledger rs-costs"
+            id="rs-costs"
+            aria-labelledby="rs-costs-title"
+            hidden
+          >
+            <div class="rs-ledger-head">
+              <div>
+                <h2 id="rs-costs-title">¿Cuánto cuesta la casa al mes?</h2>
+                <small>Últimos 6 meses · toca uno para verlo</small>
+              </div>
+            </div>
+            <div class="rs-cost-chart" id="rs-cost-chart"></div>
+            <dl class="rs-cost-avg">
+              <div>
+                <dt>Promedio al mes</dt>
+                <dd id="rs-avg-total">—</dd>
+              </div>
+              <div>
+                <dt>De eso, fijos</dt>
+                <dd id="rs-avg-fixed">—</dd>
+              </div>
+            </dl>
+            <p class="rs-ledger-note" id="rs-avg-note"></p>
+          </section>
+
           <section
             class="rs-ledger rs-reminders"
             id="rs-reminders"
@@ -60,32 +111,6 @@
               <div><h2 id="rs-reminders-title">Próximos pagos</h2></div>
             </div>
             <div id="rs-reminder-list"></div>
-          </section>
-
-          <section class="rs-summary" aria-label="Resumen del periodo">
-            <div class="rs-left">
-              <span class="rs-left-label" id="rs-left-label">Me queda</span>
-              <strong class="rs-left-value" id="rs-left-value">$0</strong>
-            </div>
-            <div class="rs-pair">
-              <button type="button" class="rs-income-btn" id="rs-income-btn">
-                <span>Entró <em>Editar</em></span>
-                <strong id="rs-income-value">$0</strong>
-              </button>
-              <div class="rs-spent">
-                <span id="rs-spent-label">Gasté</span>
-                <strong id="rs-spent-value">$0</strong>
-              </div>
-              <div class="rs-spent rs-paid" id="rs-paid" hidden>
-                <span>Pagaste</span>
-                <strong id="rs-paid-value">$0</strong>
-              </div>
-            </div>
-            <div class="rs-bar-wrap">
-              <div class="rs-bar"><i id="rs-bar-fill"></i></div>
-              <p class="rs-bar-note" id="rs-bar-note"></p>
-            </div>
-            <div class="rs-split" id="rs-split"></div>
           </section>
 
           <section
@@ -248,44 +273,6 @@
         </button>
       </div>
     </div>
-
-    <form
-      class="rs-sheet"
-      id="rs-income-sheet"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="rs-income-title"
-      novalidate
-      hidden
-    >
-      <div class="rs-grab"></div>
-      <div class="rs-sheet-head">
-        <h3 id="rs-income-title">¿Cuánto entró?</h3>
-        <button
-          type="button"
-          class="rs-icon-btn"
-          data-rs-close
-          aria-label="Cerrar"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <label class="rs-amount-field" for="rs-income-amount">
-        <span>$</span>
-        <input
-          id="rs-income-amount"
-          inputmode="decimal"
-          placeholder="0"
-          autocomplete="off"
-        />
-      </label>
-      <p class="rs-sheet-note" id="rs-income-note"></p>
-      <button type="submit" class="rs-btn rs-btn-main" id="rs-income-submit">
-        Guardar
-      </button>
-    </form>
 
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver/dist/FileSaver.min.js"></script>

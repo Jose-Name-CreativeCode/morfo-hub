@@ -1,3 +1,5 @@
+import { DEFAULT_FIXED_CATEGORIES } from "./casa-costs.js";
+
 const SCOPE_STORAGE_KEY = "morfo_active_scope";
 
 export const DEFAULT_SCOPE = "morfo";
@@ -124,7 +126,12 @@ export function getFinanceConfig(settings, scope) {
 
   const reminders = Array.isArray(saved.reminders) ? saved.reminders : [];
 
-  return { paymentMethods, categories, reminders };
+  // Qué categorías son gasto fijo: Casa las usa para su costo mensual.
+  const fixedCategories = Array.isArray(saved.fixedCategories)
+    ? saved.fixedCategories
+    : DEFAULT_FIXED_CATEGORIES;
+
+  return { paymentMethods, categories, reminders, fixedCategories };
 }
 
 export function isValidScope(scope) {
