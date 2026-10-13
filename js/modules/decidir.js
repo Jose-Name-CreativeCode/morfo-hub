@@ -9,6 +9,7 @@ import {
   CAR_TEMPLATE,
   DEFAULT_CUSHION,
   EVERY_MONTH,
+  EVERY_WEEK,
   EVERY_YEAR,
   buildDecision,
   paidByMe,
@@ -228,8 +229,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const every = el("select", "dc-line-every");
       every.setAttribute("aria-label", "Cada cuándo");
       [
-        [EVERY_MONTH, "al mes"],
-        [EVERY_YEAR, "al año"],
+        [EVERY_WEEK, "semanal"],
+        [EVERY_MONTH, "mensual"],
+        [EVERY_YEAR, "anual"],
       ].forEach(([value, label]) => {
         const option = el("option", "", label);
         option.value = value;

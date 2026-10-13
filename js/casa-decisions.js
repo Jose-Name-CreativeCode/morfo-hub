@@ -17,6 +17,7 @@ import { monthlyAmount } from "./reminders.js";
 // Porcentaje de lo que entra que, por omisión, se quiere que sobre.
 export const DEFAULT_CUSHION = 15;
 
+export const EVERY_WEEK = "semana";
 export const EVERY_MONTH = "mes";
 export const EVERY_YEAR = "año";
 
@@ -57,10 +58,12 @@ export function paidByMe(line) {
   return line?.paidBy === FUNDED_BY_ME;
 }
 
-/** Lo que cuesta al mes un renglón: lo anual se reparte en 12. */
+/** Lo que cuesta al mes un renglón: lo anual entre 12, lo semanal por 4.33. */
 export function lineMonthly(line) {
   const amount = Number(line?.amount || 0);
-  return line?.every === EVERY_YEAR ? amount / 12 : amount;
+  if (line?.every === EVERY_YEAR) return amount / 12;
+  if (line?.every === EVERY_WEEK) return (amount * 52) / 12;
+  return amount;
 }
 
 /** Los gastos de la casa que se pueden recortar: los variables con monto. */

@@ -16,6 +16,8 @@ export const REMINDER_KINDS = {
 };
 
 export const REMINDER_FREQUENCIES = {
+  DAILY: "diario",
+  WEEKLY: "semanal",
   BIWEEKLY: "quincenal",
   MONTHLY: "mensual",
   BIMONTHLY: "bimestral",
@@ -24,8 +26,11 @@ export const REMINDER_FREQUENCIES = {
   ANNUAL: "anual",
 };
 
-// Cuántas veces al mes se paga, en promedio, según la frecuencia.
+// Cuántas veces al mes se paga, en promedio, según la frecuencia. Un año
+// tiene 365 días y 52 semanas: un mes promedia 30.4 días y 4.33 semanas.
 const TIMES_PER_MONTH = {
+  diario: 365 / 12,
+  semanal: 52 / 12,
   quincenal: 2,
   mensual: 1,
   bimestral: 1 / 2,
@@ -85,15 +90,21 @@ function activeMonths(reminder) {
   );
 }
 
-/**
- * Si avisa en "Próximos pagos": necesita un día, y lo que se paga cada 15
- * días no tiene una fecha fija en el mes.
- */
+// Lo que se paga cada día, cada semana o cada 15 días no cae en una fecha
+// fija del mes: sólo cuenta para el presupuesto.
+const UNDATED_FREQUENCIES = [
+  REMINDER_FREQUENCIES.DAILY,
+  REMINDER_FREQUENCIES.WEEKLY,
+  REMINDER_FREQUENCIES.BIWEEKLY,
+];
+
+export function hasFixedDay(frequency) {
+  return !UNDATED_FREQUENCIES.includes(frequency);
+}
+
+/** Si avisa en "Próximos pagos": necesita un día fijo en el mes. */
 export function hasDueDate(reminder) {
-  return (
-    Number(reminder?.day) >= 1 &&
-    reminder?.frequency !== REMINDER_FREQUENCIES.BIWEEKLY
-  );
+  return Number(reminder?.day) >= 1 && hasFixedDay(reminder?.frequency);
 }
 
 /** Lo que cuesta al mes, en promedio: lo bimestral cuenta la mitad. */
@@ -169,6 +180,8 @@ function joinNames(names) {
 
 export function reminderScheduleLabel(reminder) {
   const { frequency } = reminder;
+  if (frequency === REMINDER_FREQUENCIES.DAILY) return "Cada día";
+  if (frequency === REMINDER_FREQUENCIES.WEEKLY) return "Cada semana";
   if (frequency === REMINDER_FREQUENCIES.BIWEEKLY) return "Cada 15 días";
 
   const dated = hasDueDate(reminder);

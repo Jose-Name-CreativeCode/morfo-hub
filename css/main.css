@@ -5226,7 +5226,7 @@ body.rs-sheet-open {
    paga. Con espacio, todo en una línea. */
 .dc-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px 54px 30px;
+  grid-template-columns: minmax(0, 1fr) 96px 54px 30px;
   grid-template-areas:
     "name name name remove"
     "amount every payer payer";
@@ -5263,7 +5263,7 @@ body.rs-sheet-open {
 
 @container (min-width: 560px) {
   .dc-line {
-    grid-template-columns: minmax(0, 1fr) 110px 84px 96px 30px;
+    grid-template-columns: minmax(0, 1fr) 110px 100px 96px 30px;
     grid-template-areas: "name amount every payer remove";
   }
 }

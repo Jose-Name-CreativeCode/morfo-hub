@@ -16,6 +16,7 @@ import {
 import {
   REMINDER_FREQUENCIES,
   REMINDER_KINDS,
+  hasFixedDay,
   monthlyAmount,
   reminderScheduleLabel,
 } from "../reminders.js";
@@ -324,14 +325,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const kind = document.getElementById("reminder-kind").value;
     const frequency = document.getElementById("reminder-frequency").value;
 
-    // Lo de cada mes o cada 15 días no tiene "primer mes"; lo de cada 15
-    // días tampoco tiene un día fijo.
-    const everyMonth =
-      frequency === REMINDER_FREQUENCIES.MONTHLY ||
-      frequency === REMINDER_FREQUENCIES.BIWEEKLY;
-    document.getElementById("reminder-month-group").hidden = everyMonth;
-    document.getElementById("reminder-day-group").hidden =
-      frequency === REMINDER_FREQUENCIES.BIWEEKLY;
+    // Lo que se repite cada mes o más seguido no tiene "primer mes"; lo de
+    // cada día, semana o 15 días tampoco tiene un día fijo.
+    const dated = hasFixedDay(frequency);
+    document.getElementById("reminder-month-group").hidden =
+      !dated || frequency === REMINDER_FREQUENCIES.MONTHLY;
+    document.getElementById("reminder-day-group").hidden = !dated;
     document.querySelectorAll(".reminder-money").forEach((element) => {
       element.hidden = kind === REMINDER_KINDS.TASK;
     });
@@ -479,12 +478,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const kind = document.getElementById("reminder-kind").value;
         const frequency = document.getElementById("reminder-frequency").value;
         const isTask = kind === REMINDER_KINDS.TASK;
-        // Sin día no avisa: sólo cuenta para el presupuesto. Lo de cada 15
-        // días nunca lleva día.
-        const day =
-          frequency === REMINDER_FREQUENCIES.BIWEEKLY
-            ? 0
-            : Number(document.getElementById("reminder-day").value || 0);
+        // Sin día no avisa: sólo cuenta para el presupuesto. Lo de cada día,
+        // semana o 15 días nunca lleva día.
+        const dated = hasFixedDay(frequency);
+        const day = dated
+          ? Number(document.getElementById("reminder-day").value || 0)
+          : 0;
 
         if (!name) {
           showToast("Escribe el nombre.", { type: "error" });
@@ -513,8 +512,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           frequency,
           day,
           month:
-            frequency === REMINDER_FREQUENCIES.MONTHLY ||
-            frequency === REMINDER_FREQUENCIES.BIWEEKLY
+            !dated || frequency === REMINDER_FREQUENCIES.MONTHLY
               ? 0
               : Number(document.getElementById("reminder-month").value || 0),
           amount: isTask
