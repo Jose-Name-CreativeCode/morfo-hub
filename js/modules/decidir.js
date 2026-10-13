@@ -1,10 +1,19 @@
 import { protectPage } from "../services/auth.js";
+import { getExpensesCollection } from "../services/expenses-service.js";
+import { getIncomeCollection } from "../services/income-service.js";
 import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
-import { getActiveScope, getFinanceConfig, withScopeParam } from "../scopes.js";
+import {
+  getActiveScope,
+  getFinanceConfig,
+  recordMatchesScope,
+  withScopeParam,
+} from "../scopes.js";
 import { buildBudget, splitBudgetByQuincena } from "../casa-costs.js";
+import { findCard, groupByPaymentDate } from "../card-cycles.js";
+import { isCardExpense } from "../finance-periods.js";
 import {
   CAR_TEMPLATE,
   DEFAULT_CUSHION,
@@ -16,9 +25,14 @@ import {
   savingsFromCuts,
   variableItems,
 } from "../casa-decisions.js";
-import { FUNDED_BY_ME, FUNDED_BY_PAPA } from "../card-ledger.js";
+import {
+  FUNDED_BY_ME,
+  FUNDED_BY_PAPA,
+  fundedBy,
+  isReimbursement,
+} from "../card-ledger.js";
 import { monthlyAmount } from "../reminders.js";
-import { setPageLoading, showToast } from "../utils.js";
+import { getTodayISO, setPageLoading, showToast } from "../utils.js";
 
 function money(amount) {
   const value = Number(amount || 0);
@@ -88,6 +102,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     fixedCategories: [],
     budget: buildBudget(),
     paymentMethods: [],
+    card: null,
+    // Los cargos de verdad a la tarjeta, para saber qué sale en cada fecha.
+    expenses: [],
+    reimbursements: [],
     // A papá le pagan por quincena: todo se compara contra eso.
     incomeQ: 0,
     half: "",
@@ -100,12 +118,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const $ = (id) => document.getElementById(id);
 
   async function loadData() {
-    state.settings = await getSettingsRecord();
+    const [settings, expenses, incomes] = await Promise.all([
+      getSettingsRecord(),
+      getExpensesCollection(),
+      getIncomeCollection(),
+    ]);
+    state.settings = settings;
     const finance = getFinanceConfig(state.settings, "casa");
     state.items = finance.reminders;
     state.fixedCategories = finance.fixedCategories;
     state.paymentMethods = finance.paymentMethods;
+    state.card = findCard(state.paymentMethods, "Nu");
     state.budget = buildBudget(state.items, state.fixedCategories);
+    state.expenses = expenses.filter((item) =>
+      recordMatchesScope(item, "casa"),
+    );
+    state.reimbursements = incomes
+      .filter((item) => recordMatchesScope(item, "casa"))
+      .filter(isReimbursement);
 
     const saved = state.settings.finance?.casa?.decision || {};
     state.incomeQ = Number(
@@ -159,7 +189,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function currentHalves() {
-    return splitBudgetByQuincena(adjustedItems(), state.paymentMethods);
+    return splitBudgetByQuincena(
+      adjustedItems(),
+      state.paymentMethods,
+      state.card,
+    );
   }
 
   /** Dónde se pagaría: lo que se eligió o, si no, la quincena más holgada. */
@@ -262,8 +296,68 @@ document.addEventListener("DOMContentLoaded", async () => {
       note.textContent =
         "Escribe cuánto entra cada quincena para ver cuánto sobra en cada una.";
     } else {
-      note.textContent = `Al mes entran ${money(state.incomeQ * 2)}, salen ${money(total)} y sobran ${money(state.incomeQ * 2 - total)}. Lo de la tarjeta sale el 17, en la 2ª quincena.`;
+      const card = state.card
+        ? ` Lo de la tarjeta sale el ${state.card.payDay}, en ${HALVES[state.card.payDay <= 15 ? 0 : 1].in}.`
+        : "";
+      note.textContent = `Al mes entran ${money(state.incomeQ * 2)}, salen ${money(total)} y sobran ${money(state.incomeQ * 2 - total)}.${card}`;
     }
+  }
+
+  /**
+   * Lo que de verdad se paga en cada fecha de la tarjeta. El presupuesto de
+   * arriba cuenta un promedio al mes; esto es lo que ya se cargó y en qué
+   * fecha cae, para no llevarse una sorpresa en la quincena del pago.
+   */
+  function renderCardDates() {
+    const section = $("dc-card");
+    const list = $("dc-card-dates");
+    list.replaceChildren();
+
+    const { card } = state;
+    if (!card) {
+      section.hidden = true;
+      return;
+    }
+
+    // Sólo lo que puso Manolo con la tarjeta: eso es lo que se va a pagar.
+    const isCard = (expense) => isCardExpense(expense, state.paymentMethods);
+    const charges = state.expenses.filter(
+      (expense) => isCard(expense) && fundedBy(expense) === FUNDED_BY_ME,
+    );
+    const rows = groupByPaymentDate({
+      charges,
+      payments: state.reimbursements,
+      card,
+    });
+    section.hidden = !rows.length;
+    if (!rows.length) return;
+
+    $("dc-card-head").textContent =
+      `${card.name}: corte el ${card.cutDay}, se paga el ${card.payDay}`;
+
+    const today = getTodayISO();
+    rows.forEach((row, index) => {
+      const item = el("li");
+      const when = el("span", "", row.label);
+      if (index === 0) {
+        when.appendChild(
+          el("small", "", row.date >= today ? "lo próximo" : "ya venció"),
+        );
+      }
+      item.append(when, el("b", "", money(row.due)));
+      list.appendChild(item);
+    });
+
+    // El presupuesto cuenta un promedio; esto dice de cuánto es ese promedio.
+    const budgeted = adjustedItems()
+      .filter((item) =>
+        isCardExpense({ paymentMethod: item.method }, state.paymentMethods),
+      )
+      .reduce((sum, item) => sum + monthlyAmount(item), 0);
+    const half = HALVES[card.payDay <= 15 ? 0 : 1];
+    $("dc-card-note").textContent = budgeted
+      ? `Arriba, ${half.name} cuenta ${money(budgeted)} al mes de tarjeta; esto es lo que ya se cargó.`
+      : `Esto cae en ${half.in}; el presupuesto de arriba todavía no cuenta nada de tarjeta.`;
   }
 
   /* ---------- 2. Lo que se quiere decidir ---------- */
@@ -511,6 +605,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const chosen = chosenIndex(halves);
     const result = decisionFor(halves[chosen]);
     renderHalves(halves, chosen);
+    renderCardDates();
     $("dc-half-pick").value = HALVES[chosen].key;
     $("dc-plan-total").textContent = money(result.planMonthly);
     $("dc-plan-mine").textContent = money(result.mineMonthly);

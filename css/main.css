@@ -5166,6 +5166,40 @@ body.rs-sheet-open {
   gap: 12px;
 }
 
+/* Lo que de verdad se paga en cada fecha de la tarjeta. */
+.dc-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.dc-card[hidden] {
+  display: none;
+}
+
+.dc-card-head {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dc-card .rs-debt-dates {
+  margin-top: 8px;
+}
+
+.dc-card-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.dc-card-note:empty {
+  display: none;
+}
+
 .dc-half {
   display: grid;
   gap: 10px;

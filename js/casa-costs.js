@@ -1,3 +1,4 @@
+import { DEFAULT_PAY_DAY } from "./card-cycles.js";
 import { isCardExpense } from "./finance-periods.js";
 import {
   REMINDER_FREQUENCIES,
@@ -176,10 +177,6 @@ export function budgetFor(budget, category) {
   return 0;
 }
 
-// La tarjeta se paga el día 17: lo que se carga a ella sale en la segunda
-// quincena, sin importar el día en que se hizo el cargo.
-export const CARD_PAY_DAY = 17;
-
 // Un mes promedio tiene 30.4 días: 15 en la primera quincena y el resto en
 // la segunda.
 const FIRST_HALF_DAYS = 15;
@@ -196,10 +193,18 @@ const PERIODIC_FREQUENCIES = [
 
 /**
  * El presupuesto partido en las dos quincenas, según cuándo sale el dinero:
- * lo de la tarjeta, el 17; lo que tiene día, en su quincena; lo diario, por
- * días; y lo demás (gasolina, psicólogo), mitad y mitad.
+ * lo de la tarjeta, el día en que se paga; lo que tiene día, en su quincena;
+ * lo diario, por días; y lo demás (gasolina, psicólogo), mitad y mitad.
  */
-export function splitBudgetByQuincena(items = [], paymentMethods = []) {
+export function splitBudgetByQuincena(
+  items = [],
+  paymentMethods = [],
+  card = null,
+) {
+  // Lo de la tarjeta sale el día en que se paga, sin importar cuándo se cargó.
+  const payDay = card?.payDay || DEFAULT_PAY_DAY;
+  const cardHalf = payDay <= 15 ? 0 : 1;
+
   const halves = [
     { key: "first", total: 0, items: [] },
     { key: "second", total: 0, items: [] },
@@ -224,7 +229,7 @@ export function splitBudgetByQuincena(items = [], paymentMethods = []) {
     };
 
     if (isCardExpense({ paymentMethod: item.method }, paymentMethods)) {
-      add(1, monthly, `tarjeta, se paga el ${CARD_PAY_DAY}`);
+      add(cardHalf, monthly, `tarjeta, se paga el ${payDay}`);
     } else if (item.frequency === REMINDER_FREQUENCIES.DAILY) {
       const daily = Number(item.amount || 0);
       add(0, daily * FIRST_HALF_DAYS, "15 días");
