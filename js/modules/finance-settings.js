@@ -16,6 +16,7 @@ import {
 import {
   REMINDER_FREQUENCIES,
   REMINDER_KINDS,
+  monthlyAmount,
   reminderScheduleLabel,
 } from "../reminders.js";
 import {
@@ -25,7 +26,7 @@ import {
   getFinanceConfig,
   getScopeConfig,
 } from "../scopes.js";
-import { isFixedExpense } from "../casa-costs.js";
+import { buildBudget, isFixedExpense } from "../casa-costs.js";
 import {
   askConfirm,
   formatCurrency,
@@ -277,13 +278,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let editingReminderId = "";
 
+  // En Casa la lista de recordatorios es la de gastos de la casa.
+  const isCasa = scope === "casa";
+  const addReminderLabel = isCasa ? "Agregar gasto" : "Agregar recordatorio";
+
   function resetReminderForm() {
     editingReminderId = "";
     const form = document.getElementById("reminder-form");
     form.reset();
-    document.getElementById("reminder-day").value = "1";
-    form.querySelector("button[type=submit]").textContent =
-      "Agregar recordatorio";
+    document.getElementById("reminder-day").value = isCasa ? "" : "1";
+    form.querySelector("button[type=submit]").textContent = addReminderLabel;
     syncReminderFields();
   }
 
@@ -295,7 +299,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? REMINDER_KINDS.EXPENSE
         : reminder.kind;
     document.getElementById("reminder-frequency").value = reminder.frequency;
-    document.getElementById("reminder-day").value = reminder.day;
+    document.getElementById("reminder-day").value = reminder.day || "";
     document.getElementById("reminder-month").value = String(
       reminder.month ?? 0,
     );
@@ -320,8 +324,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const kind = document.getElementById("reminder-kind").value;
     const frequency = document.getElementById("reminder-frequency").value;
 
-    document.getElementById("reminder-month-group").hidden =
-      frequency === REMINDER_FREQUENCIES.MONTHLY;
+    // Lo de cada mes o cada 15 días no tiene "primer mes"; lo de cada 15
+    // días tampoco tiene un día fijo.
+    const everyMonth =
+      frequency === REMINDER_FREQUENCIES.MONTHLY ||
+      frequency === REMINDER_FREQUENCIES.BIWEEKLY;
+    document.getElementById("reminder-month-group").hidden = everyMonth;
+    document.getElementById("reminder-day-group").hidden =
+      frequency === REMINDER_FREQUENCIES.BIWEEKLY;
     document.querySelectorAll(".reminder-money").forEach((element) => {
       element.hidden = kind === REMINDER_KINDS.TASK;
     });
@@ -359,9 +369,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     const finance = getFinanceConfig(settings, scope);
     container.replaceChildren();
 
+    // En Casa, arriba de la lista: cuánto suman al mes.
+    const total = document.getElementById("reminder-total");
+    const budget = buildBudget(finance.reminders, finance.fixedCategories);
+    total.hidden = !isCasa || !budget.total;
+    total.replaceChildren();
+    if (isCasa && budget.total) {
+      const strong = document.createElement("strong");
+      strong.textContent = formatCurrency(budget.total);
+      total.append(
+        "La casa cuesta ",
+        strong,
+        ` al mes · Fijos ${formatCurrency(budget.fixed)} · Variables ${formatCurrency(budget.variable)}`,
+      );
+    }
+
     if (!finance.reminders.length) {
-      container.innerHTML =
-        '<p class="empty-message">Todavía no tienes recordatorios.</p>';
+      container.innerHTML = isCasa
+        ? '<p class="empty-message">Todavía no tienes gastos de la casa.</p>'
+        : '<p class="empty-message">Todavía no tienes recordatorios.</p>';
       return;
     }
 
@@ -374,11 +400,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           : reminder.kind === REMINDER_KINDS.CARD_PAYMENT && scope !== "casa"
             ? "Pago de tarjeta"
             : "Gasto";
+      // Lo que no es de cada mes dice cuánto pesa al mes en promedio.
+      const monthly = monthlyAmount(reminder);
+      const perMonth =
+        monthly && reminder.frequency !== REMINDER_FREQUENCIES.MONTHLY
+          ? `≈ ${formatCurrency(monthly)} al mes`
+          : "";
       const detail = [
         reminderScheduleLabel(reminder),
-        kindLabel,
+        isCasa ? reminder.category || "" : kindLabel,
         reminder.method || "",
         Number(reminder.amount) ? formatCurrency(reminder.amount) : "",
+        perMonth,
       ]
         .filter(Boolean)
         .join(" · ");
@@ -443,20 +476,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       .addEventListener("submit", async (event) => {
         event.preventDefault();
         const name = document.getElementById("reminder-name").value.trim();
-        const day = Number(document.getElementById("reminder-day").value || 0);
-
-        if (!name) {
-          showToast("Escribe el nombre del recordatorio.", { type: "error" });
-          return;
-        }
-        if (day < 1 || day > 31) {
-          showToast("El día debe estar entre 1 y 31.", { type: "error" });
-          return;
-        }
-
         const kind = document.getElementById("reminder-kind").value;
         const frequency = document.getElementById("reminder-frequency").value;
         const isTask = kind === REMINDER_KINDS.TASK;
+        // Sin día no avisa: sólo cuenta para el presupuesto. Lo de cada 15
+        // días nunca lleva día.
+        const day =
+          frequency === REMINDER_FREQUENCIES.BIWEEKLY
+            ? 0
+            : Number(document.getElementById("reminder-day").value || 0);
+
+        if (!name) {
+          showToast("Escribe el nombre.", { type: "error" });
+          return;
+        }
+        if (isTask && !day) {
+          showToast("Un trámite necesita el día en que toca.", {
+            type: "error",
+          });
+          return;
+        }
+        if (day && (day < 1 || day > 31)) {
+          showToast("El día debe estar entre 1 y 31.", { type: "error" });
+          return;
+        }
         const finance = getFinanceConfig(settings, scope);
         const existing = finance.reminders.find(
           (item) => String(item.id) === String(editingReminderId),
@@ -470,7 +513,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           frequency,
           day,
           month:
-            frequency === REMINDER_FREQUENCIES.MONTHLY
+            frequency === REMINDER_FREQUENCIES.MONTHLY ||
+            frequency === REMINDER_FREQUENCIES.BIWEEKLY
               ? 0
               : Number(document.getElementById("reminder-month").value || 0),
           amount: isTask
@@ -834,6 +878,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("finance-settings-subtitle").textContent =
         "Aquí eliges los botones que ves al registrar un gasto: con qué pagas y en qué categoría entra.";
       if (scope === "casa") {
+        document.getElementById("reminder-title").textContent =
+          "Gastos de la casa";
+        document.getElementById("reminder-hint").textContent =
+          "Todo lo que se paga en la casa. Con día, te avisa en el Resumen cuando se acerca; sin día (como la comida), sólo cuenta para lo que cuesta la casa al mes.";
+        document.getElementById("reminder-name").placeholder =
+          "Ej. Pago de la camioneta";
         document.getElementById("category-hint").textContent =
           "Son los botones de “Categoría”. Marca como Fijo lo que se paga cada mes: cuenta aparte en “¿Cuánto cuesta la casa al mes?”.";
         // En Casa no hay pagos de tarjeta: lo que se paga es un gasto de la casa.
@@ -856,7 +906,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (isSimpleScope) {
       renderReminderOptions();
       renderReminders();
-      syncReminderFields();
+      resetReminderForm();
     }
     renderAccounts();
     renderAccountOptions();

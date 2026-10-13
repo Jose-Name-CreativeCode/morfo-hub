@@ -4931,11 +4931,22 @@ body.rs-sheet-open {
 }
 
 .rs-cost-track {
+  position: relative;
   display: flex;
   align-items: flex-end;
   width: 100%;
   max-width: 44px;
   height: 110px;
+}
+
+/* El presupuesto: una línea punteada a la misma altura en cada mes. */
+.rs-cost-line {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  height: 0;
+  border-top: 1.5px dashed var(--peach);
+  pointer-events: none;
 }
 
 .rs-cost-stack {
@@ -4972,7 +4983,7 @@ body.rs-sheet-open {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin: 14px 0 8px;
+  margin: 10px 0 16px;
 }
 
 .rs-cost-avg div {
@@ -4996,6 +5007,25 @@ body.rs-sheet-open {
   font-variant-numeric: tabular-nums;
 }
 
+.rs-cost-avg small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.rs-cost-avg .is-budget {
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.45);
+}
+
+.rs-cost-avg .is-budget dt {
+  color: var(--peach);
+}
+
+.rs-cat-row strong small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .settings-chip-toggle {
   padding: 3px 8px;
   border: 1px solid var(--border);
@@ -5011,4 +5041,18 @@ body.rs-sheet-open {
   border-color: transparent;
   background: rgba(124, 92, 255, 0.18);
   color: var(--primary-dark);
+}
+
+.reminder-total {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.reminder-total strong {
+  color: var(--text);
+  font-size: 1.05rem;
 }

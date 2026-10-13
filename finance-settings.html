@@ -144,11 +144,17 @@
             data-simple-only
             hidden
           >
-            <h2 class="section-title section-title-sm">Recordatorios</h2>
-            <p class="section-subtitle section-subtitle-compact">
+            <h2 class="section-title section-title-sm" id="reminder-title">
+              Recordatorios
+            </h2>
+            <p
+              class="section-subtitle section-subtitle-compact"
+              id="reminder-hint"
+            >
               Lo que se repite cada mes o cada año: pagos de tarjeta, servicios
               y trámites. Aparecen en el Resumen cuando se acerca la fecha.
             </p>
+            <p class="reminder-total" id="reminder-total" hidden></p>
             <div class="reminder-settings-list" id="reminder-list"></div>
             <form id="reminder-form" class="entry-form-grid">
               <div class="form-group form-group-full">
@@ -170,19 +176,22 @@
               <div class="form-group">
                 <label for="reminder-frequency">Cada cuándo</label>
                 <select id="reminder-frequency">
-                  <option value="mensual">Cada mes</option>
+                  <option value="quincenal">Cada 15 días</option>
+                  <option value="mensual" selected>Cada mes</option>
+                  <option value="bimestral">Cada 2 meses</option>
+                  <option value="cuatrimestral">Cada 4 meses</option>
                   <option value="semestral">Cada 6 meses</option>
                   <option value="anual">Cada año</option>
                 </select>
               </div>
-              <div class="form-group">
+              <div class="form-group" id="reminder-day-group">
                 <label for="reminder-day">Día</label>
                 <input
                   id="reminder-day"
                   type="number"
                   min="1"
                   max="31"
-                  value="1"
+                  placeholder="Sin aviso"
                 />
               </div>
               <div class="form-group" id="reminder-month-group" hidden>

@@ -4,6 +4,9 @@
  * Cada recordatorio dice qué día toca y cada cuándo; al marcarlo como hecho se
  * guarda el periodo para no volver a pedirlo. Viven en la configuración del
  * espacio (Ajustes), así que Personal, Casa y Morfo tienen los suyos.
+ *
+ * En Casa la misma lista es el presupuesto: un gasto sin día no avisa, sólo
+ * cuenta para lo que cuesta la casa al mes.
  */
 
 export const REMINDER_KINDS = {
@@ -13,10 +16,41 @@ export const REMINDER_KINDS = {
 };
 
 export const REMINDER_FREQUENCIES = {
+  BIWEEKLY: "quincenal",
   MONTHLY: "mensual",
+  BIMONTHLY: "bimestral",
+  FOUR_MONTHLY: "cuatrimestral",
   BIANNUAL: "semestral",
   ANNUAL: "anual",
 };
+
+// Cuántas veces al mes se paga, en promedio, según la frecuencia.
+const TIMES_PER_MONTH = {
+  quincenal: 2,
+  mensual: 1,
+  bimestral: 1 / 2,
+  cuatrimestral: 1 / 4,
+  semestral: 1 / 6,
+  anual: 1 / 12,
+};
+
+// Cada cuántos meses se repite lo que cae en meses concretos.
+const MONTH_STEP = { bimestral: 2, cuatrimestral: 4, semestral: 6, anual: 12 };
+
+const MONTH_NAMES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
 
 // Cuántos días antes aparece y cuánto tiempo sigue visible si ya venció.
 const DAYS_AHEAD = 10;
@@ -41,15 +75,32 @@ function daysBetween(fromIso, toIsoDate) {
 
 /** Meses (0-11) en los que aplica un recordatorio. */
 function activeMonths(reminder) {
-  if (reminder.frequency === REMINDER_FREQUENCIES.MONTHLY) {
-    return [...Array(12).keys()];
-  }
+  const step = MONTH_STEP[reminder.frequency];
+  if (!step) return [...Array(12).keys()];
 
-  const first = Number(reminder.month ?? 0);
-  if (reminder.frequency === REMINDER_FREQUENCIES.BIANNUAL) {
-    return [first % 12, (first + 6) % 12];
-  }
-  return [first % 12];
+  const first = Number(reminder.month ?? 0) % 12;
+  return Array.from(
+    { length: 12 / step },
+    (_, index) => (first + index * step) % 12,
+  );
+}
+
+/**
+ * Si avisa en "Próximos pagos": necesita un día, y lo que se paga cada 15
+ * días no tiene una fecha fija en el mes.
+ */
+export function hasDueDate(reminder) {
+  return (
+    Number(reminder?.day) >= 1 &&
+    reminder?.frequency !== REMINDER_FREQUENCIES.BIWEEKLY
+  );
+}
+
+/** Lo que cuesta al mes, en promedio: lo bimestral cuenta la mitad. */
+export function monthlyAmount(reminder) {
+  if (reminder?.kind === REMINDER_KINDS.TASK) return 0;
+  const times = TIMES_PER_MONTH[reminder?.frequency] ?? 1;
+  return Number(reminder?.amount || 0) * times;
 }
 
 export function occurrenceKey(date) {
@@ -84,7 +135,7 @@ function occurrences(reminder, today) {
 export function buildUpcomingReminders(reminders = [], today) {
   const rows = [];
 
-  reminders.forEach((reminder) => {
+  reminders.filter(hasDueDate).forEach((reminder) => {
     occurrences(reminder, today).forEach((date) => {
       if (isDone(reminder, date)) return;
 
@@ -111,32 +162,37 @@ export function reminderWhenLabel(days) {
   return `en ${days} días`;
 }
 
+function joinNames(names) {
+  if (names.length < 2) return names.join("");
+  return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+}
+
 export function reminderScheduleLabel(reminder) {
-  const months = [
-    "enero",
-    "febrero",
-    "marzo",
-    "abril",
-    "mayo",
-    "junio",
-    "julio",
-    "agosto",
-    "septiembre",
-    "octubre",
-    "noviembre",
-    "diciembre",
-  ];
+  const { frequency } = reminder;
+  if (frequency === REMINDER_FREQUENCIES.BIWEEKLY) return "Cada 15 días";
+
+  const dated = hasDueDate(reminder);
   const day = `día ${reminder.day}`;
-
-  if (reminder.frequency === REMINDER_FREQUENCIES.MONTHLY) {
-    return `Cada mes, ${day}`;
+  if (frequency === REMINDER_FREQUENCIES.MONTHLY || !MONTH_STEP[frequency]) {
+    return dated ? `Cada mes, ${day}` : "Cada mes";
   }
 
-  const first = Number(reminder.month ?? 0) % 12;
-  if (reminder.frequency === REMINDER_FREQUENCIES.BIANNUAL) {
-    return `Cada 6 meses, ${day} de ${months[first]} y de ${months[(first + 6) % 12]}`;
+  const every = {
+    bimestral: "Cada 2 meses",
+    cuatrimestral: "Cada 4 meses",
+    semestral: "Cada 6 meses",
+    anual: "Cada año",
+  }[frequency];
+  if (!dated) return every;
+
+  const months = activeMonths(reminder).map((month) => MONTH_NAMES[month]);
+  if (frequency === REMINDER_FREQUENCIES.BIMONTHLY) {
+    return `${every}, ${day}, desde ${months[0]}`;
   }
-  return `Cada año, ${day} de ${months[first]}`;
+  if (frequency === REMINDER_FREQUENCIES.BIANNUAL) {
+    return `${every}, ${day} de ${months[0]} y de ${months[1]}`;
+  }
+  return `${every}, ${day} de ${joinNames(months)}`;
 }
 
 export function markReminderDone(reminders, reminderId, date, done = true) {

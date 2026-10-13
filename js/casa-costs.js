@@ -1,3 +1,4 @@
+import { monthlyAmount } from "./reminders.js";
 import { normalizeText } from "./utils.js";
 
 /**
@@ -129,4 +130,43 @@ export function averageMonthlyCost(
     fixedAverage: count ? round(sum("fixed") / count) : 0,
     variableAverage: count ? round(sum("variable") / count) : 0,
   };
+}
+
+/**
+ * Presupuesto de la casa: lo que cuesta al mes según la lista de gastos de
+ * Ajustes. Cada gasto cuenta su promedio mensual (lo bimestral, la mitad; lo
+ * de cada 15 días, el doble), con o sin fecha de aviso.
+ */
+export function buildBudget(items = [], fixedCategories = []) {
+  const byCategory = new Map();
+  let fixed = 0;
+  let variable = 0;
+
+  items.forEach((item) => {
+    const monthly = monthlyAmount(item);
+    if (!monthly) return;
+
+    const category = item.category || "Otro";
+    byCategory.set(category, (byCategory.get(category) || 0) + monthly);
+    if (isFixedExpense({ category }, fixedCategories)) fixed += monthly;
+    else variable += monthly;
+  });
+
+  return {
+    total: round(fixed + variable),
+    fixed: round(fixed),
+    variable: round(variable),
+    byCategory: new Map(
+      [...byCategory].map(([category, amount]) => [category, round(amount)]),
+    ),
+  };
+}
+
+/** Presupuesto de una categoría, sin importar acentos ni mayúsculas. */
+export function budgetFor(budget, category) {
+  const key = normalizeText(category);
+  for (const [name, amount] of budget.byCategory) {
+    if (normalizeText(name) === key) return amount;
+  }
+  return 0;
 }

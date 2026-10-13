@@ -35,6 +35,8 @@ import {
 import {
   HISTORY_MONTHS,
   averageMonthlyCost,
+  budgetFor,
+  buildBudget,
   buildCostHistory,
   buildMonthCost,
   isFixedExpense,
@@ -61,6 +63,7 @@ import {
 import {
   askConfirm,
   getTodayISO,
+  normalizeText,
   setButtonLoading,
   setPageLoading,
   showToast,
@@ -277,6 +280,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     ]);
   }
 
+  /** En Casa, la lista de gastos de Ajustes es también el presupuesto. */
+  function currentBudget() {
+    return buildBudget(
+      tracksDebt ? [] : state.reminders,
+      state.fixedCategories,
+    );
+  }
+
   function currentMonthCost() {
     return buildMonthCost(
       state.expenses,
@@ -341,8 +352,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /**
-   * Casa: los últimos meses en barras y el promedio de los que ya cerraron,
-   * que es el número para saber cuánto cabe un pago nuevo.
+   * Casa: lo que cuesta según el presupuesto contra lo que se ha registrado.
+   * Las barras son lo gastado cada mes y la línea punteada, el presupuesto.
    */
   function renderCasaCosts() {
     const section = $("rs-costs");
@@ -360,7 +371,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       end,
       state.fixedCategories,
     );
-    const max = Math.max(...history.map((row) => row.total), 1);
+    const budget = currentBudget();
+    const max = Math.max(...history.map((row) => row.total), budget.total, 1);
 
     const chart = $("rs-cost-chart");
     chart.replaceChildren();
@@ -387,6 +399,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const track = el("span", "rs-cost-track");
       track.appendChild(stack);
+      if (budget.total > 0) {
+        const line = el("span", "rs-cost-line");
+        line.style.bottom = `${(budget.total / max) * 100}%`;
+        track.appendChild(line);
+      }
 
       button.append(
         el("span", "rs-cost-value", row.total ? compactMoney(row.total) : "—"),
@@ -406,15 +423,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       today,
       state.fixedCategories,
     );
+    $("rs-budget-total").textContent = budget.total ? money(budget.total) : "—";
+    $("rs-budget-split").textContent = budget.total
+      ? `Fijos ${money(budget.fixed)} · Variables ${money(budget.variable)}`
+      : "Agrega los gastos de la casa en Ajustes";
     $("rs-avg-total").textContent = average.count
       ? money(average.average)
       : "—";
-    $("rs-avg-fixed").textContent = average.count
-      ? money(average.fixedAverage)
-      : "—";
-    $("rs-avg-note").textContent = average.count
-      ? `Sale de ${monthList(average.months)}. El mes en curso no cuenta porque aún no termina.`
-      : "Cuando cierre el primer mes con gastos, aquí verás el promedio.";
+    $("rs-avg-split").textContent = average.count
+      ? `De ${monthList(average.months)}`
+      : "Aún no cierra ningún mes";
+
+    $("rs-avg-note").textContent = [
+      budget.total
+        ? "El presupuesto sale de los gastos de la casa en Ajustes; la línea punteada lo marca en la gráfica."
+        : "",
+      average.count
+        ? "El mes en curso no cuenta en el promedio porque aún no termina."
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   function renderCategories(expenses) {
@@ -426,7 +455,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       const name = expense.category || "Otro";
       totals.set(name, (totals.get(name) || 0) + Number(expense.amount || 0));
     });
-    const rows = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+
+    // Lo presupuestado aparece aunque todavía no se haya gastado nada.
+    const budget = currentBudget();
+    budget.byCategory.forEach((_, name) => {
+      const present = [...totals.keys()].some(
+        (key) => normalizeText(key) === normalizeText(name),
+      );
+      if (!present) totals.set(name, 0);
+    });
+    const rows = [...totals.entries()].sort(
+      (a, b) =>
+        b[1] - a[1] || budgetFor(budget, b[0]) - budgetFor(budget, a[0]),
+    );
 
     if (!rows.length) {
       container.appendChild(el("p", "rs-empty", "Sin gastos en este periodo"));
@@ -448,11 +489,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       ) {
         label.appendChild(el("span", "rs-tag is-fixed", "Fijo"));
       }
-      row.append(label, el("strong", "", money(total)));
+      const planned = budgetFor(budget, name);
+      const amount = el("strong", "", money(total));
+      if (planned) amount.appendChild(el("small", "", ` de ${money(planned)}`));
+      row.append(label, amount);
 
+      // Con presupuesto, la barra es cuánto se lleva de él; sin presupuesto,
+      // se compara contra la categoría más grande.
       const bar = el("span", "rs-bar rs-bar-thin");
       const fill = el("i");
-      fill.style.width = `${Math.max(4, (total / max) * 100)}%`;
+      if (planned) {
+        fill.style.width = `${Math.min(100, (total / planned) * 100)}%`;
+        fill.classList.toggle("is-hot", total > planned);
+      } else {
+        fill.style.width = `${Math.max(4, (total / max) * 100)}%`;
+      }
       bar.appendChild(fill);
 
       button.append(row, bar);
