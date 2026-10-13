@@ -61,6 +61,7 @@ import {
   markReminderDone,
   reminderWhenLabel,
 } from "../reminders.js";
+import { DAILY_BATCH_KIND, pendingDailyBatches } from "../daily-expenses.js";
 import {
   askConfirm,
   getTodayISO,
@@ -798,6 +799,87 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  /**
+   * Gastos del día a día: en vez de registrar $400 cada día, se registran
+   * juntos los días que faltan del periodo que se está viendo.
+   */
+  function renderDaily() {
+    const section = $("rs-daily");
+    const container = $("rs-daily-list");
+    const batches = tracksDebt
+      ? []
+      : pendingDailyBatches({
+          items: state.reminders,
+          expenses: state.expenses,
+          month: periodKey(state.period),
+          today,
+        });
+
+    section.hidden = !batches.length;
+    container.replaceChildren();
+
+    batches.forEach((batch) => {
+      const item = el("div", "rs-reminder");
+      const text = el("div", "rs-reminder-text");
+      text.appendChild(el("strong", "", batch.item.name));
+      text.appendChild(
+        el(
+          "small",
+          "",
+          `${batch.label} · ${batch.days} ${batch.days === 1 ? "día" : "días"} × ${money(batch.item.amount)}`,
+        ),
+      );
+
+      const action = el(
+        "button",
+        "rs-btn rs-btn-soft rs-btn-sm",
+        `Registrar ${money(batch.amount)}`,
+      );
+      action.type = "button";
+      action.addEventListener("click", () => registerDailyBatch(batch, action));
+
+      item.append(text, action);
+      container.appendChild(item);
+    });
+  }
+
+  /** Guarda un lote de días como un solo gasto, con los días que cubre. */
+  async function registerDailyBatch(batch, button) {
+    setButtonLoading(button, true, "Guardando...");
+    try {
+      const method = methodOptionByName(batch.item.method);
+      await saveExpenseRecord({
+        id: batch.id,
+        kind: DAILY_BATCH_KIND,
+        dailyId: batch.item.id,
+        coversFrom: batch.from,
+        coversTo: batch.to,
+        scope,
+        date: batch.to,
+        concept: `${batch.item.name} · ${batch.label}`,
+        category: batch.item.category || "Otro",
+        amount: batch.amount,
+        paymentMethod: method?.paymentMethod || batch.item.method || "Efectivo",
+        accountId: "",
+        ...(tracksPapaDebt
+          ? { fundedBy: batch.item.fundedBy || defaultFundedBy(method) }
+          : {}),
+        invoice: "No",
+        notes: "",
+      });
+      await loadData();
+      render();
+      showToast(`${batch.item.name} de ${batch.label} registrada.`, {
+        type: "success",
+      });
+    } catch (error) {
+      console.error("No se pudo registrar el gasto diario:", error);
+      showToast(error?.message || "No se pudo registrar.", { type: "error" });
+    } finally {
+      setButtonLoading(button, false);
+    }
+  }
+
   function renderReminders() {
     const section = $("rs-reminders");
     const container = $("rs-reminder-list");
@@ -843,6 +925,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPeriod();
     renderSummary();
     renderCasaCosts();
+    renderDaily();
     renderReminders();
     renderPapaDebt();
     renderCategories(summary.expenses);
