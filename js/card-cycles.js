@@ -6,13 +6,13 @@ import { normalizeText } from "./utils.js";
  * siguiente.
  *
  * Un cargo entra en el estado de cuenta que cierra en el primer día de corte
- * a partir de ese cargo, y ese estado de cuenta se paga en el día de pago. Si
- * el día de pago es anterior al de corte, ese pago cae en el mes siguiente:
- * con corte 28 y pago 18, lo que se gastó hasta el 28 de septiembre se paga el
- * 18 de octubre.
+ * a partir de ese cargo, y ese estado de cuenta se paga en el día de pago. Con
+ * corte 8 y pago 18, lo que se gastó del 9 de septiembre al 8 de octubre se
+ * paga el 18 de octubre, en ese mismo mes. Si el día de pago fuera anterior al
+ * de corte, ese pago caería en el mes siguiente.
  */
 
-export const DEFAULT_CUT_DAY = 28;
+export const DEFAULT_CUT_DAY = 8;
 export const DEFAULT_PAY_DAY = 18;
 
 const MONTHS = [
