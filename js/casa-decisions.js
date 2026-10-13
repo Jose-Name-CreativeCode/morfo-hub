@@ -1,3 +1,4 @@
+import { FUNDED_BY_ME, FUNDED_BY_PAPA } from "./card-ledger.js";
 import { isFixedExpense } from "./casa-costs.js";
 import { monthlyAmount } from "./reminders.js";
 
@@ -8,6 +9,9 @@ import { monthlyAmount } from "./reminders.js";
  * de la casa") y simula algo nuevo, como un carro, con todo lo que cuesta y
  * no sólo la mensualidad. El colchón es la parte de lo que entra que se
  * quiere que siga sobrando; con él se calcula lo máximo que cabe.
+ *
+ * Cada costo dice quién lo paga: lo de papá sale de la casa y cuenta para
+ * decidir; lo de Manolo se muestra aparte y no toca el dinero de la casa.
  */
 
 // Porcentaje de lo que entra que, por omisión, se quiere que sobre.
@@ -16,18 +20,29 @@ export const DEFAULT_CUSHION = 15;
 export const EVERY_MONTH = "mes";
 export const EVERY_YEAR = "año";
 
-// Lo que cuesta tener un carro además de la mensualidad.
+// Lo que cuesta tener un carro además de la mensualidad. El seguro y la
+// gasolina los paga Manolo; lo demás, la casa.
 export const CAR_TEMPLATE = [
   { id: "mensualidad", name: "Mensualidad", every: EVERY_MONTH, main: true },
-  { id: "seguro", name: "Seguro del carro", every: EVERY_YEAR },
-  { id: "gasolina", name: "Gasolina extra", every: EVERY_MONTH },
+  {
+    id: "seguro",
+    name: "Seguro del carro",
+    every: EVERY_YEAR,
+    paidBy: FUNDED_BY_ME,
+  },
+  {
+    id: "gasolina",
+    name: "Gasolina",
+    every: EVERY_MONTH,
+    paidBy: FUNDED_BY_ME,
+  },
   { id: "servicios", name: "Servicios y mantenimiento", every: EVERY_YEAR },
   {
     id: "tramites",
     name: "Control vehicular y verificaciones",
     every: EVERY_YEAR,
   },
-].map((line) => ({ amount: 0, ...line }));
+].map((line) => ({ amount: 0, paidBy: FUNDED_BY_PAPA, ...line }));
 
 function round(value) {
   return Math.round(Number(value || 0) * 100) / 100;
@@ -35,6 +50,11 @@ function round(value) {
 
 function percentOf(part, whole) {
   return whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0;
+}
+
+/** Lo que paga Manolo no sale de la casa. Sin dato, lo paga papá. */
+export function paidByMe(line) {
+  return line?.paidBy === FUNDED_BY_ME;
 }
 
 /** Lo que cuesta al mes un renglón: lo anual se reparte en 12. */
@@ -76,10 +96,13 @@ export function buildDecision({
 }) {
   const expenses = round(budgetTotal - saved);
   const freeNow = round(income - expenses);
-  const planMonthly = round(
-    lines.reduce((sum, line) => sum + lineMonthly(line), 0),
-  );
-  const main = lines.find((line) => line.main);
+  const sumOf = (rows) =>
+    round(rows.reduce((sum, line) => sum + lineMonthly(line), 0));
+  const houseLines = lines.filter((line) => !paidByMe(line));
+  // Sólo lo que paga papá cuenta para saber si a la casa le alcanza.
+  const planMonthly = sumOf(houseLines);
+  const mineMonthly = sumOf(lines.filter(paidByMe));
+  const main = houseLines.find((line) => line.main);
   const extras = round(planMonthly - (main ? lineMonthly(main) : 0));
   const freeAfter = round(freeNow - planMonthly);
   const reserve = round((income * Number(cushion || 0)) / 100);
@@ -91,7 +114,7 @@ export function buildDecision({
 
   let verdict = "alcanza";
   if (!income) verdict = "sin-ingreso";
-  else if (!planMonthly) verdict = "sin-costos";
+  else if (!planMonthly && !mineMonthly) verdict = "sin-costos";
   else if (freeAfter < 0) verdict = "no-alcanza";
   else if (freeAfter < reserve) verdict = "justo";
 
@@ -102,6 +125,7 @@ export function buildDecision({
     freeNow,
     freeNowPercent: percentOf(freeNow, income),
     planMonthly,
+    mineMonthly,
     extras,
     freeAfter,
     freeAfterPercent: percentOf(freeAfter, income),

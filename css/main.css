@@ -5194,6 +5194,7 @@ body.rs-sheet-open {
 .dc-line-name,
 .dc-line-amount,
 .dc-line-every,
+.dc-line-payer,
 .dc-cushion input {
   padding: 9px 10px;
   border: 1px solid var(--border);
@@ -5208,6 +5209,7 @@ body.rs-sheet-open {
 .dc-line-name:focus,
 .dc-line-amount:focus-within,
 .dc-line-every:focus,
+.dc-line-payer:focus,
 .dc-cushion input:focus {
   outline: none;
   border-color: var(--primary-dark);
@@ -5220,26 +5222,49 @@ body.rs-sheet-open {
   container-type: inline-size;
 }
 
-/* El concepto va en su propia línea; si hay espacio, todo en una. */
+/* Angosto: el concepto a todo lo ancho; abajo monto, frecuencia y quién
+   paga. Con espacio, todo en una línea. */
 .dc-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px 30px;
+  grid-template-columns: minmax(0, 1fr) 80px 54px 30px;
+  grid-template-areas:
+    "name name name remove"
+    "amount every payer payer";
   gap: 8px;
   align-items: center;
 }
 
+.dc-line-every,
+.dc-line-payer {
+  padding-inline: 8px;
+  font-size: 0.85rem;
+}
+
 .dc-line-name {
-  grid-column: 1 / -1;
+  grid-area: name;
   min-width: 0;
 }
 
-@container (min-width: 440px) {
-  .dc-line {
-    grid-template-columns: minmax(0, 1fr) 118px 88px 30px;
-  }
+.dc-line-amount {
+  grid-area: amount;
+}
 
-  .dc-line-name {
-    grid-column: auto;
+.dc-line-every {
+  grid-area: every;
+}
+
+.dc-line-payer {
+  grid-area: payer;
+}
+
+.dc-line-remove {
+  grid-area: remove;
+}
+
+@container (min-width: 560px) {
+  .dc-line {
+    grid-template-columns: minmax(0, 1fr) 110px 84px 96px 30px;
+    grid-template-areas: "name amount every payer remove";
   }
 }
 
@@ -5263,23 +5288,39 @@ body.rs-sheet-open {
   pointer-events: none;
 }
 
+/* Lo de Manolo se distingue: no cuenta para la casa. */
+.dc-line-payer.is-mine {
+  border-color: rgba(251, 146, 60, 0.45);
+  color: var(--peach);
+}
+
 .dc-plan-total {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
-.dc-plan-total span {
-  color: var(--muted);
-  font-size: 0.85rem;
+.dc-plan-total div {
+  display: grid;
+  gap: 2px;
 }
 
-.dc-plan-total strong {
+.dc-plan-total dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.dc-plan-total dd {
   font-size: 1.25rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.dc-plan-total div + div dd {
+  color: var(--peach);
 }
 
 .dc-verdict {

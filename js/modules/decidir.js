@@ -11,9 +11,11 @@ import {
   EVERY_MONTH,
   EVERY_YEAR,
   buildDecision,
+  paidByMe,
   savingsFromCuts,
   variableItems,
 } from "../casa-decisions.js";
+import { FUNDED_BY_ME, FUNDED_BY_PAPA } from "../card-ledger.js";
 import { monthlyAmount } from "../reminders.js";
 import { setPageLoading, showToast } from "../utils.js";
 
@@ -240,7 +242,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         save();
       });
 
-      row.append(name, amountBox, every);
+      // Lo que paga Manolo no sale de la casa: se cuenta aparte.
+      const payer = el("select", "dc-line-payer");
+      payer.setAttribute("aria-label", "Quién lo paga");
+      [
+        [FUNDED_BY_PAPA, "Papá"],
+        [FUNDED_BY_ME, "Manolo"],
+      ].forEach(([value, label]) => {
+        const option = el("option", "", label);
+        option.value = value;
+        payer.appendChild(option);
+      });
+      payer.value = paidByMe(line) ? FUNDED_BY_ME : FUNDED_BY_PAPA;
+      payer.classList.toggle("is-mine", paidByMe(line));
+      payer.addEventListener("change", () => {
+        line.paidBy = payer.value;
+        payer.classList.toggle("is-mine", paidByMe(line));
+        render();
+        save();
+      });
+
+      row.append(name, amountBox, every, payer);
 
       // La mensualidad no se quita: es con la que se calcula el máximo.
       if (!line.main) {
@@ -282,7 +304,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ],
       alcanza: [
         `${title}: sí cabe`,
-        `Después de pagarlo sobrarían ${money(result.freeAfter)} al mes, el ${pct}% de lo que entra. Tu colchón del ${state.cushion}% sigue completo.`,
+        `Después de pagar su parte, a la casa le sobrarían ${money(result.freeAfter)} al mes, el ${pct}% de lo que entra. Tu colchón del ${state.cushion}% sigue completo.`,
       ],
       justo: [
         `${title}: cabe, pero sin colchón`,
@@ -294,7 +316,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       ],
     }[result.verdict];
     $("dc-verdict-title").textContent = copy[0];
-    $("dc-verdict-text").textContent = copy[1];
+    // Lo de Manolo no cambia el veredicto, pero conviene tenerlo a la vista.
+    const mine = state.lines.filter(
+      (line) => paidByMe(line) && Number(line.amount) > 0,
+    );
+    const mineNote =
+      result.income && result.mineMonthly > 0
+        ? ` Aparte, tú pondrías ${money(result.mineMonthly)} al mes (${mine
+            .map((line) => (line.name || "otro costo").toLowerCase())
+            .join(" y ")}).`
+        : "";
+    $("dc-verdict-text").textContent =
+      result.verdict === "sin-ingreso" || result.verdict === "sin-costos"
+        ? copy[1]
+        : copy[1] + mineNote;
 
     const after = $("dc-after");
     after.textContent = result.income ? money(result.freeAfter) : "—";
@@ -317,7 +352,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("dc-max-note").textContent = short
       ? `Para pagarlo y que siga sobrando tu ${state.cushion}%, tendría que entrar ${money(result.incomeNeeded)} al mes.`
       : result.income && result.hasMain && result.extras > 0
-        ? `La mensualidad máxima ya descuenta ${money(result.extras)} al mes de lo demás que cuesta.`
+        ? `La mensualidad máxima ya descuenta ${money(result.extras)} al mes de lo demás que también paga papá.`
         : "";
   }
 
@@ -378,6 +413,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const result = currentDecision();
     renderNow(result);
     $("dc-plan-total").textContent = money(result.planMonthly);
+    $("dc-plan-mine").textContent = money(result.mineMonthly);
     renderVerdict(result);
     $("dc-cuts-note").textContent = result.saved
       ? `Recortando liberas ${money(result.saved)} al mes; ya está contado arriba.`
@@ -416,6 +452,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       name: "",
       amount: 0,
       every: EVERY_MONTH,
+      paidBy: FUNDED_BY_PAPA,
     });
     renderLines();
     render();
