@@ -59,7 +59,7 @@ export const SCOPES = {
   casa: {
     key: "casa",
     label: "Casa",
-    navKeys: ["resumen", "financeSettings"],
+    navKeys: ["resumen", "decidir", "financeSettings"],
     navLabels: { financeSettings: "Ajustes" },
     homeKey: "resumen",
     expenseCategories: [

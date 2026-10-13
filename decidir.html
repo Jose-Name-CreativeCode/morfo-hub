@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <title>Morfo Hub | Decidir</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body data-page-title="Decidir" data-nav-key="decidir" class="rs-page">
+    <div class="app-layout">
+      <aside class="sidebar" data-app-sidebar></aside>
+      <div class="main-content">
+        <header class="header" data-app-header></header>
+
+        <main class="page-content rs-content dc-content">
+          <section class="rs-period-row">
+            <div class="rs-period-text">
+              <span class="rs-period-kicker">Casa · decidir</span>
+              <h1 class="rs-period-title">¿Nos alcanza?</h1>
+            </div>
+          </section>
+
+          <section class="rs-summary dc-now" aria-labelledby="dc-now-title">
+            <h2 class="dc-h" id="dc-now-title">Cómo estamos cada mes</h2>
+            <div class="dc-flow">
+              <label class="dc-cell" for="dc-income">
+                <span>Entra</span>
+                <span class="dc-money">
+                  $<input
+                    id="dc-income"
+                    inputmode="decimal"
+                    placeholder="Escribe"
+                    autocomplete="off"
+                  />
+                </span>
+                <small>Lo que recibe la casa al mes</small>
+              </label>
+              <div class="dc-cell">
+                <span>Sale</span>
+                <strong id="dc-expenses">$0</strong>
+                <small
+                  ><a href="finance-settings.html?scope=casa"
+                    >Gastos de la casa</a
+                  ></small
+                >
+              </div>
+              <div class="dc-cell">
+                <span>Sobra</span>
+                <strong id="dc-free">—</strong>
+                <small id="dc-free-pct"></small>
+              </div>
+            </div>
+            <div class="dc-bar" id="dc-bar" aria-hidden="true"></div>
+            <p class="rs-bar-note" id="dc-now-note"></p>
+          </section>
+
+          <div class="dc-cols">
+            <section class="rs-ledger" aria-labelledby="dc-plan-title">
+              <div class="rs-ledger-head">
+                <div>
+                  <h2 id="dc-plan-title">¿Qué quieres decidir?</h2>
+                  <small>Pon todo lo que cuesta, no sólo la mensualidad</small>
+                </div>
+              </div>
+              <label class="dc-field" for="dc-title">
+                <span>Nombre</span>
+                <input id="dc-title" type="text" autocomplete="off" />
+              </label>
+              <div class="dc-lines" id="dc-lines"></div>
+              <button
+                type="button"
+                class="rs-btn rs-btn-soft rs-btn-sm"
+                id="dc-add-line"
+              >
+                + Agregar costo
+              </button>
+              <div class="dc-plan-total">
+                <span>Cuesta al mes</span>
+                <strong id="dc-plan-total">$0</strong>
+              </div>
+            </section>
+
+            <div class="dc-side">
+              <section
+                class="dc-verdict"
+                id="dc-verdict"
+                aria-live="polite"
+                aria-labelledby="dc-verdict-title"
+              >
+                <span class="dc-tag" id="dc-verdict-tag"></span>
+                <strong class="dc-verdict-title" id="dc-verdict-title"></strong>
+                <p id="dc-verdict-text"></p>
+                <dl class="dc-facts">
+                  <div>
+                    <dt>Te sobraría al mes</dt>
+                    <dd id="dc-after">—</dd>
+                  </div>
+                  <div>
+                    <dt id="dc-max-label">Mensualidad máxima</dt>
+                    <dd id="dc-max">—</dd>
+                  </div>
+                </dl>
+                <p class="dc-max-note" id="dc-max-note"></p>
+                <label class="dc-cushion" for="dc-cushion">
+                  Quiero que sobre al menos
+                  <input
+                    id="dc-cushion"
+                    type="number"
+                    min="0"
+                    max="80"
+                    step="1"
+                    inputmode="numeric"
+                  />
+                  % de lo que entra
+                </label>
+              </section>
+
+              <section class="rs-ledger" aria-labelledby="dc-cuts-title">
+                <div class="rs-ledger-head">
+                  <div>
+                    <h2 id="dc-cuts-title">¿Y si gastamos menos?</h2>
+                    <small>Mueve los gastos que sí se pueden ajustar</small>
+                  </div>
+                </div>
+                <div class="dc-cuts" id="dc-cuts"></div>
+                <p class="rs-ledger-note" id="dc-cuts-note"></p>
+              </section>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/modules/decidir.js"></script>
+  </body>
+</html>

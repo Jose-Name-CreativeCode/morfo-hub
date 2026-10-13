@@ -5056,3 +5056,398 @@ body.rs-sheet-open {
   color: var(--text);
   font-size: 1.05rem;
 }
+
+/* ==========================================================
+   Decidir: ¿nos alcanza?
+   ========================================================== */
+
+.dc-h {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rs-summary.dc-now {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dc-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dc-cell {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  min-width: 0;
+}
+
+.dc-cell > span:first-child {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dc-cell strong {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-cell small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.dc-cell small a {
+  color: var(--primary-dark);
+}
+
+.dc-cell strong.is-negative,
+.dc-facts dd.is-negative {
+  color: var(--danger);
+}
+
+.dc-money {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+}
+
+.dc-cell .dc-money {
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-bottom: 1px dashed var(--border);
+}
+
+.dc-money input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-money input:focus {
+  outline: none;
+}
+
+.dc-cell .dc-money:focus-within {
+  border-bottom-color: var(--primary-dark);
+}
+
+.dc-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 99px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.dc-bar i {
+  display: block;
+}
+
+.dc-bar i.is-fixed {
+  background: var(--primary);
+}
+
+.dc-bar i.is-variable {
+  background: rgba(124, 92, 255, 0.28);
+}
+
+.dc-bar i.is-free,
+.rs-legend.is-free::before {
+  background: var(--success);
+}
+
+.dc-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.dc-side {
+  display: grid;
+  gap: 20px;
+}
+
+.dc-field {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 14px;
+}
+
+.dc-field span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.dc-field input,
+.dc-line-name,
+.dc-line-amount,
+.dc-line-every,
+.dc-cushion input {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.dc-field input:focus,
+.dc-line-name:focus,
+.dc-line-amount:focus-within,
+.dc-line-every:focus,
+.dc-cushion input:focus {
+  outline: none;
+  border-color: var(--primary-dark);
+}
+
+.dc-lines {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  container-type: inline-size;
+}
+
+/* El concepto va en su propia línea; si hay espacio, todo en una. */
+.dc-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 30px;
+  gap: 8px;
+  align-items: center;
+}
+
+.dc-line-name {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+@container (min-width: 440px) {
+  .dc-line {
+    grid-template-columns: minmax(0, 1fr) 118px 88px 30px;
+  }
+
+  .dc-line-name {
+    grid-column: auto;
+  }
+}
+
+.dc-line-remove {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.dc-line-remove:hover {
+  background: rgba(248, 113, 113, 0.14);
+  color: var(--danger);
+}
+
+.dc-line-remove.is-placeholder {
+  pointer-events: none;
+}
+
+.dc-plan-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.dc-plan-total span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.dc-plan-total strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-verdict {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+}
+
+.dc-verdict.is-alcanza {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: linear-gradient(rgba(74, 222, 128, 0.07), var(--panel));
+}
+
+.dc-verdict.is-justo {
+  border-color: rgba(251, 146, 60, 0.5);
+  background: linear-gradient(rgba(251, 146, 60, 0.08), var(--panel));
+}
+
+.dc-verdict.is-no-alcanza {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: linear-gradient(rgba(248, 113, 113, 0.08), var(--panel));
+}
+
+.dc-tag {
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.is-alcanza .dc-tag {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--success);
+}
+
+.is-justo .dc-tag {
+  background: rgba(251, 146, 60, 0.15);
+  color: var(--peach);
+}
+
+.is-no-alcanza .dc-tag {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--danger);
+}
+
+.dc-verdict-title {
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.dc-verdict p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.dc-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dc-facts div {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.dc-facts dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dc-facts dd {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-verdict .dc-max-note:empty {
+  display: none;
+}
+
+.dc-cushion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dc-cushion input {
+  width: 64px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.dc-cuts {
+  display: grid;
+}
+
+.dc-cut {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.dc-cut:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.dc-cut-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.dc-cut-head strong {
+  font-weight: 600;
+}
+
+.dc-cut-head span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-cut input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+.dc-cut-out {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.dc-cut-out.is-on {
+  color: var(--success);
+}
+
+@media (max-width: 900px) {
+  .dc-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .dc-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dc-flow .dc-cell:first-child {
+    grid-column: 1 / -1;
+  }
+}
