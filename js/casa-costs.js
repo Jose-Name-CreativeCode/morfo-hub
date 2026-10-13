@@ -1,4 +1,9 @@
-import { monthlyAmount } from "./reminders.js";
+import { isCardExpense } from "./finance-periods.js";
+import {
+  REMINDER_FREQUENCIES,
+  hasDueDate,
+  monthlyAmount,
+} from "./reminders.js";
 import { normalizeText } from "./utils.js";
 
 /**
@@ -169,4 +174,74 @@ export function budgetFor(budget, category) {
     if (normalizeText(name) === key) return amount;
   }
   return 0;
+}
+
+// La tarjeta se paga el día 17: lo que se carga a ella sale en la segunda
+// quincena, sin importar el día en que se hizo el cargo.
+export const CARD_PAY_DAY = 17;
+
+// Un mes promedio tiene 30.4 días: 15 en la primera quincena y el resto en
+// la segunda.
+const FIRST_HALF_DAYS = 15;
+const SECOND_HALF_DAYS = 365 / 12 - FIRST_HALF_DAYS;
+
+// Lo que no se paga cada mes cuenta su promedio mensual, en un solo renglón
+// por categoría: las cuatro parcialidades de la escuela son "Colegiatura".
+const PERIODIC_FREQUENCIES = [
+  REMINDER_FREQUENCIES.BIMONTHLY,
+  REMINDER_FREQUENCIES.FOUR_MONTHLY,
+  REMINDER_FREQUENCIES.BIANNUAL,
+  REMINDER_FREQUENCIES.ANNUAL,
+];
+
+/**
+ * El presupuesto partido en las dos quincenas, según cuándo sale el dinero:
+ * lo de la tarjeta, el 17; lo que tiene día, en su quincena; lo diario, por
+ * días; y lo demás (gasolina, psicólogo), mitad y mitad.
+ */
+export function splitBudgetByQuincena(items = [], paymentMethods = []) {
+  const halves = [
+    { key: "first", total: 0, items: [] },
+    { key: "second", total: 0, items: [] },
+  ];
+
+  items.forEach((item) => {
+    const monthly = monthlyAmount(item);
+    if (!monthly) return;
+
+    const periodic = PERIODIC_FREQUENCIES.includes(item.frequency);
+    const key = periodic ? `promedio:${item.category || "Otro"}` : item.id;
+    const name = periodic ? item.category || "Otro" : item.name;
+    const average = periodic ? " · promedio al mes" : "";
+
+    const add = (index, amount, when) => {
+      if (amount <= 0) return;
+      const half = halves[index];
+      const row = half.items.find((entry) => entry.key === key);
+      if (row) row.amount += amount;
+      else half.items.push({ key, name, amount, when: when + average });
+      half.total += amount;
+    };
+
+    if (isCardExpense({ paymentMethod: item.method }, paymentMethods)) {
+      add(1, monthly, `tarjeta, se paga el ${CARD_PAY_DAY}`);
+    } else if (item.frequency === REMINDER_FREQUENCIES.DAILY) {
+      const daily = Number(item.amount || 0);
+      add(0, daily * FIRST_HALF_DAYS, "15 días");
+      add(1, daily * SECOND_HALF_DAYS, "el resto del mes");
+    } else if (!hasDueDate(item)) {
+      add(0, monthly / 2, "la mitad");
+      add(1, monthly / 2, "la mitad");
+    } else {
+      add(Number(item.day) <= 15 ? 0 : 1, monthly, `día ${item.day}`);
+    }
+  });
+
+  return halves.map((half) => ({
+    ...half,
+    total: round(half.total),
+    items: half.items
+      .map((row) => ({ ...row, amount: round(row.amount) }))
+      .sort((a, b) => b.amount - a.amount),
+  }));
 }

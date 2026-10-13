@@ -5070,42 +5070,153 @@ body.rs-sheet-open {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.dc-flow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.dc-now-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
 }
 
-.dc-cell {
+.dc-income {
   display: grid;
   gap: 3px;
-  align-content: start;
-  min-width: 0;
 }
 
-.dc-cell > span:first-child {
+.dc-income > span:first-child,
+.dc-half-nums span {
   font-size: 0.72rem;
   color: var(--muted);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.dc-cell strong {
+.dc-income .dc-money {
+  min-width: 150px;
   font-size: 1.3rem;
+  font-weight: 700;
+  border-bottom: 1px dashed var(--border);
+}
+
+.dc-income .dc-money:focus-within {
+  border-bottom-color: var(--primary-dark);
+}
+
+.dc-halves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dc-half {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+/* La quincena donde caería lo nuevo. */
+.dc-half.is-chosen {
+  border-color: rgba(251, 146, 60, 0.5);
+}
+
+.dc-half-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.dc-half-head strong {
+  font-size: 0.95rem;
+}
+
+.dc-half-head span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.dc-half-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(251, 146, 60, 0.15);
+  color: var(--peach);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.dc-half-nums {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dc-half-nums div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dc-half-nums strong {
+  font-size: 1.2rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.dc-cell small {
-  font-size: 0.75rem;
+.dc-half-nums small {
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
-.dc-cell small a {
+.dc-half-list summary {
+  cursor: pointer;
+  font-size: 0.82rem;
   color: var(--primary-dark);
 }
 
-.dc-cell strong.is-negative,
+.dc-half-list ul {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  list-style: none;
+}
+
+.dc-half-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+
+.dc-half-list li span {
+  display: grid;
+  min-width: 0;
+}
+
+.dc-half-list li small {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.dc-half-list li b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dc-plan-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+
+.dc-half-nums strong.is-negative,
 .dc-facts dd.is-negative {
   color: var(--danger);
 }
@@ -5115,12 +5226,6 @@ body.rs-sheet-open {
   align-items: center;
   gap: 2px;
   color: var(--muted);
-}
-
-.dc-cell .dc-money {
-  font-size: 1.3rem;
-  font-weight: 700;
-  border-bottom: 1px dashed var(--border);
 }
 
 .dc-money input {
@@ -5138,10 +5243,6 @@ body.rs-sheet-open {
   outline: none;
 }
 
-.dc-cell .dc-money:focus-within {
-  border-bottom-color: var(--primary-dark);
-}
-
 .dc-bar {
   display: flex;
   height: 10px;
@@ -5154,7 +5255,8 @@ body.rs-sheet-open {
   display: block;
 }
 
-.dc-bar i.is-fixed {
+.dc-bar i.is-fixed,
+.dc-bar i.is-out {
   background: var(--primary);
 }
 
@@ -5191,6 +5293,7 @@ body.rs-sheet-open {
 }
 
 .dc-field input,
+.dc-field select,
 .dc-line-name,
 .dc-line-amount,
 .dc-line-every,
@@ -5206,6 +5309,7 @@ body.rs-sheet-open {
 }
 
 .dc-field input:focus,
+.dc-field select:focus,
 .dc-line-name:focus,
 .dc-line-amount:focus-within,
 .dc-line-every:focus,
@@ -5484,11 +5588,8 @@ body.rs-sheet-open {
 }
 
 @media (max-width: 560px) {
-  .dc-flow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dc-flow .dc-cell:first-child {
-    grid-column: 1 / -1;
+  .dc-halves,
+  .dc-plan-fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -22,10 +22,10 @@
           </section>
 
           <section class="rs-summary dc-now" aria-labelledby="dc-now-title">
-            <h2 class="dc-h" id="dc-now-title">Cómo estamos cada mes</h2>
-            <div class="dc-flow">
-              <label class="dc-cell" for="dc-income">
-                <span>Entra</span>
+            <div class="dc-now-head">
+              <h2 class="dc-h" id="dc-now-title">Cómo estamos cada quincena</h2>
+              <label class="dc-income" for="dc-income">
+                <span>Entra cada quincena</span>
                 <span class="dc-money">
                   $<input
                     id="dc-income"
@@ -34,24 +34,9 @@
                     autocomplete="off"
                   />
                 </span>
-                <small>Lo que recibe la casa al mes</small>
               </label>
-              <div class="dc-cell">
-                <span>Sale</span>
-                <strong id="dc-expenses">$0</strong>
-                <small
-                  ><a href="finance-settings.html?scope=casa"
-                    >Gastos de la casa</a
-                  ></small
-                >
-              </div>
-              <div class="dc-cell">
-                <span>Sobra</span>
-                <strong id="dc-free">—</strong>
-                <small id="dc-free-pct"></small>
-              </div>
             </div>
-            <div class="dc-bar" id="dc-bar" aria-hidden="true"></div>
+            <div class="dc-halves" id="dc-halves"></div>
             <p class="rs-bar-note" id="dc-now-note"></p>
           </section>
 
@@ -63,10 +48,19 @@
                   <small>Todo lo que cuesta y quién lo paga: papá o tú</small>
                 </div>
               </div>
-              <label class="dc-field" for="dc-title">
-                <span>Nombre</span>
-                <input id="dc-title" type="text" autocomplete="off" />
-              </label>
+              <div class="dc-plan-fields">
+                <label class="dc-field" for="dc-title">
+                  <span>Nombre</span>
+                  <input id="dc-title" type="text" autocomplete="off" />
+                </label>
+                <label class="dc-field" for="dc-half-pick">
+                  <span>Lo de papá se pagaría en</span>
+                  <select id="dc-half-pick">
+                    <option value="first">La 1ª quincena</option>
+                    <option value="second">La 2ª quincena</option>
+                  </select>
+                </label>
+              </div>
               <div class="dc-lines" id="dc-lines"></div>
               <button
                 type="button"
@@ -99,7 +93,7 @@
                 <p id="dc-verdict-text"></p>
                 <dl class="dc-facts">
                   <div>
-                    <dt>Te sobraría al mes</dt>
+                    <dt>Sobraría esa quincena</dt>
                     <dd id="dc-after">—</dd>
                   </div>
                   <div>

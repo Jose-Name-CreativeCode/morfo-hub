@@ -41,6 +41,7 @@ import {
   buildMonthCost,
   isFixedExpense,
   shiftMonth,
+  splitBudgetByQuincena,
 } from "../casa-costs.js";
 import {
   CARD_PAYMENT_KIND,
@@ -220,9 +221,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("rs-split-title").textContent = title;
     const split = $("rs-split");
     split.replaceChildren();
-    chips.forEach(([label, amount]) => {
+    chips.forEach(([label, amount, planned]) => {
       const chip = el("span", "rs-split-chip", `${label} `);
       chip.appendChild(el("b", "", amount));
+      if (planned) chip.append(` de ${planned}`);
       split.appendChild(chip);
     });
   }
@@ -330,9 +332,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       note.textContent = `Aún no hay gastos en ${monthWord()}.`;
     }
 
+    // Lo gastado en cada quincena contra lo que se espera que salga en ella.
+    const [first, second] = splitBudgetByQuincena(
+      state.reminders,
+      state.paymentMethods,
+    );
     setSplitChips("Por quincena", [
-      [`1–15 ${short}`, money(cost.firstHalf)],
-      [`16–${lastDay} ${short}`, money(cost.secondHalf)],
+      [
+        `1–15 ${short}`,
+        money(cost.firstHalf),
+        first.total && money(first.total),
+      ],
+      [
+        `16–${lastDay} ${short}`,
+        money(cost.secondHalf),
+        second.total && money(second.total),
+      ],
     ]);
   }
 

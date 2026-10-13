@@ -4,7 +4,7 @@ import {
   saveSettingsRecord,
 } from "../services/settings-service.js";
 import { getActiveScope, getFinanceConfig, withScopeParam } from "../scopes.js";
-import { buildBudget } from "../casa-costs.js";
+import { buildBudget, splitBudgetByQuincena } from "../casa-costs.js";
 import {
   CAR_TEMPLATE,
   DEFAULT_CUSHION,
@@ -46,6 +46,21 @@ function el(tag, className, text) {
   return node;
 }
 
+const HALVES = [
+  {
+    key: "first",
+    name: "1ª quincena",
+    range: "del 1 al 15",
+    in: "la 1ª quincena",
+  },
+  {
+    key: "second",
+    name: "2ª quincena",
+    range: "del 16 al fin de mes",
+    in: "la 2ª quincena",
+  },
+];
+
 const VERDICT_TAGS = {
   "sin-ingreso": "Falta un dato",
   "sin-costos": "Falta un dato",
@@ -72,7 +87,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     items: [],
     fixedCategories: [],
     budget: buildBudget(),
-    income: 0,
+    paymentMethods: [],
+    // A papá le pagan por quincena: todo se compara contra eso.
+    incomeQ: 0,
+    half: "",
     cushion: DEFAULT_CUSHION,
     title: "Carro",
     lines: [],
@@ -86,10 +104,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const finance = getFinanceConfig(state.settings, "casa");
     state.items = finance.reminders;
     state.fixedCategories = finance.fixedCategories;
+    state.paymentMethods = finance.paymentMethods;
     state.budget = buildBudget(state.items, state.fixedCategories);
 
     const saved = state.settings.finance?.casa?.decision || {};
-    state.income = Number(saved.income || 0);
+    state.incomeQ = Number(
+      saved.incomePerQuincena ?? (saved.income ? saved.income / 2 : 0),
+    );
+    state.half = saved.half || "";
     state.cushion = Number(saved.cushion ?? DEFAULT_CUSHION);
     state.title = saved.title || "Carro";
     state.lines =
@@ -110,7 +132,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           casa: {
             ...(finance.casa || {}),
             decision: {
-              income: state.income,
+              incomePerQuincena: state.incomeQ,
+              half: state.half,
               cushion: state.cushion,
               title: state.title,
               lines: state.lines,
@@ -125,65 +148,121 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function currentDecision() {
-    const variables = variableItems(state.items, state.fixedCategories);
+  /** Los gastos de la casa con los recortes ya aplicados. */
+  function adjustedItems() {
+    return state.items.map((item) => {
+      const cut = Number(state.cuts[item.id] || 0);
+      return cut
+        ? { ...item, amount: Number(item.amount || 0) * (1 - cut / 100) }
+        : item;
+    });
+  }
+
+  function currentHalves() {
+    return splitBudgetByQuincena(adjustedItems(), state.paymentMethods);
+  }
+
+  /** Dónde se pagaría: lo que se eligió o, si no, la quincena más holgada. */
+  function chosenIndex(halves) {
+    if (state.half) return state.half === "first" ? 0 : 1;
+    return halves[1].total <= halves[0].total ? 1 : 0;
+  }
+
+  function decisionFor(half) {
     return buildDecision({
-      income: state.income,
-      budgetTotal: state.budget.total,
-      saved: savingsFromCuts(variables, state.cuts),
+      income: state.incomeQ,
+      budgetTotal: half.total,
       cushion: state.cushion,
       lines: state.lines,
     });
   }
 
-  /* ---------- 1. Cómo estamos ---------- */
+  /* ---------- 1. Cómo estamos cada quincena ---------- */
 
-  function renderNow(result) {
-    const { budget } = state;
-    $("dc-expenses").textContent = money(result.expenses);
+  function renderHalves(halves, chosen) {
+    const container = $("dc-halves");
+    container.replaceChildren();
 
-    const free = $("dc-free");
-    free.textContent = result.income ? money(result.freeNow) : "—";
-    free.classList.toggle(
-      "is-negative",
-      result.income > 0 && result.freeNow < 0,
-    );
-    $("dc-free-pct").textContent = result.income
-      ? `${result.freeNowPercent}% de lo que entra`
-      : "";
+    halves.forEach((half, index) => {
+      const info = HALVES[index];
+      const free = state.incomeQ - half.total;
+      const card = el("article", "dc-half");
+      card.classList.toggle("is-chosen", index === chosen);
 
-    // La barra reparte lo que entra: fijos, variables y lo que sobra.
-    const variable = Math.max(0, budget.variable - result.saved);
-    const left = Math.max(0, result.freeNow);
-    const bar = $("dc-bar");
-    bar.replaceChildren();
-    [
-      ["is-fixed", budget.fixed],
-      ["is-variable", variable],
-      ["is-free", result.income ? left : 0],
-    ].forEach(([className, amount]) => {
-      if (amount <= 0) return;
-      const piece = el("i", className);
-      piece.style.flexGrow = String(amount);
-      bar.appendChild(piece);
+      const head = el("header", "dc-half-head");
+      head.append(el("strong", "", info.name), el("span", "", info.range));
+      if (index === chosen) {
+        head.appendChild(
+          el(
+            "em",
+            "dc-half-badge",
+            `Aquí: ${state.title.trim() || "lo nuevo"}`,
+          ),
+        );
+      }
+
+      const nums = el("div", "dc-half-nums");
+      const out = el("div");
+      out.append(el("span", "", "Sale"), el("strong", "", money(half.total)));
+      const left = el("div");
+      const leftValue = el(
+        "strong",
+        free < 0 ? "is-negative" : "",
+        state.incomeQ ? money(free) : "—",
+      );
+      left.append(el("span", "", "Sobra"), leftValue);
+      if (state.incomeQ) {
+        left.appendChild(
+          el(
+            "small",
+            "",
+            `${Math.round((free / state.incomeQ) * 100)}% de ${money(state.incomeQ)}`,
+          ),
+        );
+      }
+      nums.append(out, left);
+
+      const bar = el("div", "dc-bar");
+      bar.setAttribute("aria-hidden", "true");
+      [
+        ["is-out", half.total],
+        ["is-free", state.incomeQ ? Math.max(0, free) : 0],
+      ].forEach(([className, amount]) => {
+        if (amount <= 0) return;
+        const piece = el("i", className);
+        piece.style.flexGrow = String(amount);
+        bar.appendChild(piece);
+      });
+
+      const details = el("details", "dc-half-list");
+      details.appendChild(el("summary", "", `Qué sale (${half.items.length})`));
+      const list = el("ul");
+      half.items.forEach((row) => {
+        const item = el("li");
+        const text = el("span", "", row.name);
+        text.appendChild(el("small", "", row.when));
+        item.append(text, el("b", "", money(row.amount)));
+        list.appendChild(item);
+      });
+      details.appendChild(list);
+
+      card.append(head, nums, bar, details);
+      container.appendChild(card);
     });
 
+    const total = halves[0].total + halves[1].total;
     const note = $("dc-now-note");
     note.replaceChildren();
-    if (!budget.total) {
+    if (!state.budget.total) {
       note.append("Primero agrega los gastos de la casa en ");
       const link = el("a", "", "Ajustes");
       link.href = "finance-settings.html?scope=casa";
       note.append(link, ".");
-    } else if (!result.income) {
+    } else if (!state.incomeQ) {
       note.textContent =
-        "Escribe cuánto entra a la casa al mes para ver cuánto sobra.";
+        "Escribe cuánto entra cada quincena para ver cuánto sobra en cada una.";
     } else {
-      note.append(
-        el("span", "rs-legend is-fixed", `Fijos ${money(budget.fixed)}`),
-        el("span", "rs-legend is-variable", `Variables ${money(variable)}`),
-        el("span", "rs-legend is-free", `Sobra ${money(left)}`),
-      );
+      note.textContent = `Al mes entran ${money(state.incomeQ * 2)}, salen ${money(total)} y sobran ${money(state.incomeQ * 2 - total)}. Lo de la tarjeta sale el 17, en la 2ª quincena.`;
     }
   }
 
@@ -288,8 +367,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ---------- 3. El veredicto ---------- */
 
-  function renderVerdict(result) {
+  function renderVerdict(result, other, chosen) {
     const title = state.title.trim() || "Esto";
+    const here = HALVES[chosen].in;
+    const there = HALVES[1 - chosen].in;
     const section = $("dc-verdict");
     section.className = `dc-verdict is-${result.verdict}`;
     $("dc-verdict-tag").textContent = VERDICT_TAGS[result.verdict];
@@ -297,24 +378,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     const pct = result.freeAfterPercent;
     const copy = {
       "sin-ingreso": [
-        "Escribe cuánto entra a la casa",
-        "Con eso te digo si alcanza y cuánto es lo máximo que se puede pagar.",
+        "Escribe cuánto entra cada quincena",
+        "Con eso te digo si alcanza y en qué quincena conviene pagarlo.",
       ],
       "sin-costos": [
         "Escribe lo que cuesta",
         "Empieza por la mensualidad; luego el seguro y lo demás.",
       ],
       alcanza: [
-        `${title}: sí cabe`,
-        `Después de pagar su parte, a la casa le sobrarían ${money(result.freeAfter)} al mes, el ${pct}% de lo que entra. Tu colchón del ${state.cushion}% sigue completo.`,
+        `${title}: sí cabe en ${here}`,
+        `Después de pagar su parte, en ${here} sobrarían ${money(result.freeAfter)} de ${money(state.incomeQ)}, el ${pct}%. Tu colchón del ${state.cushion}% sigue completo.`,
       ],
       justo: [
-        `${title}: cabe, pero sin colchón`,
-        `Sobrarían ${money(result.freeAfter)} al mes (${pct}%), menos del ${state.cushion}% que quieres que sobre.`,
+        `${title}: cabe en ${here}, pero sin colchón`,
+        `En esa quincena sobrarían ${money(result.freeAfter)} (${pct}%), menos del ${state.cushion}% que quieres que sobre.`,
       ],
       "no-alcanza": [
-        `${title}: no cabe todavía`,
-        `Cada mes faltarían ${money(-result.freeAfter)}.`,
+        `${title}: no cabe en ${here}`,
+        `En esa quincena faltarían ${money(-result.freeAfter)}.`,
       ],
     }[result.verdict];
     $("dc-verdict-title").textContent = copy[0];
@@ -342,20 +423,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("dc-max-label").textContent = result.hasMain
       ? "Mensualidad máxima"
-      : "Lo máximo al mes";
+      : "Lo máximo";
     const max = result.hasMain ? result.maxMain : result.maxCommit;
     $("dc-max").textContent = !result.income
       ? "—"
       : max > 0
         ? money(max)
         : "No cabe";
-    // Si no alcanza, lo útil es saber cuánto tendría que entrar.
-    const short = result.verdict === "no-alcanza" || result.verdict === "justo";
-    $("dc-max-note").textContent = short
-      ? `Para pagarlo y que siga sobrando tu ${state.cushion}%, tendría que entrar ${money(result.incomeNeeded)} al mes.`
-      : result.income && result.hasMain && result.extras > 0
-        ? `La mensualidad máxima ya descuenta ${money(result.extras)} al mes de lo demás que también paga papá.`
-        : "";
+
+    const notes = [];
+    if (result.income) {
+      // Si no alcanza, lo útil es saber cuánto tendría que entrar.
+      if (result.verdict === "no-alcanza" || result.verdict === "justo") {
+        notes.push(
+          `Para pagarlo en ${here} y que siga sobrando tu ${state.cushion}%, tendría que entrar ${money(result.incomeNeeded)} por quincena.`,
+        );
+      } else if (result.hasMain && result.extras > 0) {
+        notes.push(
+          `La mensualidad máxima ya descuenta ${money(result.extras)} al mes de lo demás que también paga papá.`,
+        );
+      }
+      const otherMax = other.hasMain ? other.maxMain : other.maxCommit;
+      notes.push(
+        otherMax > 0
+          ? `En ${there}, la máxima sería ${money(otherMax)}.`
+          : `En ${there} no cabría.`,
+      );
+    }
+    $("dc-max-note").textContent = notes.join(" ");
   }
 
   /* ---------- 4. Recortes ---------- */
@@ -412,13 +507,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function render() {
-    const result = currentDecision();
-    renderNow(result);
+    const halves = currentHalves();
+    const chosen = chosenIndex(halves);
+    const result = decisionFor(halves[chosen]);
+    renderHalves(halves, chosen);
+    $("dc-half-pick").value = HALVES[chosen].key;
     $("dc-plan-total").textContent = money(result.planMonthly);
     $("dc-plan-mine").textContent = money(result.mineMonthly);
-    renderVerdict(result);
-    $("dc-cuts-note").textContent = result.saved
-      ? `Recortando liberas ${money(result.saved)} al mes; ya está contado arriba.`
+    renderVerdict(result, decisionFor(halves[1 - chosen]), chosen);
+
+    const saved = savingsFromCuts(
+      variableItems(state.items, state.fixedCategories),
+      state.cuts,
+    );
+    $("dc-cuts-note").textContent = saved
+      ? `Recortando liberas ${money(saved)} al mes; ya está contado arriba.`
       : "Mueve una barra para ver cuánto se libera.";
   }
 
@@ -426,13 +529,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const incomeInput = $("dc-income");
   incomeInput.addEventListener("input", () => {
-    state.income = parseAmount(incomeInput.value);
+    state.incomeQ = parseAmount(incomeInput.value);
     render();
   });
   incomeInput.addEventListener("blur", () => {
-    incomeInput.value = plainNumber(state.income);
+    incomeInput.value = plainNumber(state.incomeQ);
   });
   incomeInput.addEventListener("change", save);
+
+  $("dc-half-pick").addEventListener("change", (event) => {
+    state.half = event.target.value;
+    render();
+    save();
+  });
 
   const cushionInput = $("dc-cushion");
   cushionInput.addEventListener("input", () => {
@@ -463,7 +572,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     await loadData();
-    incomeInput.value = plainNumber(state.income);
+    incomeInput.value = plainNumber(state.incomeQ);
     cushionInput.value = String(state.cushion);
     titleInput.value = state.title;
     renderLines();
