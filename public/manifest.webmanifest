@@ -1,7 +1,7 @@
 {
   "name": "Morfo Hub Finanzas",
   "short_name": "Morfo Hub",
-  "description": "Control financiero de Personal, Casa y Morfo.",
+  "description": "Control financiero de Morfo.",
   "start_url": "/dashboard.html?scope=morfo",
   "scope": "/",
   "display": "standalone",
@@ -9,16 +9,6 @@
   "theme_color": "#7c5cff",
   "lang": "es-MX",
   "shortcuts": [
-    {
-      "name": "Registrar gasto personal",
-      "short_name": "Gasto personal",
-      "url": "/resumen.html?scope=personal&nuevo=1"
-    },
-    {
-      "name": "Registrar gasto de Casa",
-      "short_name": "Gasto Casa",
-      "url": "/resumen.html?scope=casa&nuevo=1"
-    },
     {
       "name": "Registrar movimiento de Morfo",
       "short_name": "Movimiento Morfo",

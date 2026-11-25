@@ -24,8 +24,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   await protectPage();
 
   const activeScope = getActiveScope();
-  const isSummary = activeScope === "resumen";
-  const scopeLabel = SCOPES[activeScope]?.label || "Morfo";
   const money = (value) => formatCurrency(Number(value || 0));
   const paidIncome = (item) => Number(item.paidAmount || item.amount || 0);
   const expenseAmount = (item) => Number(item.amount || 0);
@@ -44,9 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function filterScope(records, scope = activeScope) {
-    return scope === "resumen"
-      ? records
-      : records.filter((record) => recordMatchesScope(record, scope));
+    return records.filter((record) => recordMatchesScope(record, scope));
   }
 
   function emptyMessage(text) {
@@ -61,23 +57,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const subtitle = document.getElementById("dashboard-subtitle");
     const kicker = document.getElementById("dashboard-kicker");
 
-    if (isSummary) {
-      kicker.textContent = "Vista consolidada";
-      title.textContent = "Todo tu dinero, sin revolverlo";
-      subtitle.textContent =
-        "Compara Personal, Casa y Morfo; entra a cada espacio para tomar decisiones con detalle.";
-      document.getElementById("dashboard-actions").hidden = true;
-    } else {
-      title.textContent = scopeLabel;
-      kicker.textContent =
-        activeScope === "morfo" ? "Negocio" : "Control financiero";
-      subtitle.textContent =
-        activeScope === "casa"
-          ? "Sigue cada quincena, los gastos compartidos y lo comprometido antes del siguiente ingreso."
-          : activeScope === "personal"
-            ? "Una vista privada para entender en qué gastas y cuánto puedes usar con tranquilidad."
-            : "Flujo de efectivo, cobros pendientes y operación comercial de la agencia.";
-    }
+    title.textContent = "Morfo";
+    kicker.textContent = "Negocio";
+    subtitle.textContent =
+      "Flujo de efectivo, cobros pendientes y operación comercial de la agencia.";
 
     ["quick-movement-link", "view-movements-link"].forEach((id) => {
       document.getElementById(id).href = withScopeParam(
@@ -104,9 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     const pending = incomes.reduce((sum, item) => sum + pendingIncome(item), 0);
     const net = totalIncome - totalExpense;
-    const budget = isSummary
-      ? 0
-      : Number(settings.finance?.[activeScope]?.monthlyBudget || 0);
+    const budget = Number(settings.finance?.[activeScope]?.monthlyBudget || 0);
 
     document.getElementById("metric-income").textContent = money(totalIncome);
     document.getElementById("metric-expense").textContent = money(totalExpense);
@@ -123,31 +104,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         `${money(totalExpense)} usados de ${money(budget)}`;
       if (available < 0)
         document.getElementById("budget-card").classList.add("expense");
-    } else if (isSummary) {
-      document.getElementById("budget-card").hidden = true;
     }
 
     return { totalIncome, totalExpense, pending, net, budget };
-  }
-
-  function renderScopeOverview(allIncomes, allExpenses) {
-    if (!isSummary) return;
-    const container = document.getElementById("scope-overview");
-    container.hidden = false;
-
-    ["personal", "casa", "morfo"].forEach((scope) => {
-      const incoming = filterScope(allIncomes, scope)
-        .filter((item) => isCurrentMonth(item.date))
-        .reduce((sum, item) => sum + paidIncome(item), 0);
-      const outgoing = filterScope(allExpenses, scope)
-        .filter((item) => isCurrentMonth(item.date))
-        .reduce((sum, item) => sum + expenseAmount(item), 0);
-      const card = document.createElement("a");
-      card.className = `card scope-overview-card scope-${scope}`;
-      card.href = withScopeParam("dashboard.html", scope);
-      card.innerHTML = `<div class="scope-card-top"><span>${SCOPES[scope].label}</span><b>→</b></div><strong>${money(incoming - outgoing)}</strong><small>${money(incoming)} entró · ${money(outgoing)} salió</small>`;
-      container.appendChild(card);
-    });
   }
 
   function categoryTotals(expenses) {
@@ -375,7 +334,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const incomes = filterScope(allIncomes);
     const expenses = filterScope(allExpenses);
     const metrics = renderMetrics(incomes, expenses, settings);
-    renderScopeOverview(allIncomes, allExpenses);
     renderInsights(metrics, expenses);
     renderAccounts(accounts, incomes, expenses);
     renderCategories(expenses);

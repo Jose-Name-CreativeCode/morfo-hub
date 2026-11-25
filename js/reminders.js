@@ -2,11 +2,8 @@
  * Recordatorios de pagos y trámites que se repiten.
  *
  * Cada recordatorio dice qué día toca y cada cuándo; al marcarlo como hecho se
- * guarda el periodo para no volver a pedirlo. Viven en la configuración del
- * espacio (Ajustes), así que Personal, Casa y Morfo tienen los suyos.
- *
- * En Casa la misma lista es el presupuesto: un gasto sin día no avisa, sólo
- * cuenta para lo que cuesta la casa al mes.
+ * guarda el periodo para no volver a pedirlo. Viven en la configuración de
+ * Morfo (Ajustes).
  */
 
 export const REMINDER_KINDS = {

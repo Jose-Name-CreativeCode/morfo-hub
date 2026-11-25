@@ -91,32 +91,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!scopeConfig.showInvoice) {
       document.getElementById("income-invoice").value = "no";
     }
-
-    renderScopePresets();
-  }
-
-  /** En Casa el atajo prepara una quincena sin inventar monto ni confirmarla. */
-  function renderScopePresets() {
-    const presetsContainer = document.getElementById("income-presets");
-    if (!presetsContainer || activeScope === "morfo") return;
-
-    presetsContainer.replaceChildren();
-
-    if (activeScope !== "casa") return;
-
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "preset-chip";
-    chip.textContent = "Registrar quincena";
-    chip.addEventListener("click", () => {
-      document.getElementById("income-client").value = "Quincena";
-      document.getElementById("income-concept").value = "Quincena";
-      document.getElementById("income-amount").value = "";
-      document.getElementById("income-paid-amount").value = "";
-      document.getElementById("income-payment-status").value = "Pagado";
-    });
-
-    presetsContainer.appendChild(chip);
   }
 
   function getTableColumnCount() {
@@ -350,7 +324,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function loadClientOptions() {
-    // Personal y Casa tienen fuentes fijas; solo Morfo depende de clientes.
+    // Morfo toma las fuentes de la lista de clientes.
     if (scopeConfig.incomeSources) {
       const knownSources = [
         ...new Set([

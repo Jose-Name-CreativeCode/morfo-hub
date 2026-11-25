@@ -12,11 +12,6 @@ import {
   getScopeConfig,
   recordMatchesScope,
 } from "../scopes.js";
-import { computeCasaBalance } from "../casa-ledger.js";
-import {
-  getIncomeCollection,
-  saveIncomeRecord,
-} from "../services/income-service.js";
 import {
   appendRowActions,
   askConfirm,
@@ -41,7 +36,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const expenseTableBody = document.querySelector(".table tbody");
   const submitButton = expenseForm.querySelector(".btn-primary");
   const accountSelect = document.getElementById("expense-account");
-  const payerSelect = document.getElementById("expense-payer");
 
   const filterYearSelect = document.getElementById("filter-expense-year");
   const filterMonthSelect = document.getElementById("filter-expense-month");
@@ -49,7 +43,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     "filter-expense-category",
   );
   const filterMethodSelect = document.getElementById("filter-expense-method");
-  const filterPayerSelect = document.getElementById("filter-expense-payer");
   const clearFiltersBtn = document.getElementById("clear-expense-filters");
   const exportExcelBtn = document.getElementById("export-expense-excel");
   const expenseCounters = {
@@ -70,24 +63,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const detailAmount = document.getElementById("expense-detail-amount");
   const detailCategory = document.getElementById("expense-detail-category");
   const detailMethod = document.getElementById("expense-detail-method");
-  const detailPayer = document.getElementById("expense-detail-payer");
   const detailInvoice = document.getElementById("expense-detail-invoice");
   const detailNotes = document.getElementById("expense-detail-notes");
 
   let editingExpenseId = null;
   let currentExpenses = [];
   let currentAccounts = [];
-  let casaIncomesCache = [];
-  let scopeIncomeTotal = 0;
-  let scopeChartInstance = null;
   const selectedExpenseIds = new Set();
 
   const activeScope = getActiveScope();
   const scopeConfig = getScopeConfig(activeScope);
 
   /**
-   * Adapta el formulario y la tabla al espacio activo: categorías, métodos de
-   * pago y, cuando no aplica (Personal y Casa), oculta todo lo de facturación.
+   * Adapta el formulario y la tabla: categorías, métodos de pago y, cuando no
+   * aplica, oculta todo lo de facturación.
    */
   function applyScopeToUi() {
     document.body.dataset.scope = activeScope;
@@ -107,14 +96,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       element.hidden = !scopeConfig.showInvoice;
     });
 
-    document.querySelectorAll("[data-casa-only]").forEach((element) => {
-      element.hidden = activeScope !== "casa";
-    });
-
-    document.querySelectorAll("[data-personal-only]").forEach((element) => {
-      element.hidden = activeScope !== "personal";
-    });
-
     if (!scopeConfig.showInvoice) {
       document.getElementById("expense-invoice").value = "no";
     }
@@ -122,7 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderScopePresets();
   }
 
-  /** Atajos de captura: en Personal y Casa son las tarjetas que sí se usan. */
+  /** Atajos de captura con las formas de pago que sí se usan. */
   function renderScopePresets() {
     const presetsContainer = document.getElementById("expense-presets");
     if (!presetsContainer || scopeConfig.showInvoice) return;
@@ -143,227 +124,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function getTableColumnCount() {
     return document.querySelectorAll(".table thead th:not([hidden])").length;
-  }
-
-  /** Carga únicamente ingresos confirmados. Las reglas no alteran el saldo. */
-  async function syncCasaLedger() {
-    if (activeScope !== "casa") return;
-
-    casaIncomesCache = (await getIncomeCollection()).filter((income) =>
-      recordMatchesScope(income, "casa"),
-    );
-
-    renderCasaLedger();
-  }
-
-  /** Recalcula el saldo con los gastos actuales; no vuelve a pedir ingresos. */
-  function renderCasaLedger() {
-    if (activeScope !== "casa") return;
-
-    const { balance, totalIncome, settledExpenses, pendingExpenses } =
-      computeCasaBalance(casaIncomesCache, currentExpenses);
-
-    document.getElementById("casa-balance-grid").hidden = false;
-    document.getElementById("casa-income-panel").hidden = false;
-    document.getElementById("casa-balance").textContent =
-      formatCurrency(balance);
-    document.getElementById("casa-income-total").textContent =
-      formatCurrency(totalIncome);
-    document.getElementById("casa-settled-total").textContent =
-      formatCurrency(settledExpenses);
-    document.getElementById("casa-pending-total").textContent =
-      formatCurrency(pendingExpenses);
-
-    const list = document.getElementById("casa-income-list");
-    list.replaceChildren();
-
-    const recentIncomes = [...casaIncomesCache]
-      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
-      .slice(0, 6);
-
-    if (recentIncomes.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "section-subtitle section-subtitle-compact";
-      empty.textContent = "Todavía no hay quincenas registradas.";
-      list.appendChild(empty);
-      return;
-    }
-
-    recentIncomes.forEach((income) => {
-      list.appendChild(buildCasaIncomeCard(income));
-    });
-  }
-
-  /** Tarjeta de un ingreso de Casa confirmado. */
-  function buildCasaIncomeCard(income) {
-    const card = document.createElement("article");
-    card.className = "card casa-income-card";
-
-    const label = document.createElement("span");
-    label.className = "casa-income-card-label";
-    label.textContent = "Ingreso";
-
-    const amount = document.createElement("div");
-    amount.className = "casa-income-card-amount";
-    amount.textContent = formatCurrency(income.paidAmount || 0);
-
-    const date = document.createElement("div");
-    date.className = "casa-income-card-date";
-    date.textContent = formatDate(income.date);
-
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.className = "casa-income-card-edit-btn";
-    editButton.textContent = "Editar";
-    editButton.addEventListener("click", () => {
-      startCasaIncomeEdit(card, income);
-    });
-
-    card.appendChild(label);
-    card.appendChild(amount);
-    card.appendChild(date);
-    card.appendChild(editButton);
-
-    return card;
-  }
-
-  function startCasaIncomeEdit(card, income) {
-    card.replaceChildren();
-
-    const label = document.createElement("span");
-    label.className = "casa-income-card-label";
-    label.textContent = "Ingreso";
-
-    const input = document.createElement("input");
-    input.type = "number";
-    input.step = "0.01";
-    input.min = "0";
-    input.value = income.paidAmount || 0;
-    input.className = "casa-income-card-input";
-
-    const date = document.createElement("div");
-    date.className = "casa-income-card-date";
-    date.textContent = formatDate(income.date);
-
-    const actions = document.createElement("div");
-    actions.className = "casa-income-card-actions";
-
-    const saveButton = document.createElement("button");
-    saveButton.type = "button";
-    saveButton.className = "btn-primary";
-    saveButton.textContent = "Guardar";
-    saveButton.addEventListener("click", async () => {
-      const newAmount = Number(input.value || 0);
-      setButtonLoading(saveButton, true, "Guardando...");
-
-      try {
-        const updated = await saveIncomeRecord({
-          ...income,
-          totalAmount: newAmount,
-          paidAmount: newAmount,
-          remainingAmount: 0,
-        });
-
-        casaIncomesCache = casaIncomesCache.map((item) =>
-          String(item.id) === String(updated.id) ? updated : item,
-        );
-        renderCasaLedger();
-        showToast("Quincena actualizada.", { type: "success" });
-      } catch (error) {
-        console.error("No se pudo actualizar la quincena:", error);
-        showToast(error?.message || "No se pudo actualizar la quincena.", {
-          type: "error",
-          duration: 4200,
-        });
-        setButtonLoading(saveButton, false);
-      }
-    });
-
-    const cancelButton = document.createElement("button");
-    cancelButton.type = "button";
-    cancelButton.className = "casa-income-card-edit-btn";
-    cancelButton.textContent = "Cancelar";
-    cancelButton.addEventListener("click", () => {
-      card.replaceWith(buildCasaIncomeCard(income));
-    });
-
-    actions.appendChild(saveButton);
-    actions.appendChild(cancelButton);
-
-    card.appendChild(label);
-    card.appendChild(input);
-    card.appendChild(date);
-    card.appendChild(actions);
-    input.focus();
-  }
-
-  /**
-   * Total de ingresos del espacio activo. En Morfo esta página no muestra
-   * gráfica (ya tiene su propio dashboard), así que no aplica.
-   */
-  async function refreshScopeIncomeTotal() {
-    if (activeScope === "morfo") return;
-
-    if (activeScope === "casa") {
-      scopeIncomeTotal = casaIncomesCache.reduce(
-        (sum, income) => sum + Number(income.paidAmount || 0),
-        0,
-      );
-      return;
-    }
-
-    const scopeIncomes = (await getIncomeCollection()).filter((income) =>
-      recordMatchesScope(income, activeScope),
-    );
-    scopeIncomeTotal = scopeIncomes.reduce(
-      (sum, income) =>
-        sum + Number(income.paidAmount || income.totalAmount || 0),
-      0,
-    );
-  }
-
-  /** Ingresos vs. gastos, solo con los datos del espacio activo. */
-  function renderScopeFinanceChart() {
-    if (activeScope === "morfo") return;
-
-    const panel = document.getElementById("scope-chart-panel");
-    const canvas = document.getElementById("scopeFinanceChart");
-    if (!panel || !canvas || typeof Chart === "undefined") return;
-
-    panel.hidden = false;
-
-    const totalExpenses = currentExpenses.reduce(
-      (sum, expense) => sum + Number(expense.amount || 0),
-      0,
-    );
-
-    if (scopeChartInstance) {
-      scopeChartInstance.destroy();
-    }
-
-    scopeChartInstance = new Chart(canvas, {
-      type: "pie",
-      data: {
-        labels: ["Ingresos", "Gastos"],
-        datasets: [
-          {
-            data: [scopeIncomeTotal, totalExpenses],
-            backgroundColor: ["#98db6b", "#ff8a8a"],
-            borderColor: "#1f1f1f",
-            borderWidth: 2,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: { color: "#f3f3f3", padding: 16 },
-          },
-        },
-      },
-    });
   }
 
   function createRecordId() {
@@ -400,7 +160,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-payment-method").value =
       scopeConfig.paymentMethods[0] || "";
     document.getElementById("expense-invoice").value = "no";
-    if (payerSelect) payerSelect.value = "";
   }
 
   function applyExpensePreset(preset) {
@@ -574,7 +333,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? filterCategorySelect.value
       : "";
     const selectedMethod = filterMethodSelect ? filterMethodSelect.value : "";
-    const selectedPayer = filterPayerSelect ? filterPayerSelect.value : "";
 
     if (selectedYear) {
       expenses = expenses.filter(
@@ -606,13 +364,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
 
-    if (selectedPayer) {
-      expenses = expenses.filter(
-        (expense) =>
-          normalizeText(expense.payer) === normalizeText(selectedPayer),
-      );
-    }
-
     return expenses.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   }
 
@@ -626,49 +377,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     expenseCounters.total.textContent = formatCurrency(total);
     expenseCounters.invoiced.textContent = String(invoiced.length);
     expenseCounters.count.textContent = String(expenses.length);
-
-    if (activeScope === "casa") {
-      const cashTotal = expenses
-        .filter((expense) => isCasaCashExpense(expense))
-        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-      const creditTotal = expenses
-        .filter((expense) => isCasaCreditExpense(expense))
-        .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-
-      document.getElementById("casa-cash-total").textContent =
-        formatCurrency(cashTotal);
-      document.getElementById("casa-credit-total").textContent =
-        formatCurrency(creditTotal);
-    }
-  }
-
-  function getExpenseAccount(expense) {
-    return currentAccounts.find(
-      (account) => String(account.id) === String(expense.accountId || ""),
-    );
-  }
-
-  function isCasaCashExpense(expense) {
-    const account = getExpenseAccount(expense);
-    if (account) return account.type === "cash";
-    return normalizeText(expense.paymentMethod) === "efectivo";
-  }
-
-  function isCasaCreditExpense(expense) {
-    const account = getExpenseAccount(expense);
-    if (account) return account.type === "credit";
-
-    return ["nu", "tarjeta", "tarjeta de credito", "credito", "amex"].includes(
-      normalizeText(expense.paymentMethod),
-    );
   }
 
   function renderExpenses() {
     const expenses = getFilteredExpenses();
     updateExpenseCounters(expenses);
     expenseTableBody.replaceChildren();
-    renderCasaLedger();
-    renderScopeFinanceChart();
 
     if (expenses.length === 0) {
       expenseTableBody.appendChild(
@@ -698,10 +412,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.appendChild(createTableCell(expense.category || "-"));
       row.appendChild(createTableCell(formatCurrency(expense.amount)));
       row.appendChild(createTableCell(expense.paymentMethod || "-"));
-
-      if (activeScope === "personal") {
-        row.appendChild(createTableCell(expense.payer || "Sin asignar"));
-      }
 
       if (scopeConfig.showInvoice) {
         row.appendChild(createTableCell(expense.invoice || "-"));
@@ -733,7 +443,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("expense-amount").value = expense.amount || 0;
     document.getElementById("expense-payment-method").value =
       expense.paymentMethod || "";
-    if (payerSelect) payerSelect.value = expense.payer || "";
     accountSelect.value = expense.accountId || "";
     document.getElementById("expense-invoice").value =
       expense.invoice === "Sí" ? "yes" : "no";
@@ -764,7 +473,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     detailAmount.textContent = formatCurrency(expense.amount || 0);
     detailCategory.textContent = expense.category || "-";
     detailMethod.textContent = expense.paymentMethod || "-";
-    if (detailPayer) detailPayer.textContent = expense.payer || "Sin asignar";
     detailInvoice.textContent = expense.invoice || "-";
     detailNotes.textContent = expense.notes || "Sin observaciones.";
 
@@ -954,7 +662,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       "expense-payment-method",
     ).value;
     const accountId = accountSelect.value;
-    const payer = payerSelect?.value || "";
     const invoice = document.getElementById("expense-invoice").value;
     const notes = document.getElementById("expense-notes").value.trim();
 
@@ -964,8 +671,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       !category ||
       !amount ||
       !paymentMethod ||
-      !invoice ||
-      (activeScope === "personal" && !payer)
+      !invoice
     ) {
       showToast("Por favor, completa todos los campos obligatorios.", {
         type: "error",
@@ -995,7 +701,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         category,
         amount: Number(amount),
         paymentMethod,
-        payer: activeScope === "personal" ? payer : "",
         invoice: invoice === "yes" ? "Sí" : "No",
         notes,
       });
@@ -1041,7 +746,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (filterMonthSelect) filterMonthSelect.value = "";
       if (filterCategorySelect) filterCategorySelect.value = "";
       if (filterMethodSelect) filterMethodSelect.value = "";
-      if (filterPayerSelect) filterPayerSelect.value = "";
       clearSelection();
       renderExpenses();
     });
@@ -1056,13 +760,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (filterMethodSelect) {
     filterMethodSelect.addEventListener("change", () => {
-      clearSelection();
-      renderExpenses();
-    });
-  }
-
-  if (filterPayerSelect) {
-    filterPayerSelect.addEventListener("change", () => {
       clearSelection();
       renderExpenses();
     });
@@ -1088,8 +785,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener("focus", async () => {
     await refreshExpensesCollection();
     await loadAccountOptions();
-    await syncCasaLedger();
-    await refreshScopeIncomeTotal();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();
@@ -1101,8 +796,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     applyExpensePrefillFromUrl();
     await refreshExpensesCollection();
     await loadAccountOptions();
-    await syncCasaLedger();
-    await refreshScopeIncomeTotal();
     loadYearOptions();
     loadDynamicFilterOptions();
     renderExpenses();

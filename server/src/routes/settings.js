@@ -75,8 +75,6 @@ const DEFAULT_SETTINGS = {
   },
   serviceTemplates: DEFAULT_SERVICE_TEMPLATES,
   finance: {
-    personal: { monthlyBudget: 0 },
-    casa: { monthlyBudget: 0 },
     morfo: { monthlyBudget: 0 },
   },
 };

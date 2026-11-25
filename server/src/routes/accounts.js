@@ -3,7 +3,6 @@ import { prisma } from "../lib/prisma.js";
 import {
   canAccessFinanceRecord,
   normalizeFinanceScope,
-  ownerForScope,
   visibleFinanceWhere,
 } from "../lib/finance-access.js";
 
@@ -30,10 +29,7 @@ function accountPayload(body, userId, existing = null) {
         ? null
         : Number(body.paymentDay),
     color: String(body.color || "#7c5cff"),
-    ownerUserId:
-      scope === "personal"
-        ? existing?.ownerUserId || ownerForScope(scope, userId)
-        : null,
+    ownerUserId: null,
     isActive: body.isActive !== false,
   };
 }
@@ -68,7 +64,7 @@ accountsRouter.put("/:id", async (request, response) => {
     response.status(404).json({ message: "No se encontró la cuenta." });
     return;
   }
-  if (!canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (!canAccessFinanceRecord(existing)) {
     response.status(403).json({ message: "No tienes acceso a esta cuenta." });
     return;
   }
@@ -88,7 +84,7 @@ accountsRouter.delete("/:id", async (request, response) => {
     response.status(404).json({ message: "No se encontró la cuenta." });
     return;
   }
-  if (!canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (!canAccessFinanceRecord(existing)) {
     response.status(403).json({ message: "No tienes acceso a esta cuenta." });
     return;
   }

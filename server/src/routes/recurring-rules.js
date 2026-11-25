@@ -3,7 +3,6 @@ import { prisma } from "../lib/prisma.js";
 import {
   canAccessFinanceRecord,
   normalizeFinanceScope,
-  ownerForScope,
   visibleFinanceWhere,
 } from "../lib/finance-access.js";
 
@@ -23,10 +22,7 @@ function rulePayload(body, userId, existing = null) {
       : "monthly",
     dayOne: body.dayOne ? Number(body.dayOne) : null,
     dayTwo: body.dayTwo ? Number(body.dayTwo) : null,
-    ownerUserId:
-      scope === "personal"
-        ? existing?.ownerUserId || ownerForScope(scope, userId)
-        : null,
+    ownerUserId: null,
     isActive: body.isActive !== false,
   };
 }
@@ -60,7 +56,7 @@ recurringRulesRouter.put("/:id", async (request, response) => {
     response.status(404).json({ message: "No se encontró la regla." });
     return;
   }
-  if (!canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (!canAccessFinanceRecord(existing)) {
     response.status(403).json({ message: "No tienes acceso a esta regla." });
     return;
   }
@@ -79,7 +75,7 @@ recurringRulesRouter.delete("/:id", async (request, response) => {
     response.status(404).json({ message: "No se encontró la regla." });
     return;
   }
-  if (!canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (!canAccessFinanceRecord(existing)) {
     response.status(403).json({ message: "No tienes acceso a esta regla." });
     return;
   }

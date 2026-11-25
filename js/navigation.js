@@ -1,13 +1,6 @@
-import {
-  SCOPES,
-  getActiveScope,
-  getScopeConfig,
-  withScopeParam,
-} from "./scopes.js";
+import { getActiveScope, getScopeConfig, withScopeParam } from "./scopes.js";
 
 const NAV_ITEMS = [
-  { key: "resumen", label: "Resumen", href: "resumen.html" },
-  { key: "decidir", label: "Decidir", href: "decidir.html" },
   { key: "comercial", label: "Tablero", href: "comercial.html" },
   { key: "dinero", label: "Dinero", href: "dinero.html" },
   { key: "dashboard", label: "Inicio", href: "dashboard.html" },
@@ -38,34 +31,6 @@ function inferNavKey() {
   return match?.key || "dashboard";
 }
 
-function renderScopeSwitcher(sidebar, activeScope) {
-  const switcher = document.createElement("div");
-  switcher.className = "scope-switcher";
-  switcher.setAttribute("role", "tablist");
-  switcher.setAttribute("aria-label", "Espacio de trabajo");
-
-  Object.values(SCOPES).forEach((scope) => {
-    const link = document.createElement("a");
-    const target = getNavItem(scope.homeKey)?.href || "expenses.html";
-
-    link.className = "scope-tab";
-    link.href = withScopeParam(target, scope.key);
-    link.textContent = scope.label;
-    link.setAttribute("role", "tab");
-
-    if (scope.key === activeScope) {
-      link.classList.add("active");
-      link.setAttribute("aria-selected", "true");
-    } else {
-      link.setAttribute("aria-selected", "false");
-    }
-
-    switcher.appendChild(link);
-  });
-
-  sidebar.appendChild(switcher);
-}
-
 function renderSidebar(sidebar, activeKey) {
   sidebar.replaceChildren();
   sidebar.setAttribute("aria-hidden", "false");
@@ -77,8 +42,6 @@ function renderSidebar(sidebar, activeKey) {
   brand.className = "sidebar-brand";
   brand.textContent = "Morfo Hub";
   sidebar.appendChild(brand);
-
-  renderScopeSwitcher(sidebar, activeScope);
 
   const nav = document.createElement("nav");
   nav.className = "sidebar-nav";
@@ -133,13 +96,8 @@ function renderHeader(header, pageTitle) {
   title.className = "header-title";
   title.textContent = pageTitle;
 
-  const scopeBadge = document.createElement("span");
-  scopeBadge.className = "header-scope-badge";
-  scopeBadge.textContent = getScopeConfig().label;
-
   headerMain.appendChild(mobileMenuButton);
   headerMain.appendChild(title);
-  headerMain.appendChild(scopeBadge);
 
   const user = document.createElement("div");
   user.className = "header-user";
@@ -225,34 +183,17 @@ function setupMobileSidebar() {
   syncMobileNavState();
 }
 
-// Personal y Casa se manejan sólo desde el Resumen; estas páginas son de Morfo.
-const PAGES_REPLACED_BY_RESUMEN = [
-  "dashboard",
-  "movements",
-  "income",
-  "expenses",
-];
-
-// En Morfo, el antiguo Inicio y los Reportes viven ahora en Tablero y Dinero.
+// El antiguo Inicio y los Reportes viven ahora en Tablero y Dinero.
 const MORFO_REPLACEMENTS = {
   dashboard: "comercial.html",
   reports: "dinero.html",
 };
 
 function redirectIfNeeded(activeKey) {
-  const scope = getActiveScope();
-  const scopeConfig = getScopeConfig(scope);
-
-  if (scopeConfig.homeKey === "resumen") {
-    if (!PAGES_REPLACED_BY_RESUMEN.includes(activeKey)) return false;
-    window.location.replace(withScopeParam("resumen.html", scope));
-    return true;
-  }
-
   const replacement = MORFO_REPLACEMENTS[activeKey];
   if (!replacement) return false;
 
-  window.location.replace(withScopeParam(replacement, scope));
+  window.location.replace(withScopeParam(replacement, getActiveScope()));
   return true;
 }
 

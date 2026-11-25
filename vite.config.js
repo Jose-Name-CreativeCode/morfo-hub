@@ -22,8 +22,6 @@ export default defineConfig({
         index: resolve(__dirname, "index.html"),
         login: resolve(__dirname, "login.html"),
         dashboard: resolve(__dirname, "dashboard.html"),
-        resumen: resolve(__dirname, "resumen.html"),
-        decidir: resolve(__dirname, "decidir.html"),
         comercial: resolve(__dirname, "comercial.html"),
         dinero: resolve(__dirname, "dinero.html"),
         movements: resolve(__dirname, "movements.html"),

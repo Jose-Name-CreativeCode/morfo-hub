@@ -31,7 +31,7 @@
           </section>
 
           <section class="dashboard-split-grid">
-            <article class="card form-shell" data-morfo-only>
+            <article class="card form-shell">
               <h2 class="section-title section-title-sm">
                 Presupuesto mensual
               </h2>
@@ -57,7 +57,7 @@
               </form>
             </article>
 
-            <article class="card form-shell" data-morfo-only>
+            <article class="card form-shell">
               <h2 class="section-title section-title-sm">
                 Nueva cuenta o tarjeta
               </h2>
@@ -121,7 +121,7 @@
                     max="31"
                   />
                 </div>
-                <div class="form-group" data-morfo-only>
+                <div class="form-group">
                   <label for="account-color">Color</label>
                   <input id="account-color" type="color" value="#7c5cff" />
                 </div>
@@ -134,191 +134,12 @@
             </article>
           </section>
 
-          <section class="card dashboard-panel section-spacing" data-morfo-only>
+          <section class="card dashboard-panel section-spacing">
             <h2 class="section-title section-title-sm">Tus cuentas</h2>
             <div class="settings-card-grid" id="account-settings-list"></div>
           </section>
 
-          <section
-            class="card form-shell section-spacing"
-            data-simple-only
-            hidden
-          >
-            <h2 class="section-title section-title-sm" id="reminder-title">
-              Recordatorios
-            </h2>
-            <p
-              class="section-subtitle section-subtitle-compact"
-              id="reminder-hint"
-            >
-              Lo que se repite cada mes o cada año: pagos de tarjeta, servicios
-              y trámites. Aparecen en el Resumen cuando se acerca la fecha.
-            </p>
-            <p class="reminder-total" id="reminder-total" hidden></p>
-            <div class="reminder-settings-list" id="reminder-list"></div>
-            <form id="reminder-form" class="entry-form-grid">
-              <div class="form-group form-group-full">
-                <label for="reminder-name">Nombre</label>
-                <input
-                  id="reminder-name"
-                  type="text"
-                  placeholder="Ej. Pago tarjeta Nu"
-                />
-              </div>
-              <div class="form-group">
-                <label for="reminder-kind">Tipo</label>
-                <select id="reminder-kind">
-                  <option value="gasto">Gasto</option>
-                  <option value="pago">Pago de tarjeta</option>
-                  <option value="tramite">Trámite (sin dinero)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="reminder-frequency">Cada cuándo</label>
-                <select id="reminder-frequency">
-                  <option value="diario">Cada día</option>
-                  <option value="semanal">Cada semana</option>
-                  <option value="quincenal">Cada 15 días</option>
-                  <option value="mensual" selected>Cada mes</option>
-                  <option value="bimestral">Cada 2 meses</option>
-                  <option value="cuatrimestral">Cada 4 meses</option>
-                  <option value="semestral">Cada 6 meses</option>
-                  <option value="anual">Cada año</option>
-                </select>
-              </div>
-              <div class="form-group" id="reminder-day-group">
-                <label for="reminder-day">Día</label>
-                <input
-                  id="reminder-day"
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="Sin aviso"
-                />
-              </div>
-              <div class="form-group" id="reminder-month-group" hidden>
-                <label for="reminder-month">Primer mes</label>
-                <select id="reminder-month"></select>
-              </div>
-              <div class="form-group reminder-money">
-                <label for="reminder-amount">Monto (opcional)</label>
-                <input
-                  id="reminder-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-              </div>
-              <div class="form-group reminder-money">
-                <label for="reminder-method">Pagado con</label>
-                <select id="reminder-method"></select>
-              </div>
-              <div
-                class="form-group reminder-money"
-                id="reminder-category-group"
-              >
-                <label for="reminder-category">Categoría</label>
-                <select id="reminder-category"></select>
-              </div>
-              <div
-                class="form-group reminder-money"
-                id="reminder-funded-group"
-                hidden
-              >
-                <label for="reminder-funded">¿De quién es el dinero?</label>
-                <select id="reminder-funded">
-                  <option value="papa">Papá</option>
-                  <option value="mio">Manolo</option>
-                </select>
-              </div>
-              <div class="form-group form-group-full form-group-tight">
-                <button type="submit" class="btn-primary">
-                  Agregar recordatorio
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="dashboard-split-grid" data-simple-only hidden>
-            <article class="card form-shell">
-              <h2 class="section-title section-title-sm">Formas de pago</h2>
-              <p class="section-subtitle section-subtitle-compact">
-                Son los botones de “Pagado con” al registrar un gasto. Las
-                tarjetas dejan deuda hasta que registras el pago.
-              </p>
-              <div class="settings-chip-list" id="method-list"></div>
-              <form id="method-form" class="entry-form-grid">
-                <div class="form-group">
-                  <label for="method-name">Nombre</label>
-                  <input id="method-name" type="text" placeholder="Ej. Nu" />
-                </div>
-                <div class="form-group">
-                  <label for="method-type">Tipo</label>
-                  <select id="method-type">
-                    <option value="tarjeta">Tarjeta (se paga después)</option>
-                    <option value="cuenta">Efectivo o transferencia</option>
-                  </select>
-                </div>
-                <div class="form-group method-card-only">
-                  <label for="method-cut-day">Día de corte</label>
-                  <input
-                    id="method-cut-day"
-                    type="number"
-                    min="1"
-                    max="31"
-                    inputmode="numeric"
-                    placeholder="8"
-                  />
-                </div>
-                <div class="form-group method-card-only">
-                  <label for="method-pay-day">Día de pago</label>
-                  <input
-                    id="method-pay-day"
-                    type="number"
-                    min="1"
-                    max="31"
-                    inputmode="numeric"
-                    placeholder="18"
-                  />
-                </div>
-                <div class="form-group form-group-full form-group-tight">
-                  <button type="submit" class="btn-primary">
-                    Agregar forma de pago
-                  </button>
-                </div>
-              </form>
-            </article>
-
-            <article class="card form-shell">
-              <h2 class="section-title section-title-sm">Categorías</h2>
-              <p
-                class="section-subtitle section-subtitle-compact"
-                id="category-hint"
-              >
-                Son los botones de “Categoría”. Quita las que no uses y agrega
-                las tuyas.
-              </p>
-              <div class="settings-chip-list" id="category-list"></div>
-              <form id="category-form" class="entry-form-grid">
-                <div class="form-group form-group-full">
-                  <label for="category-name">Nombre</label>
-                  <input
-                    id="category-name"
-                    type="text"
-                    placeholder="Ej. Psicólogo"
-                  />
-                </div>
-                <div class="form-group form-group-full form-group-tight">
-                  <button type="submit" class="btn-primary">
-                    Agregar categoría
-                  </button>
-                </div>
-              </form>
-            </article>
-          </section>
-
-          <section class="dashboard-split-grid" data-morfo-only>
+          <section class="dashboard-split-grid">
             <article class="card form-shell">
               <h2 class="section-title section-title-sm">
                 Nueva regla recurrente

@@ -1,8 +1,7 @@
 # Morfo Hub
 
-Hub financiero para controlar por separado los espacios Personal, Casa y Morfo
-en un mismo sistema. Incluye captura rápida, cuentas, presupuestos,
-recurrencias y la operación comercial de la agencia.
+Hub financiero de Morfo: captura rápida, cuentas, presupuestos, recurrencias y
+la operación comercial de la agencia.
 
 ## Stack actual
 
@@ -148,8 +147,7 @@ La API ya cubre:
 
 ## Modelo financiero
 
-- `Personal` es privado para el usuario que crea cada registro nuevo.
-- `Casa` y `Morfo` son espacios compartidos.
+- `Morfo` es el único espacio; sus registros son compartidos.
 - Las cuentas guardan el saldo inicial; el saldo estimado se calcula con los
   movimientos asociados.
 - Las reglas recurrentes son expectativas. Nunca crean ingresos o gastos

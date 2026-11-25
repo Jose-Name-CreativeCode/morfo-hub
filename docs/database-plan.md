@@ -15,7 +15,6 @@
 Ingresos, gastos, cuentas y reglas incluyen:
 
 - `scope`: `personal`, `casa` o `morfo`.
-- `ownerUserId`: propietario cuando el espacio es Personal.
 - `accountId`: cuenta asociada cuando aplica.
 
 ## Compatibilidad de datos

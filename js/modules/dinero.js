@@ -5,7 +5,6 @@ import {
 } from "../services/income-service.js";
 import { getExpensesCollection } from "../services/expenses-service.js";
 import { getSettingsRecord } from "../services/settings-service.js";
-import { getActiveScope, withScopeParam } from "../scopes.js";
 import {
   IVA_RATE,
   buildMonthlyTaxSummary,
@@ -68,13 +67,6 @@ function shiftMonth(month, delta) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const scope = getActiveScope();
-
-  if (scope !== "morfo") {
-    window.location.replace(withScopeParam("resumen.html", scope));
-    return;
-  }
-
   setPageLoading(true);
   const user = await protectPage();
   if (!user) return;

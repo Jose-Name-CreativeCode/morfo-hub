@@ -31,7 +31,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const initialScope = getActiveScope();
   const form = document.getElementById("quick-movement-form");
   const amountInput = document.getElementById("movement-amount");
-  const scopeSelect = document.getElementById("movement-scope");
   const categorySelect = document.getElementById("movement-category");
   const accountSelect = document.getElementById("movement-account");
   const feed = document.getElementById("movement-feed");
@@ -41,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let activeFilter = "all";
 
   function selectedScope() {
-    return initialScope === "resumen" ? scopeSelect.value : initialScope;
+    return initialScope;
   }
 
   function selectedType() {
@@ -164,11 +163,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function resetForm() {
-    const preservedScope = selectedScope();
     form.reset();
     form.elements["movement-type"].value = "expense";
     document.getElementById("movement-date").value = getTodayISO();
-    if (initialScope === "resumen") scopeSelect.value = preservedScope;
     syncTypeUi();
     amountInput.focus();
   }
@@ -244,10 +241,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document
     .querySelectorAll('input[name="movement-type"]')
     .forEach((input) => input.addEventListener("change", syncTypeUi));
-  scopeSelect.addEventListener("change", () => {
-    refreshFormOptions();
-    renderFeed();
-  });
   document.querySelectorAll("[data-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       activeFilter = button.dataset.filter;
@@ -259,21 +252,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   try {
-    if (initialScope === "resumen") {
-      document.getElementById("movement-scope-group").hidden = false;
-      fillSimpleSelect(
-        scopeSelect,
-        ["personal", "casa", "morfo"].map((scope) => ({
-          value: scope,
-          label: SCOPES[scope].label,
-        })),
-        "Selecciona un espacio",
-      );
-      scopeSelect.value = "personal";
-    }
     document.getElementById("quick-settings-link").href = withScopeParam(
       "finance-settings.html",
-      initialScope === "resumen" ? "personal" : initialScope,
+      initialScope,
     );
     document.getElementById("movement-date").value = getTodayISO();
     await reloadCollections();

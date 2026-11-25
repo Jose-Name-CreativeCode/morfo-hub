@@ -1,11 +1,6 @@
-import { DEFAULT_FIXED_CATEGORIES } from "./casa-costs.js";
-
 const SCOPE_STORAGE_KEY = "morfo_active_scope";
 
 export const DEFAULT_SCOPE = "morfo";
-
-const BASE_METHODS = ["Efectivo", "Transferencia", "Otro"];
-const PERSONAL_METHODS = ["Nu", "BBVA", "Amex", ...BASE_METHODS];
 
 export const SCOPES = {
   morfo: {
@@ -29,63 +24,6 @@ export const SCOPES = {
     incomeSourceLabel: "Cliente",
     showInvoice: true,
   },
-  personal: {
-    key: "personal",
-    label: "Personal",
-    navKeys: ["resumen", "financeSettings"],
-    navLabels: { financeSettings: "Ajustes" },
-    homeKey: "resumen",
-    expenseCategories: [
-      "Britania",
-      "Supermercado",
-      "Gasolina / Transporte",
-      "Comidas",
-      "Salud",
-      "Suscripciones",
-      "Ropa",
-      "Otro",
-    ],
-    paymentMethods: PERSONAL_METHODS,
-    incomeSources: [
-      "Sueldo / Quincena",
-      "Freelance",
-      "Venta",
-      "Reembolso",
-      "Otro",
-    ],
-    incomeSourceLabel: "Fuente de ingreso",
-    showInvoice: false,
-  },
-  casa: {
-    key: "casa",
-    label: "Casa",
-    navKeys: ["resumen", "decidir", "financeSettings"],
-    navLabels: { financeSettings: "Ajustes" },
-    homeKey: "resumen",
-    expenseCategories: [
-      "Renta / Hipoteca",
-      "Luz",
-      "Agua",
-      "Gas",
-      "Internet / Teléfono",
-      "Supermercado",
-      "Mantenimiento",
-      "Camioneta",
-      "Seguro",
-      "Colegiatura",
-      "Gasolina",
-      "Transporte",
-      "Comida",
-      "Salud",
-      "Suscripciones",
-      "Limpieza",
-      "Otro",
-    ],
-    paymentMethods: ["Nu", ...BASE_METHODS],
-    incomeSources: ["Quincena", "Aportación", "Reembolso", "Otro"],
-    incomeSourceLabel: "Origen",
-    showInvoice: false,
-  },
 };
 
 // Nombres que por defecto se tratan como tarjeta: dejan deuda que se paga después.
@@ -101,10 +39,7 @@ function normalizeName(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/**
- * Formas de pago y categorías de un espacio. Personal y Casa las editan en
- * Ajustes; mientras no las toquen se usan las de esta configuración.
- */
+/** Formas de pago y categorías guardadas, o las de esta configuración. */
 export function getFinanceConfig(settings, scope) {
   const saved = settings?.finance?.[scope] || {};
   const config = getScopeConfig(scope);
@@ -124,14 +59,7 @@ export function getFinanceConfig(settings, scope) {
       ? saved.categories
       : config.expenseCategories;
 
-  const reminders = Array.isArray(saved.reminders) ? saved.reminders : [];
-
-  // Qué categorías son gasto fijo: Casa las usa para su costo mensual.
-  const fixedCategories = Array.isArray(saved.fixedCategories)
-    ? saved.fixedCategories
-    : DEFAULT_FIXED_CATEGORIES;
-
-  return { paymentMethods, categories, reminders, fixedCategories };
+  return { paymentMethods, categories };
 }
 
 export function isValidScope(scope) {
@@ -177,10 +105,7 @@ export function getScopeConfig(scope = getActiveScope()) {
   return SCOPES[scope] || SCOPES[DEFAULT_SCOPE];
 }
 
-/**
- * Los registros creados antes de existir los espacios no tienen `scope`;
- * se consideran de Morfo para no perderlos de vista.
- */
+/** Los registros sin `scope` son de Morfo: así se guardaban al principio. */
 export function recordMatchesScope(record, scope) {
   return String(record?.scope || DEFAULT_SCOPE) === String(scope);
 }

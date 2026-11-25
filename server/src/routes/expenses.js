@@ -5,7 +5,6 @@ import { parseJsonRecord } from "../lib/json-record.js";
 import {
   canAccessFinanceRecord,
   normalizeFinanceScope,
-  ownerForScope,
   visibleFinanceWhere,
 } from "../lib/finance-access.js";
 
@@ -14,10 +13,7 @@ export const expensesRouter = Router();
 function mapExpensePayload(body = {}, userId, existing = null) {
   const id = String(body.id || crypto.randomUUID()).trim();
   const scope = normalizeFinanceScope(body.scope || existing?.scope);
-  const ownerUserId =
-    scope === "personal"
-      ? existing?.ownerUserId || ownerForScope(scope, userId)
-      : null;
+  const ownerUserId = null;
   const record = {
     ...body,
     id,
@@ -66,7 +62,7 @@ expensesRouter.post("/", async (request, response) => {
   const existing = requestedId
     ? await prisma.expenseRecord.findUnique({ where: { id: requestedId } })
     : null;
-  if (existing && !canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (existing && !canAccessFinanceRecord(existing)) {
     response.status(403).json({ message: "No tienes acceso a este gasto." });
     return;
   }
@@ -97,10 +93,10 @@ expensesRouter.put("/:id", async (request, response) => {
     where: { id: request.params.id },
   });
 
-  if (existing && !canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (existing && !canAccessFinanceRecord(existing)) {
     response.status(403).json({
       error: "forbidden",
-      message: "No tienes acceso a este gasto personal.",
+      message: "No tienes acceso a este gasto.",
     });
     return;
   }
@@ -136,10 +132,10 @@ expensesRouter.delete("/:id", async (request, response) => {
     return;
   }
 
-  if (!canAccessFinanceRecord(existing, request.auth.user.id)) {
+  if (!canAccessFinanceRecord(existing)) {
     response.status(403).json({
       error: "forbidden",
-      message: "No tienes acceso a este gasto personal.",
+      message: "No tienes acceso a este gasto.",
     });
     return;
   }

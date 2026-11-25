@@ -9,7 +9,7 @@ import {
   getSettingsRecord,
   saveSettingsRecord,
 } from "../services/settings-service.js";
-import { getActiveScope, getFinanceConfig, withScopeParam } from "../scopes.js";
+import { getFinanceConfig } from "../scopes.js";
 import {
   QUOTE_STAGES,
   daysSince,
@@ -75,14 +75,6 @@ function longMonthLabel(month) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const scope = getActiveScope();
-
-  // El tablero es sólo de Morfo; Personal y Casa tienen su propio Resumen.
-  if (scope !== "morfo") {
-    window.location.replace(withScopeParam("resumen.html", scope));
-    return;
-  }
-
   setPageLoading(true);
   const user = await protectPage();
   if (!user) return;
